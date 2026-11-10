@@ -1,13 +1,13 @@
-// P0-005b reproduction (evidence only; the payment path is NOT changed here).
-// Renders the real CardDetails panel (src/components/WealthPanels.tsx) with a recording store and proves:
-//  1. the amount comes from window.prompt (no in-app form, label, preview or confirmation of accounts);
-//  2. it is saved with the generic save() — no createId/idempotency key and no finance_operation call;
-//  3. a retry after a lost response therefore writes a SECOND card payment, and the ledger counts both.
+// P0-005b regression (was the reproduction; fixed in Phase 3 completion). The card payment is entered in an
+// in-app form (no window.prompt) and recorded through ONE idempotent action: record_card_payment where the
+// database has it, else save() with createId = the payment id. The payment id is created once per form, so a
+// lost response followed by the person's retry records the payment ONCE and the ledger counts it once.
+// The database side (same id -> one entry, one posting) is proven in src/lib/phase3-completion-sql.test.ts.
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Account } from "@/lib/ledger";
 import { accountBalance } from "@/lib/ledger";
-import { saveWithRecovery } from "@/lib/statement-pipeline/save-recovery";
+import { recordCardPayment, type CardPaymentInput } from "@/lib/posting";
 import { defaultPreferences } from "@/lib/preferences";
 
 const mocks = vi.hoisted(() => ({ store: {} as Record<string, unknown> }));
@@ -25,36 +25,75 @@ import { CardDetails } from "./WealthPanels";
 const card: Account = { id: "card-1", name: "HDFC Regalia", kind: "credit_card", openingBalance: 0, archived: false, creditLimit: 100000, dueDay: 5, issuer: "HDFC", lastFour: "4242", statementDay: 20 } as Account;
 const bank: Account = { id: "bank-1", name: "HDFC savings", kind: "savings", openingBalance: 50000, archived: false } as Account;
 const spend = { id: "s1", title: "Flipkart", amount: 8000, date: "2026-10-25", txnType: "expense", accountId: card.id, toAccountId: null } as never;
+type Row = { id: string; amount: number; txnType: string; accountId: string; toAccountId: string; date: string };
 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
-describe("P0-005b REPRO: card payment entered by window.prompt and saved outside finance_operation", () => {
-  it("prompts with window.prompt, then calls save() with no idempotency key and never calls finance_operation", async () => {
-    const save = vi.fn(async () => {});
-    const operation = vi.fn();
-    mocks.store = { updateAccount: vi.fn(), transactions: [spend], loans: [], preferences: defaultPreferences(), accounts: [card, bank], save, financeOperation: operation, recordReimbursement: operation };
-    const prompt = vi.spyOn(window, "prompt").mockReturnValue("8000");
+describe("P0-005b fixed: card payment through an in-app form and one idempotent action", () => {
+  it("uses an in-app form (amount, date, account, preview) and never window.prompt; retries reuse the same payment id", async () => {
+    const calls: CardPaymentInput[] = [];
+    let lose = true;
+    const payCard = vi.fn(async (p: CardPaymentInput) => { calls.push(p); if (lose) { lose = false; throw Error("Network connection was lost"); } return { id: p.requestId, amount: p.amount, replayed: true, via: "database" as const }; });
+    mocks.store = { updateAccount: vi.fn(), transactions: [spend], loans: [], preferences: defaultPreferences(), accounts: [card, bank], payCard };
+    const prompt = vi.spyOn(window, "prompt");
     render(<CardDetails a={card} />);
     fireEvent.change(screen.getByLabelText("pay-from"), { target: { value: bank.id } });
+    fireEvent.change(screen.getByLabelText("Amount (₹)"), { target: { value: "8000" } });
+    expect(screen.getByRole("status").textContent).toMatch(/from HDFC savings to HDFC Regalia/); // preview before saving
     fireEvent.click(screen.getByRole("button", { name: "Record payment" }));
-    await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
-    expect(prompt).toHaveBeenCalledWith("Card payment amount (₹)", expect.any(String)); // browser prompt, not an app form
-    const calls = save.mock.calls as unknown as unknown[][];
-    expect(calls[0]).toHaveLength(1);                         // save(input) — no opts, so no createId
-    expect(calls[0]![0]).toMatchObject({ txnType: "card_payment", amount: 8000, accountId: bank.id, toAccountId: card.id });
-    expect(operation).not.toHaveBeenCalled();                  // no finance_operation idempotency record
+    await waitFor(() => expect(payCard).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Record payment" }).hasAttribute("disabled")).toBe(false));
+    fireEvent.click(screen.getByRole("button", { name: "Record payment" })); // the person retries after the error
+    await waitFor(() => expect(payCard).toHaveBeenCalledTimes(2));
+    expect(prompt).not.toHaveBeenCalled();
+    expect(calls[0]).toMatchObject({ fromAccountId: bank.id, cardAccountId: card.id, amount: 8000 });
+    expect(calls[1]!.requestId).toBe(calls[0]!.requestId); // same id on retry: recorded once
+    await waitFor(() => expect(screen.getByRole("button", { name: "Record payment" }).hasAttribute("disabled")).toBe(false));
+    fireEvent.click(screen.getByRole("button", { name: "Record payment" })); // after a confirmed save, a NEW payment gets a new id
+    await waitFor(() => expect(payCard).toHaveBeenCalledTimes(3));
+    expect(calls[2]!.requestId).not.toBe(calls[0]!.requestId);
   });
 
-  it("a lost response is reported as a failure; the person's retry posts the payment twice and both reduce the bank balance", async () => {
-    // What store.save does for this call: write, then on error read back by createId — which is absent, so read() returns null.
-    const ledger: { id: string; amount: number; txnType: string; accountId: string; toAccountId: string; date: string }[] = [];
-    const input = { title: "HDFC Regalia bill payment", merchant: "HDFC", category: "Card payment", scope: "personal", memberId: null, amount: 8000, currency: "INR", date: "2026-11-09", description: "Credit card settlement", paymentMethod: "bank_transfer", txnType: "card_payment", accountId: bank.id, toAccountId: card.id } as never;
-    const write = (lose: boolean) => async () => { ledger.push({ id: crypto.randomUUID(), amount: 8000, txnType: "card_payment", accountId: bank.id, toAccountId: card.id, date: "2026-11-09" }); if (lose) throw Error("Network connection was lost"); };
-    await expect(saveWithRecovery(write(true), async () => null, input)).rejects.toThrow("Network connection was lost"); // committed, but shown as failed
-    await saveWithRecovery(write(false), async () => null, input); // the person taps Record payment again
-    expect(ledger).toHaveLength(2);
-    expect(new Set(ledger.map((x) => x.id)).size).toBe(2); // two distinct server ids: no shared key to de-duplicate
-    expect(accountBalance(bank, ledger as never)).toBe(50000 - 16000); // bank debited twice
-    expect(accountBalance(card, [spend, ...ledger] as never)).toBe(8000 - 16000); // card shows ₹8,000 overpaid
+  it("database action: a lost response + retry with the same id records ONE payment; the bank is debited once", async () => {
+    const ledger = new Map<string, Row>();
+    let lose = true;
+    const rpc = async (name: string, args?: Record<string, unknown>) => {
+      expect(name).toBe("record_card_payment");
+      const id = String(args?.["_request"]);
+      const replayed = ledger.has(id);
+      if (!replayed) ledger.set(id, { id, amount: Number(args?.["_amount"]), txnType: "card_payment", accountId: String(args?.["_from"]), toAccountId: String(args?.["_card"]), date: String(args?.["_on"]) });
+      if (lose) { lose = false; return { data: null, error: { message: "Network connection was lost" } }; } // committed, response lost
+      return { data: { id, amount: Number(args?.["_amount"]), replayed }, error: null };
+    };
+    const p: CardPaymentInput = { requestId: crypto.randomUUID(), fromAccountId: bank.id, cardAccountId: card.id, amount: 8000, date: "2026-10-30" };
+    await expect(recordCardPayment(p, rpc)).rejects.toThrow("Network connection was lost");
+    const retry = await recordCardPayment(p, rpc);
+    expect(retry).toMatchObject({ replayed: true, via: "database" });
+    expect(ledger.size).toBe(1);
+    expect(accountBalance(bank, [...ledger.values()] as never)).toBe(50000 - 8000);
+    expect(accountBalance(card, [spend, ...ledger.values()] as never)).toBe(0); // settled, not overpaid
+  });
+
+  it("production schema (no database action): falls back to save() with createId = payment id, so the retry upserts the same entry", async () => {
+    const ledger = new Map<string, Row>();
+    let lose = true;
+    const missing = async () => ({ data: null, error: { message: "Could not find the function public.record_card_payment", code: "PGRST202" } });
+    const save = async (createId: string) => { ledger.set(createId, { id: createId, amount: 8000, txnType: "card_payment", accountId: bank.id, toAccountId: card.id, date: "2026-10-30" }); if (lose) { lose = false; throw Error("Network connection was lost"); } };
+    const p: CardPaymentInput = { requestId: crypto.randomUUID(), fromAccountId: bank.id, cardAccountId: card.id, amount: 8000, date: "2026-10-30" };
+    await expect(recordCardPayment(p, missing, save)).rejects.toThrow("Network connection was lost");
+    expect(await recordCardPayment(p, missing, save)).toMatchObject({ via: "fallback" });
+    expect(ledger.size).toBe(1);
+    expect(accountBalance(bank, [...ledger.values()] as never)).toBe(42000);
+  });
+
+  it("refuses invalid payments before any write", async () => {
+    const rpc = vi.fn();
+    const base: CardPaymentInput = { requestId: crypto.randomUUID(), fromAccountId: bank.id, cardAccountId: card.id, amount: 8000, date: "2026-10-30" };
+    await expect(recordCardPayment({ ...base, amount: 0 }, rpc)).rejects.toThrow(/positive amount/);
+    await expect(recordCardPayment({ ...base, amount: 10.001 }, rpc)).rejects.toThrow(/two decimal places/);
+    await expect(recordCardPayment({ ...base, cardAccountId: bank.id }, rpc)).rejects.toThrow(/card you paid/);
+    await expect(recordCardPayment({ ...base, requestId: "retry-1" }, rpc)).rejects.toThrow(/identifier/);
+    await expect(recordCardPayment({ ...base, date: "2099-01-01" }, rpc)).rejects.toThrow(/future/);
+    expect(rpc).not.toHaveBeenCalled();
   });
 });

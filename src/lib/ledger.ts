@@ -55,6 +55,10 @@ export interface Txn {
   principal?: number | null;
   interest?: number | null;
   originalAmount?: number;
+  /** Decision 1 (P7 r2): this row is the audited reversal of that original entry (see ledgerView). */
+  reversesEntryId?: string | null;
+  /** Set by ledgerView on an original that has a reversal row. */
+  reversedBy?: string | null;
 }
 
 export interface Valuation { id?: string; accountId: string; value: number; valuedOn: string; source: string; note?: string }
@@ -71,9 +75,82 @@ export const MOVE_TARGET: Partial<Record<TxnType, AccountKind[]>> = { card_payme
 export function repaymentParts(t: Txn) {
   if (type(t) !== "loan_repayment" || t.principal == null || t.interest == null) return { principal: t.amount, interest: 0 };
   const total = t.originalAmount ?? addMoney(t.principal, t.interest);
-  const interest = total > 0 ? proportionMoney(t.amount, t.interest, total) : 0;
+  // A reversal row (ledgerView) carries every figure negated: the same proportion, with its sign.
+  const interest = total !== 0 ? proportionMoney(t.amount, t.interest, total) : 0;
   return { principal: subtractMoney(t.amount, interest), interest };
 }
+
+/**
+ * KK decision 1 (10 Nov 2026): a reversed posted entry is never removed. The original stays and a
+ * separate reversal row (reversesEntryId = original) cancels it ON THE REVERSAL'S OWN DATE (the
+ * correction date, decision 2). Every reader of the ledger (balances, cash flow, net worth, budgets,
+ * categories, reports, assistant, MCP tools, push) passes its rows through this view: each reversal row
+ * becomes the exact negative of its original (amount, original amount, category, member and workspace
+ * splits, loan principal/interest) and the original is marked reversedBy. Sums over any range holding
+ * both net to zero, and period figures keep the original in its own (possibly closed) period, matching
+ * the posted journal. Pure and idempotent (an already negated row is left as it is).
+ */
+export interface Reversible {
+  id: string; amount: number; reversesEntryId?: string | null; reversedBy?: string | null; originalAmount?: number;
+  principal?: number | null; interest?: number | null;
+  allocations?: { amount: number }[]; splits?: { amount: number }[]; workspaceAllocations?: { amount: number }[];
+}
+const neg = <L extends { amount: number }>(lines: L[] | undefined) => lines?.map((l) => ({ ...l, amount: -l.amount }));
+export function ledgerView<T extends Reversible>(list: readonly T[]): T[] {
+  const reversedBy = new Map<string, string>();
+  for (const t of list) if (t.reversesEntryId) reversedBy.set(t.reversesEntryId, t.id);
+  return list.map((t) => {
+    if (t.reversesEntryId) {
+      if (t.amount < 0) return t;
+      return {
+        ...t, amount: -t.amount,
+        ...(t.originalAmount != null ? { originalAmount: -t.originalAmount } : {}),
+        ...(t.principal != null ? { principal: -t.principal } : {}),
+        ...(t.interest != null ? { interest: -t.interest } : {}),
+        ...(t.allocations ? { allocations: neg(t.allocations) } : {}),
+        ...(t.splits ? { splits: neg(t.splits) } : {}),
+        ...(t.workspaceAllocations ? { workspaceAllocations: neg(t.workspaceAllocations) } : {}),
+      } as T;
+    }
+    const r = reversedBy.get(t.id);
+    return r && t.reversedBy !== r ? { ...t, reversedBy: r } : t;
+  });
+}
+/**
+ * The reversal link of a raw database row. Authoritative: the expenses.reverses_entry_id column (proposed
+ * P7 r2) whenever the row carries it. A narrow select without that column (the store's first paint, the
+ * MCP tools) reads the immutable copy the database writes on every reversal row,
+ * receipt_details.reversal.of (selected whole, or as `reversal:receipt_details->reversal`).
+ */
+export function reversalOfRow(row: object): string | null {
+  const r = row as { reverses_entry_id?: unknown; reversal?: unknown; receipt_details?: unknown };
+  const str = (v: unknown) => (typeof v === "string" && v ? v : null);
+  if ("reverses_entry_id" in r) return str(r.reverses_entry_id);
+  const of = (v: unknown) => (v && typeof v === "object" && !Array.isArray(v) ? str((v as { of?: unknown }).of) : null);
+  if (r.reversal !== undefined) return of(r.reversal);
+  const d = r.receipt_details;
+  return d && typeof d === "object" && !Array.isArray(d) ? of((d as { reversal?: unknown }).reversal) : null;
+}
+/** The columns every balance reader needs (narrow selects); the reversal link travels as its readable copy. */
+export const LEDGER_COLUMNS = "id, expense_date, txn_type, amount, original_amount, account_id, to_account_id, adjustment_sign, transfer_counterpart_of, principal, interest, reversal:receipt_details->reversal";
+export interface LedgerRow {
+  id: string; expense_date: string; txn_type: string | null; amount: number | string; original_amount?: number | string | null;
+  account_id?: string | null; to_account_id?: string | null; adjustment_sign?: number | null; transfer_counterpart_of?: string | null;
+  principal?: number | string | null; interest?: number | string | null;
+}
+const num = (v: number | string | null | undefined) => (v == null ? null : Number(v));
+/** One mapping from a database row to a ledger Txn for every reader (store, server, assistant, MCP, push). */
+export function txnFromRow(r: LedgerRow): Txn {
+  const original = num(r.original_amount);
+  return {
+    id: r.id, date: r.expense_date, txnType: (r.txn_type ?? "expense") as TxnType, amount: Number(r.amount), accountId: r.account_id ?? null, toAccountId: r.to_account_id ?? null,
+    adjustmentSign: r.adjustment_sign === -1 ? -1 : 1, transferCounterpartOf: r.transfer_counterpart_of ?? null, principal: num(r.principal), interest: num(r.interest),
+    ...(original == null ? {} : { originalAmount: original }), reversesEntryId: reversalOfRow(r),
+  };
+}
+
+/** True for an entry that is reversal history (a reversed original or its reversal): read-only in the app. */
+export const isReversalHistory = (t: Pick<Reversible, "reversesEntryId" | "reversedBy">) => !!(t.reversesEntryId || t.reversedBy);
 
 /**
  * Balance of one account. For asset accounts it's money held; for liabilities it's amount owed.

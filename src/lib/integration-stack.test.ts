@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
 import { actAs, addUsers, fullSchemaDb, readSql } from "@/test/full-schema-pglite";
 
 const D = ".lovable/staged-sql/proposed/";
-const STACK = ["P1_security_containment", "P2_v31_role_model", "P4_step_up_and_assistant_limits", "P5_legal_entities_foundation", "P5b_restore_investments", "P6_registers", "P7_balanced_posting"];
+const STACK = ["P1_security_containment", "P2_v31_role_model", "P4_step_up_and_assistant_limits", "P5_legal_entities_foundation", "P5b_restore_investments", "P6_registers", "P7_balanced_posting", "P8_asset_depreciation_posting"];
 const O = "0000000a-0000-4000-8000-0000000000a1";
 type Db = Awaited<ReturnType<typeof fullSchemaDb>>;
 const one = async <T,>(db: Db, sql: string, p: unknown[] = []) => (await db.query<T>(sql, p)).rows[0]!;

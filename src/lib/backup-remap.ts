@@ -155,6 +155,10 @@ export const COLUMN_JSON_REFS: Partial<Record<string, readonly RefRule[]>> = {
     { path: "allocations[].memberId", table: "family_members", why: "Category split line for a family member" },
     { path: "reimbursement.receipts[].txnId", table: "expenses", why: "Claim money-back entry" },
     { path: "reimbursement.receipts[].id", table: "expenses", when: (p) => p["id"] === p["txnId"], why: "finance_operation stores the money-back entry id as the receipt id; it follows txnId so the two stay equal" },
+    { path: "reimbursement.reversedReceipts[].txnId", table: "expenses", why: "Claim money-back entry that was later reversed (P7 r2, history)" },
+    { path: "reimbursement.reversedReceipts[].id", table: "expenses", when: (p) => p["id"] === p["txnId"], why: "Receipt id that equals its money-back entry id" },
+    { path: "reimbursement.reversedReceipts[].reversal.entryId", table: "expenses", why: "Reversal entry of a reversed money-back entry" },
+    { path: "receipt_details.reversal.of", table: "expenses", why: "Readable copy of the reversal link (P7 r2)" },
     { path: "receipt_details.accounting.journal.documentIds[]", table: "documents", why: "Accounting evidence originals" },
     { path: "receipt_details.accounting.journal.legs[].accountId", table: "accounts", why: "Accounting leg account" },
     { path: "receipt_details.accounting.journal.legs[].source.docId", table: "documents", why: "Schedule source document" },
@@ -189,7 +193,8 @@ export const VERBATIM_TABLES = ["period_close_evidence", "imported_period_histor
 
 /** Plain uuid columns that point at remapped rows. `id` itself is always remapped for REMAP_TABLES. */
 export const COLUMN_REFS: Partial<Record<string, Readonly<Record<string, RemapTable>>>> = {
-  expenses: { account_id: "accounts", to_account_id: "accounts", member_id: "family_members", transfer_counterpart_of: "expenses" },
+  // reverses_entry_id: the P7 r2 reversal link (proposed); present only where the column exists.
+  expenses: { account_id: "accounts", to_account_id: "accounts", member_id: "family_members", transfer_counterpart_of: "expenses", reverses_entry_id: "expenses" },
   documents: { transaction_id: "expenses", account_id: "accounts", loan_id: "loans", replaces_id: "documents" },
   loans: { account_id: "accounts", source_transaction_id: "expenses" },
   commitments: { account_id: "accounts" },
@@ -236,6 +241,7 @@ export const NOT_REMAPPED_FIELDS: Readonly<Record<string, string>> = {
   amendsId: "Owner-local GST invoice id — preserved",
   reversesId: "Owner-local accounting journal id — preserved",
   requestId: "Server operation request id — preserved",
+  request: "Reversal request id (receipt_details.reversal.request; its posting audit is never backed up, DN-P3-9) — preserved",
   changeId: "Global regulatory_changes id (not owner data)",
   periodId: "Closed period id (verbatim closure history)",
   templateId: "Owner-local recurring template id",

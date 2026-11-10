@@ -1,6 +1,6 @@
 import { defineTool, ToolError } from "@lovable.dev/mcp-js";
 import { z } from "zod";
-import { cashflow } from "@/lib/ledger";
+import { cashflow, ledgerView, txnFromRow, LEDGER_COLUMNS } from "@/lib/ledger";
 import { categoryParts } from "@/lib/expenses";
 import { supabaseForUser } from "../supabase";
 
@@ -15,13 +15,15 @@ export default defineTool({
     const [y, m] = month.split("-").map(Number) as [number, number];
     const end = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
     const { data, error } = await supabaseForUser(ctx).from("expenses")
-      .select("id, expense_date, txn_type, amount, category, allocations, account_id, to_account_id, adjustment_sign")
+      .select(`${LEDGER_COLUMNS}, category, allocations`)
       .eq("employee_id", ctx.getUserId() ?? "").gte("expense_date", `${month}-01`).lte("expense_date", end).limit(5000);
     if (error) throw new ToolError(error.message);
-    const txns = (data ?? []).map((r) => ({ id: r.id, date: r.expense_date, txnType: r.txn_type as "expense", amount: Number(r.amount), category: r.category, allocations: Array.isArray(r.allocations) ? (r.allocations as { category: string; amount: number }[]) : [], accountId: r.account_id, toAccountId: r.to_account_id, adjustmentSign: (r.adjustment_sign === -1 ? -1 : 1) as 1 | -1 }));
+    // The app's rules: counterparts skipped, loan interest only, and a reversal (dated in this month) cancels
+    // its original (decision 1), so a correction shows in the month it was made, never rewriting history.
+    const txns = ledgerView((data ?? []).map((r) => ({ ...txnFromRow(r), category: r.category, allocations: Array.isArray(r.allocations) ? (r.allocations as { category: string; amount: number }[]) : [] })));
     const f = cashflow(txns, `${month}-01`, end);
     const cats: Record<string, number> = {};
-    for (const t of txns.filter((x) => x.txnType === "expense")) for (const p of categoryParts(t)) cats[p.category] = Math.round(((cats[p.category] ?? 0) + p.amount) * 100) / 100;
+    for (const t of txns.filter((x) => x.txnType === "expense" && !x.transferCounterpartOf)) for (const p of categoryParts(t)) cats[p.category] = Math.round(((cats[p.category] ?? 0) + p.amount) * 100) / 100;
     const byCategory = Object.entries(cats).sort((a, b) => b[1] - a[1]).map(([category, amount]) => ({ category, amount }));
     const text = [`${month}: income ₹${f.income}, spent ₹${f.spent}, net ₹${f.net}`, ...byCategory.map((c) => `${c.category}: ₹${c.amount}`)].join("\n");
     return { content: [{ type: "text", text }], structuredContent: { month, income: f.income, spent: f.spent, net: f.net, byCategory } };

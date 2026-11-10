@@ -1,212 +1,195 @@
-# Phase 3: Balanced Accounting plan (P7), 2026-11-10
+# Phase 3: Balanced Accounting plan (P7 r2 + P8), 2026-11-10
 
-**Status.** Proposed and isolated. Nothing has been applied to Lovable Cloud or any hosted database, nothing is committed, and no files under `drizzle/migrations` were touched. All evidence comes from in-memory PGlite, which replays 0000–0088 and then P1, P2, P4, P5 and P7.
+**Status.** Proposed and isolated. Nothing has been applied to Lovable Cloud or any hosted database, nothing is committed, and no files under `drizzle/migrations` were touched. All evidence comes from in-memory PGlite, which replays 0000–0088 and then the proposed stack P1, P2, P4, P5, (P5b), (P6), P7 and (P8).
 
-**Authority.** `.lovable/staged-sql/proposed/P7_balanced_posting.sql` is the authoritative posting-layer proposal. It **supersedes** `P3_accounting_posting_layer.sql` and `docs/plans/ACCOUNTING_MIGRATION_PLAN_2026-11-09.md`, which are kept for history. P3 now carries a SUPERSEDED header. Each file's preflight refuses to install when the other is present.
+**Revision 2 (Phase 3 completion, worktree `phase3/completion` from integration commit `a8a84b3`).** KK's six binding decisions of 10 Nov 2026 changed what revision 1 built. They are implemented by **revising `P7_balanced_posting.sql` in place** (it is not applied anywhere, and one authoritative posting layer is clearer than a patch layer), plus **one new file, `P8_asset_depreciation_posting.sql`**, for the only part that needs the P6 registers.
+
+**Authority.** `.lovable/staged-sql/proposed/P7_balanced_posting.sql` (revision 2) is the authoritative posting-layer proposal. It **supersedes** `P3_accounting_posting_layer.sql` and `docs/plans/ACCOUNTING_MIGRATION_PLAN_2026-11-09.md`, which are kept for history. Each file's preflight refuses to install when the other is present.
 
 | Deliverable | Path |
 |---|---|
-| Inventory (slice A) | `docs/plans/PHASE3_POSTING_INVENTORY_2026-11-10.md` |
-| Proposed SQL and rollback (B, E) | `.lovable/staged-sql/proposed/P7_balanced_posting.sql`, `P7_balanced_posting.rollback.sql` |
-| P5 rollback guard | `P5_legal_entities_foundation.rollback.sql` now refuses while P7 is installed |
-| App wiring (C) | `src/lib/posting.ts`, `src/lib/store.tsx` (`remove`), `src/components/ExpenseDialog.tsx`, `src/components/DuplicateCompare.tsx` |
-| C11 (D) | `src/lib/statement-pipeline/review-gate.ts`, `apply.ts`, `src/routes/_authenticated/statements.tsx`, `src/lib/receipt-reading.ts` (schema), `src/lib/fx.functions.ts` (server check) |
-| Tests | `src/lib/phase3-posting-sql.test.ts` (30), `src/lib/phase3-independent.test.ts` (6), `src/lib/phase3-c11.test.ts` (9); fixture in `src/test/phase3-fixture.ts` |
-| Screens | `docs/evidence/screens/2026-11-10-phase3/` (README inside) |
+| Inventory | `docs/plans/PHASE3_POSTING_INVENTORY_2026-11-10.md` (reader inventory for decision 1 in §3) |
+| Posting layer, revised | `.lovable/staged-sql/proposed/P7_balanced_posting.sql`, `P7_balanced_posting.rollback.sql` |
+| Depreciation posting (new) | `.lovable/staged-sql/proposed/P8_asset_depreciation_posting.sql`, `P8_asset_depreciation_posting.rollback.sql` |
+| Rollback chain guards | `P5_legal_entities_foundation.rollback.sql` and `P6_registers.rollback.sql` refuse while P8 is installed; P7 rollback refuses while P8 is installed; P5 rollback refuses while P6 or P7 is installed (unchanged) |
+| Client API for the screens | `src/lib/posting.ts` (§12) |
+| Reader rule (decision 1) | `src/lib/ledger.ts` `ledgerView`, `txnFromRow`, `reversalOfRow`, `LEDGER_COLUMNS` |
+| App wiring | `src/lib/store.tsx` (`remove`, `payCard`, ledger view on load), `src/components/ExpenseDialog.tsx`, `src/components/WealthPanels.tsx` (card payment form), `src/routes/_authenticated/statements.tsx` + `src/lib/statement-pipeline/atomic-undo*.ts` (Undo), `src/lib/reimbursements.ts` (claim kinds), server/MCP readers |
+| Tests | `src/lib/phase3-completion-sql.test.ts` (17), `phase3-depreciation-sql.test.ts` (7), `phase3-readers.test.ts` (13), `phase3-independent.test.ts` (9, rewritten), `phase3-posting-sql.test.ts` (30, updated), `phase3-c11.test.ts` (9), `phase3-coordinator-independent.test.ts` (1), `src/components/card-payment.repro.test.tsx` (4, now the P0-005b regression) |
 
-## 1. Objects (P7)
+## 0. KK's decisions of 10 Nov 2026 (binding) and how revision 2 implements them
+
+| # | Decision | Implementation | Evidence |
+|---|---|---|---|
+| 1 | Reversals keep the original in the journal and the working ledger; a separate balanced reversing entry is recorded and linked; history kept | `expenses.reverses_entry_id` (new nullable column, one reversal per original) + an immutable copy `receipt_details.reversal`. `phase3_p7.reverse_entry` inserts a mirrored reversal row through the one posting path; the trigger posts mirrored `reversal` batches dated on the reversal row's date. The original row is byte-identical afterwards; both rows are refused for edit (`P7_REVERSED_ENTRY`, `P7_REVERSAL_HISTORY`) and delete. `posting_reversals` keeps the full original row, reason, actor, session, correction date and link states. **Readers**: every reader counts original + reversal (net zero, each on its own date) through `ledger.ts ledgerView` (§3 of the inventory); the SQL reader `legacy_movements` counts reversal rows negatively | completion test "decision 1" (byte-identical original, month-by-month journal, replay, refusals); `phase3-readers.test.ts`; independent test (per month) |
+| 2 | Corrections on the authorised correction date in an OPEN period; no automatic reopening; a separate controlled prior-period workflow | `reverse_ledger_entry(_request, _entry, _reason, _on date DEFAULT today)`: refused before the entry date, in the future, or inside a closed period (`P7_CLOSED_PERIOD … submit a prior-period adjustment`). Closed periods are never reopened. **Prior-period adjustment**: `submit_posting_request(kind 'prior_period_adjustment', {periodId, entityId, lines…} or {periodId, entryId})` → `decide_posting_request('approve')` with step-up; the target must exist and be CLOSED for the entity; the batch (`kind 'prior_period'`, or a reversal for the entry variant) is posted on the correction date after the period and tagged `meta.priorPeriod`. **Reporting**: `prior_period_adjustment_report()` shows per closed period and entity the figures **as closed** (unchanged; hash compared with the close evidence), the adjustments that relate to it and the restated view, side by side. Edits (DN-P3-1 reverse-and-replace) of an entry in an open period keep the superseded version's date so period reports match | completion tests "decision 2" (closed April untouched, reversal in July; PPA pending → step-up → posted 31 Jul; June as closed unchanged, restated shown); independent test (June 7,500 as closed + July 1,500, restated 9,000) |
+| 3 | Same database-enforced protections for personal scopes | A period with `entityId = 'personal:<owner>'` (the personal legal entity's key) is enforced by **both** guards: `phase3_p7.closed()` (posting guard) and `public.p5_entry_closed` (legacy entry guard, replaced in P7 with one added branch; the P7 rollback restores the P5 body exactly). An entry touches the personal books when its paying or receiving account is personal, or it has no account and no hand-picked company | completion test "decision 3" (personal entries, a cashless entry and a company→personal withdrawal refused; Alpha-only entry allowed; personal journal refused, company journal allowed); posting test 6a (both guards agree entry by entity under 4 configurations incl. personal-only) |
+| 4 | Distinguish merchant refunds, employee reimbursements, advances, insurance recoveries and inter-party settlements; preserve gross expenses; no duplicate recognition | See §1.1. Refund = the only money back that reduces the purchase. Claims (`reimbursement.kind` employer / insurance / party / legacy unset) post their own **claim event** (`claim:<expense>`): Dr `receivable:claim:<expense>` / Cr `recovery:<kind>:<category>`; money back (linked through the claim's `receipts[].txnId`) settles the receivable. Advances: Dr account / Cr `advance:received`; return reverses it; a claim of kind `advance` settles against the advance. Unlinked money back = exception `reimbursement_unlinked`; one receipt on two claims = `reimbursement_ambiguous` (never two settlements). A reversed money-back entry moves from the claim's `receipts` to `reversedReceipts` (with its reversal reference) so the claim is outstanding again | completion tests "decision 4" (3); posting test 4 (insurance claim retry); independent test |
+| 5 | Owner-only posting for now; architecture for authorised accountants/bookkeepers; never expand legacy permissions | `phase3_p7.may(owner, entity, action)` + `require_may` is called by every posting, reversal, journal, backfill and approval path. Today: owner only (guests and assistant sessions never). The reserved delegation branch needs an owner-created `posting_delegations` row (no writer exists: default off) AND an accepted P2 grant whose matrix allows `post`/`approve`; `legacy_company_editor/viewer` never qualify | completion test "decision 5" (owner yes; accountant grant alone no; with a simulated delegation the accountant yes for C1 only, the legacy editor still no) |
+| 6 | Readable ID prefixes LSE, HLD, RCV, PRJ approved | Already issued by P6 (`assign_readable_id`) in the owning legal entity's scope, never regenerated; nothing in Phase 3 changes them | `phase2-registers-sql.test.ts` (passes on this branch) |
+
+## 1. Objects (P7 r2)
 
 **Schema.** `phase3_p7` is private: no client usage and no EXECUTE rights.
 
-**Tables.** All six are RLS-enabled. API roles get SELECT only. Each table has the P4 RESTRICTIVE assistant policies and the P7 RESTRICTIVE no-update/no-delete policies.
-- `posting_events`: source event identity, unique on `(owner_id, event_key)`; the key is `ledger_entry:<id>` or `journal:<request>`.
-- `posting_event_sources`: evidence aliases (`ledger_entry`, `statement_row`, `receipt`, `counterpart_entry`, `document`, `journal_request`). A partial unique index allows only **one active binding per piece of evidence**.
-- `posting_batches`: one legal entity per batch, as a composite foreign key to P5 `legal_entities` (including the personal entity). Each batch has a kind (`entry`, `opening`, `journal` or `reversal`), a version, the posting date and `reverses_id`, which is unique so a batch can be reversed only once. It also stores the source currency, amount, rate, FX date and FX source, and the actor.
-- `posting_lines`: exact debit and credit (2 dp, one side positive, below 1e13), explicit currency, role, owned account, counterpart entity.
-- `posting_reversals`: the audit record. It holds the reason, actor, session, the full archived source row, and the P0-005a linked records (`_linked`).
-- `posting_backfill_runs`: append-only commit and undo history. The latest row decides whether an owner is active.
+**Column added to an existing table.** `public.expenses.reverses_entry_id uuid REFERENCES expenses(id)`, `CHECK (≠ id)`, unique partial index (one reversal per original). Nullable; NULL on every pre-existing row (tested). Rollback drops it when no reversal row exists; otherwise it refuses unless `phase3_p7.rollback_keep_reversals = 'on'` (dropping the link would make each reversal row count as a new entry).
 
-**Invariants.**
-- Only the writer may insert, through the session flag `phase3_p7.writer` set by the one posting function `phase3_p7.write_batch`.
-- Assistant and guest sessions are refused at insert.
-- UPDATE, DELETE and TRUNCATE are refused for every role. The only exception is owner erasure.
-- A deferred constraint trigger checks each batch at commit:
-  - it has at least 2 lines;
-  - debits equal credits for each currency, and since a batch has one entity this means for each legal entity and currency;
-  - a reversal exactly mirrors its original;
-  - there is at most one active batch per event and entity.
-- The closed-period check is entity-aware.
-- A reversal must have the same owner, entity, event and date as its original.
+**Tables.** All RLS-enabled, SELECT-only for API roles, P4 RESTRICTIVE assistant policies and P7 no-update/no-delete policies, writer-only insert, immutable (update/delete/truncate refused for every role; only confirmed erasure deletes).
+- r1: `posting_events` (event keys `ledger_entry:`, `journal:` and now `claim:`), `posting_event_sources`, `posting_batches` (kinds `entry`, `opening`, `journal`, `reversal`, **`prior_period`**), `posting_lines`, `posting_reversals` (+ `reversal_entry_id`, `correction_date`; target + `prior_period`), `posting_backfill_runs`.
+- r2 new: `posting_link_states` (states of linked records, item 2), `posting_requests` + `posting_request_decisions` (approval queue, item 5), `statement_upload_reversals` (Undo receipts, item 1), `posting_delegations` (reserved, decision 5).
 
-**Hooks on existing tables. These add behaviour only for owners who have activated.**
-- On `expenses`:
-  - `p7_guard_posted_delete` (BEFORE DELETE): refuses deleting a posted entry (`P7_POSTED_ENTRY`) and refuses any delete by another user (`P7_TEAM_DELETE`).
-  - `zz_p7_sync_postings` (AFTER): derives the entry and posts it, or posts a reversal plus a replacement, through `write_batch`.
-- On `opening_postings`: `zz_p7_sync_opening`.
-- On `period_close_evidence`: `p7_period_evidence` (C5 / DN-P3-13).
+**Invariants (r1, kept).** Writer-only insert; deferred balance check per batch and currency (= per legal entity and currency); ≥ 2 lines; exact paise; reversal mirrors its original exactly and only once; one active batch per event and entity; entity-aware closed periods; guests and assistants cannot post. **r2 changes:** a reversal is dated on or after its original (the correction date); the closed-period check covers personal-only periods.
 
-**Entry points.**
+**Hooks on existing tables.**
+- `expenses`: `p7_guard_posted_delete` (posted deletes refused; reversed originals and reversal rows are history for every owner), **`zz_p7_guard_reversals`** (reversal rows only through the function for active books, exact mirror, immutable; reversed originals keep their financial content; the receiving side of a reversed transfer cannot be unlinked; `receipt_details.reversal` exists exactly on reversal rows), `zz_p7_sync_postings` (also re-syncs a claim's money-back entries when its receipts change).
+- `expenses` trigger `clear_empty_category_history` (0016) **disabled** (P0-021; rollback re-enables).
+- `opening_postings`: `zz_p7_sync_opening`. `period_close_evidence`: `p7_period_evidence`.
+- Replaced function: `public.p5_entry_closed` (decision 3; restored by the rollback).
 
-| Function | Guard |
-|---|---|
-| `posting_status()` (STABLE) | Capability probe |
-| `preview_posting_backfill()` (STABLE) | — |
-| `posting_reconciliation_report()` (STABLE) | — |
-| `commit_posting_backfill(run, fingerprint)` | P4 step-up |
-| `undo_posting_backfill(run, reason)` | P4 step-up |
-| `reverse_ledger_entry(request, entry, reason)` | P4 step-up |
-| `reverse_journal_batch(request, batch, reason)` | P4 step-up |
-| `post_journal_batch(request, entity, date, lines, memo, sources)` | P4 assistant refusal |
+### 1.1 Derivation rules (`phase3_p7.derive_entry`, `derive_claim`)
 
-All of them refuse guests (anonymous JWTs, anonymous `auth.users` rows or `demo_sessions`). The P5-style fail-closed check confirms that no client-callable volatile function is left unguarded.
-
-**Read access (DN-P3-7 B).**
-- The owner reads everything.
-- An **accepted, unexpired, unrevoked P2 `accountant` grant** reads that entity's batches and lines. A workspace-wide grant covers companies; personal books need an explicit `personal:<owner>` grant.
-- Company members, legacy company grants, bookkeepers, viewers, other owners, strangers and anonymous sessions read nothing.
-- Assistants can read unless they have been revoked.
-
-### Derivation rules (`phase3_p7.derive_entry`)
-
-The currency is functional INR. The source currency is kept on the batch.
+Functional currency INR; source currency, amount, rate, FX date and source on the batch.
 
 | Entry | Lines |
 |---|---|
-| expense / income / refund | The account leg (money out = credit, money in = debit) goes in the account's entity. Category legs come from the exact allocations and go in the effective entity. If the effective entity differs from the account's entity: `due:<entity>` in both books, never profit |
-| reimbursement | Debit the account, credit `expense:<category>` (a contra-expense; **never income**) |
-| transfer / card_payment / investment | Credit the source account, debit the destination account. No income or expense. Crossing entities creates `due:` lines |
-| loan_repayment | Credit the source; debit the loan for the principal; debit `expense:Loan interest` (the ledger.ts `repaymentParts` rule) |
-| adjustment that belongs to an active `opening_postings` row **with a source document** | `opening` batch: account against `equity:opening:<fy>` |
-| exception, not posted (DN-P3-2) | Unclassified adjustment, opening without evidence, no owned account, advances, missing destination, inexact amount, invalid allocation, unresolved entity, duplicate evidence, C11 review required |
-| skipped | Statement counterparts (`transfer_counterpart_of`); their evidence binds to the debit's event |
+| expense / income | Account leg in the account's entity; category legs from the exact allocations in the effective entity; `due:` lines across entities, never profit |
+| **refund (merchant refund)** | Dr account / Cr `expense:<category>`: the only money back that reduces the purchase |
+| **expense with a tracked claim** (claim event `claim:<expense>`) | Dr `receivable:claim:<expense>` / Cr `recovery:<kind>:<category>` for the reimbursable part (rejected or written-off: only what was received). kind = employer / insurance / party / claim (unset, legacy). Dated on the expense date if open, else on the correction date. The gross expense batch is never touched |
+| **expense with an advance claim** | Dr `advance:received` / Cr `recovery:advance:<category>` |
+| **reimbursement (money back) linked to its claim** | Dr account / Cr `receivable:claim:<claim>` (+ `due:` lines across entities). Never income, never an expense code |
+| **advance / advance_settlement** | Dr account / Cr `advance:received` (liability) and its exact reverse |
+| transfer / card_payment / investment / loan_repayment | Cr source, Dr destination; loan interest per `repaymentParts`; `due:` lines across entities |
+| adjustment of a source-backed opening | `opening` batch: account vs `equity:opening:<fy>` |
+| adjustment classified by the hook | P8: approved book depreciation (§11). P7 alone classifies none |
+| **reversal row** | Posted as the mirrored reversal of the original's active batches on the reversal row's date |
+| exception, not posted (DN-P3-2) | unclassified adjustment, opening without evidence, no owned account, missing destination, inexact amount, invalid allocation, unresolved entity, duplicate evidence, C11 review required, **reimbursement_unlinked, reimbursement_ambiguous, advance_claim_receipt, unknown_recovery_kind**; P8: depreciation_not_approved, duplicate_depreciation, depreciation_amount_mismatch, depreciation_date_mismatch, depreciation_account_mismatch, asset_entity_mismatch, asset_missing, asset_disposal_workflow |
+| skipped | statement counterparts (their evidence binds to the debit's event) |
 
-## 2. Decision mapping (`docs/registers/master/p3_decisions.csv`)
+### 1.2 Entry points
 
-| Decision | Implementation | Evidence |
+| Function | Guard | Purpose |
 |---|---|---|
-| DN-P3-1 A: reverse and replace posted edits | An edit after activation leaves version 1 unchanged and adds a reversal and version 2, with reason and actor in `meta`. Activation only follows a reviewed conversion | Test 2c |
-| DN-P3-2 A: exception only | No suspense or `unclassified` lines. Exceptions are listed in the preview and the report | Independent test: no suspense lines, 5 listed exceptions |
-| DN-P3-3 A: source-backed opening | Openings post only with `opening_postings.source_doc_id`. A static `accounts.opening_balance` and an opening without a document are exceptions. There is never a default opening equity | Tests 6c, 9 |
-| DN-P3-4 A: skip closed periods | The preview and commit skip closed-period work and list it under `skippedClosed`. Reversal inside a closed period is refused (reopen on Audit first) | Tests 3b, 6b |
-| **DN-P3-5 B: personal accounting included** | The same journal is used, scoped to P5's `individual_personal` legal entity. No fictitious company is created | Test 5a; independent trial balance has a personal book |
-| DN-P3-6 A: functional currency plus original | The batch records the source currency, amount, rate, FX date and FX source (`functional_currency` or `server_fx_rate`). Lines carry an explicit currency and balance per currency, so the schema extends to true multi-currency | Independent test (USD/EUR); test 1b (each currency balances) |
-| **DN-P3-7 B: owner and authorised accountants** | `p7_can_read`; member, viewer and stranger negatives; revocation takes effect on the next statement | Test 5b |
-| **DN-P3-8 B: entity-aware legacy checks** | `phase3_p7.closed` uses P5 `ll_closed_on` with the same scope semantics as the P5 `guard_closed_period` | Test 6a: legacy and posting guards agree entry by entity under 4 period configurations |
-| DN-P3-9 A: cross-account restore exceptions | Journals are never in backups. Restored rows post as new events keyed by entry id. No journal owner is ever remapped | Inventory A20; P7 tables are not in `BACKUP_TABLES` |
-| DN-P3-10 A: undo by reversal | `reverse_ledger_entry` and `undo_posting_backfill` post reversals. The original batch, the archived row, the receipts and the linked records are kept | Tests 3a, 8a |
-| DN-P3-11 A: reconciliation metadata only | Changes to tags, title, scope or statement match post nothing. Financial changes post a reversal plus a replacement | Test 2c |
-| DN-P3-12 A: preview and confirm re-sync | Commit requires the exact preview fingerprint; a stale preview is refused. Re-commit while active re-syncs | Test 4e |
-| **DN-P3-13: mandatory close follow-up** | For active owners, a close is refused while entries are unposted, exceptions or awaiting review. Close and reopen evidence includes a posting snapshot (batch ids, debit and credit, sha256) | Test 6d |
-| **DN-P3-14 B: guests cannot post** | Preview, commit, journal and reversal are refused for anonymous and demo sessions. Direct inserts are refused (permission denied). `posting_status.canPost` is false | Test 5e |
+| `posting_status()` | — | capability probe (`version 'P7.2'`, `features[]`) |
+| `preview_posting_backfill()`, `posting_reconciliation_report()`, `prior_period_adjustment_report()`, `posting_requests_overview(limit)` | read-only | previews and reports |
+| `commit_posting_backfill(run, fingerprint)` | step-up | historical conversion (direct) |
+| `undo_posting_backfill(run, reason)` | step-up | deactivate; reversals on the correction date |
+| `reverse_ledger_entry(request, entry, reason, on)` | step-up | decision 1/2 reversal (direct) |
+| `post_journal_batch(request, entity, date, lines, memo, sources)` | assistant refusal | manual journal (direct) |
+| `reverse_journal_batch(request, batch, reason, on)` | step-up | journal reversal on the correction date |
+| **`reverse_statement_upload(request, upload, items, reason)`** | step-up | item 1 |
+| **`record_card_payment(request, from, card, amount, on, note)`** | assistant refusal | item 3 (P0-005b) |
+| **`submit_posting_request(request, kind, payload, reason)`** | assistant refusal | item 5: prepare (journal, journal_reversal, reversal, backfill, prior_period_adjustment) |
+| **`decide_posting_request(request, decision, note)`** | step-up | item 5: approve (executes) / reject / cancel |
+
+All refuse guests. The fail-closed check (no unguarded client-callable volatile function) still passes.
+
+## 2. The 14 approved P3 decisions: mapping and verification (item 6)
+
+| Decision | Implementation (r2) | Evidence |
+|---|---|---|
+| DN-P3-1 A: reverse and replace posted edits | Edits after activation keep v1 and add an in-period reversal + v2 (meta reason/actor). Removal of a posted entry = linked reversal row (decision 1); originals immutable | posting test 2c; completion "decision 1" |
+| DN-P3-2 A: exception only for unknown counterpart | No suspense lines; unlinked money back is `reimbursement_unlinked`, not a guessed expense reduction; asset entity mismatch is an exception, never an inter-entity guess | independent test (no suspense; 3 explained differences); completion "decision 4"; depreciation test |
+| DN-P3-3 A: dated source-backed opening | Unchanged: openings post only with `source_doc_id` | posting tests 6c, 9 |
+| DN-P3-4 A: skip closed periods | Backfill skips and lists closed-period work; corrections never post inside a closed period; claims recognised after close post on the correction date; prior-period treatment is the separate approved workflow (decision 2) | posting test 3b; completion "decision 2" |
+| DN-P3-5 B: personal accounting included | Personal entity in the same journal; personal-only closes enforced (decision 3) | posting 5a; completion "decision 3" |
+| DN-P3-6 A: functional currency + original | Reversal rows copy amount, original amount, currency, rate and FX date (mirror check); batches keep source facts | independent test (FX); completion "decision 1" (mirror refusal) |
+| DN-P3-7 B: owner + explicitly authorised accountants | Reads unchanged (accountant grant per entity). Posting owner-only behind `may()`; delegation reserved and off; legacy roles never | posting 5b; completion "decision 5" |
+| DN-P3-8 B: company-aware legacy period checks | Both guards entity-aware incl. personal; agree entry by entity | posting 6a; completion "decision 3" |
+| DN-P3-9 A: cross-account restore exceptions | Journals never in backups; reversal rows restore only into books that are not active (mirror validated); backup remaps `reverses_entry_id`, `receipt_details.reversal.of`, `reimbursement.reversedReceipts[]` | backup tests (43/43) |
+| DN-P3-10 A: undo by reversal | No physical delete of posted entries anywhere: entry removal, duplicate removal, Statement Desk Undo, backfill undo, journal reversal; evidence and receipts kept | completion items 1–2; posting 3a, 8a |
+| DN-P3-11 A: reconciliation metadata only | Unmatching (Undo) and tags/title on reversed originals are metadata; financial edits of reversed history refused | posting 2c; completion "decision 1", item 1 |
+| DN-P3-12 A: preview and confirm re-sync | Backfill (direct or through the approval queue) needs the exact preview fingerprint | posting 4e; completion item 5 (backfill approval) |
+| DN-P3-13: mandatory close follow-up | Close refused while entries are unposted/exceptions; close and reopen evidence carries the posting snapshot; the PPA report compares the closed hash | posting 6d; completion "item 7"; PPA report `unchangedSinceClose` |
+| DN-P3-14 B: guests cannot post | Every r2 entry point refuses guests (`P7_GUEST`); `may()` false for guests | posting 5e; completion (guest submit, guest reversal) |
 
 ## 3. The 10 requirements and C11
 
-| # | Requirement | Status | Evidence |
-|---|---|---|---|
-| 1 | One posting architecture, extending the engine | Done | Every batch goes through `write_batch`. `expenses` remains the only ledger. All app paths reach it through the trigger (inventory; test 9 covers `post_opening_balances`, `move_expense_category`, `finance_operation` and direct saves) |
-| 2 | Balanced at the database | Done | Tests 1a–1c: unbalanced, single-line, 3 dp, negative, two-sided, NaN and wrong role are refused; each currency balances separately; 33.33/33.33/33.34 posts exactly |
-| 3 | Company and personal scopes | Done | Tests 5a–5c, plus the independent trial balance across 3 entities |
-| 4 | Immutable postings, audited reversals | Done | Tests 2a, 2b, 3a–3c: superuser and service role are refused; step-up, reason, `security_events`, replay |
-| 5 | No silent conversion | Done | Preview, then step-up commit with the fingerprint. Before and after hashes of every pre-existing row are identical across install, backfill and rollback |
-| 6 | Opening balances and closed periods | Done | Tests 6a–6d, 9 |
-| 7 | Duplicate-posting prevention | Done | Test 4: upload retries; statement, card and receipt evidence; transfer counterpart; reimbursement retry; commit replay |
-| 8 | Multi-currency traceability | Done | Independent test 4. Conversion stays server-side; the stored INR is never recomputed |
-| 9 | P0-005a integrated | Done for the posting layer | Section 5 |
-| 10 | Independent reconciliation | Done | `phase3-independent.test.ts`: a TypeScript double-entry model and ledger.ts both equal the journal to the paisa; the report lists exactly the 3 explained differences |
-| C11 | Explicit row review; no unchecked batch | Done (UI, server, database) | `phase3-c11.test.ts`, test 7, screenshots |
+Unchanged from revision 1 (all done; evidence in the tests above). Requirement 9 (P0-005a) is now complete for posted entries: see §5. Requirement 10 is extended (§6 and item 9).
 
-**C11 design.**
-- **Statement Desk.**
-  - Every suggested row now has its own "Approve" tick: auto rows and ask rows alike.
-  - "Apply everything" is gone, and so is "Accept all N asking items".
-  - The save button saves exactly the approved rows in one batch ("Save N approved rows").
-- **applyUpload.**
-  - It stamps each row with `receiptDetails.classification = {source: statement, automatic: true}` and `review = {approvedAt, method: row, key}`.
-  - It refuses to start when a decision has no approval.
-- **Server.** `saveExpense` refuses an automatic classification that has no review (`c11ReviewError`).
-- **Database.** The P7 posting path raises `C11_REVIEW_REQUIRED` for such a row.
-- **Graduated thresholds.** These stay at 99.5% for amounts and dates, 97% for categories, and at least 200 verified rows per issuer (`automationEarned`). In this release they **never pre-approve a row** (`rowApprovalRequired` is always true). Autopilot needs a separate KK decision.
+**C11** unchanged: every suggested Statement Desk row needs its own tick; server and database refuse an unreviewed automatic classification (`C11_REVIEW_REQUIRED`).
 
 ## 4. Stages (each needs KK approval before any hosted action)
 
-1. **Install.** Install P7 after P1, P2, P4 and P5 on a production-like restored copy, and record the catalog fingerprint. Nothing changes for any owner until they activate.
-2. **Deploy the app.** Deploy the compatible app. The capability check keeps today's behaviour while `posting_status()` is missing or the owner is inactive.
-3. **Preview, owner by owner.** Call `preview_posting_backfill()`. Compare it with the Reports Centre and review the exceptions.
-4. **Commit.** Call `commit_posting_backfill(run, fingerprint)` with step-up. Then check `posting_reconciliation_report()`: every difference must be explained.
-5. **Close follow-up.** Close periods only once the report is clean (DN-P3-13).
-6. **Undo, if needed.** Call `undo_posting_backfill(run, reason)` with step-up.
+1. Install P7 r2 after P1, P2, P4, P5 (and P6, P5b where used), then P8 after P6 and P7, on a production-like restored copy; record the catalog fingerprint. Nothing changes for any owner until they activate (except: P0-021 history is kept for everyone, and personal-only closes are honoured).
+2. Deploy the compatible app (capability-checked: missing functions or column = today's behaviour; readers accept the reversal link from the column or its `receipt_details` copy).
+3. Preview owner by owner; compare with the Reports Centre; review exceptions (now including unlinked reimbursements and unapproved depreciation).
+4. Commit (direct with step-up, or submit + approve through the queue). Check `posting_reconciliation_report()`.
+5. Close periods only once the report is clean (DN-P3-13); prior-period corrections through the PPA workflow.
 
-## 5. P0-005a integration (`/home/user/thapal-p0/docs/registers/implementation/P0-005a_TRANSACTION_DELETION_INVESTIGATION.md`)
+## 5. P0-005a integration
 
-| P0-005a requirement | P7 |
+| P0-005a requirement | r2 |
 |---|---|
-| R1: no physical delete of posted entries | `p7_guard_posted_delete`; reversal only |
-| R2: never erase evidence | Receipts are kept: the reversal path never calls storage remove. The full row and `expense_history` are archived in `posting_reversals.entry_snapshot._linked` |
-| R3: closed periods | Reversal in a closed entity period is refused (reopen first). The guard is entity-aware |
-| R4: linked records | Linked transfers are refused until unlinked (P0-020). Links are archived: documents, loans, `import_posts`, drafts, and the bulk-category history when this is the last entry (P0-021). **Re-pointing them is not done** (see Remaining) |
-| R5: metadata only | DN-P3-11, as in section 2 |
-| R6: atomic and idempotent | One transaction; request-id replay |
-| R7: actor-attributed audit | `posting_reversals.actor_id` and `session_id`, reason, full before-image, and the step-up `security_events` row |
-| R8: undo flows use reversal | Opening undo of a posted entry is refused (reverse instead). Duplicate removal reverses with a reason. The staged `statement-atomic-undo.sql` hard-deletes, so for active owners its deletes are refused by the guard (fails closed); it must be rewritten to call `reverse_ledger_entry` before approval |
-| R9: team and guest limits | `P7_TEAM_DELETE` stops the 0066 team `delete_expenses` policy from reaching active owners' entries (P0-022). Guests cannot activate |
-| R10: no invented lines for past deletes | Conversion starts from the current state; there are no balancing lines |
-| R11: interim UI | Done where posting is active: an in-app dialog with consequences and a reason. Today's `window.confirm` delete remains for inactive owners, pending KK |
+| R1 no physical delete of posted entries | Refused (`P7_POSTED_ENTRY`); removal = linked reversal row; reversed history never deletable |
+| R2 never erase evidence | Original row kept unchanged; receipts stay on it; full row + links in `posting_reversals` |
+| R3 closed periods | Correction date in an open period; prior-period workflow; entity-aware incl. personal |
+| R4 linked records | `posting_link_states`: import fingerprint, draft, counterpart, document, loan, statement upload, category batch kept as history; transfer link → `reversed` (and its receiving side cannot be unlinked); claim receipt → moved to `reversedReceipts`, claim outstanding again |
+| R5 metadata only | DN-P3-11 as above |
+| R6 atomic and idempotent | One transaction per reversal / Undo / approval; request-id replay |
+| R7 actor-attributed audit | `posting_reversals` actor, session, reason, correction date, snapshot; step-up `security_events` |
+| R8 undo flows use reversal | Statement Desk Undo (`reverse_statement_upload`), duplicate removal, backfill undo, journal reversal; opening undo of a posted opening refused |
+| R9 team and guest limits | `P7_TEAM_DELETE`; guests refused; posting owner-only (decision 5) |
+| R10 no invented lines for past deletes | Unchanged |
+| R11 interim UI | Where posting is active: in-app reason + correction date dialog; reversed history read-only in the detail view |
 
-P0-005b (a card payment through `window.prompt` outside `finance_operation` double-posts on retry) is **not fixed**. A card-payment action in `finance_operation` is listed in Remaining. Once that exists, P7 posts it as a `card_payment` through the trigger. Until then, retries with fresh ids are separate events; only the statement-row evidence deduplicates them.
+## 6. Preservation evidence (item 8)
 
-## 6. Preservation evidence
+- Install / backfill / rollback: count + md5 of every row of every public table (pre-existing columns; the new column asserted NULL) and the full catalog, before and after (posting test "historical preservation"); the P8 rollback restores the exact P6 + P7 catalog (depreciation test).
+- Every r2 operation: `rowState` (md5 of every expenses row + accounts, documents, opening postings, legal entities, import posts, drafts, category batches, loans) before and after; only the listed rows change (reversal: none, only one new row; money-back reversal: only the claim row's `reimbursement`/status; transfer reversal: none; Statement Desk Undo: posted rows byte-identical, unposted row removed by today's rule).
 
-The test "installing P7, previewing, committing the backfill and rolling back never changes a pre-existing row" covers:
-- the count and md5 of every row of every `public` table, except the step-up logs `step_up_grants` and `security_events`, which the confirmations write by design;
-- the per-row md5 of every `expenses` row;
-- the full catalog: functions (md5 of source, ACL, security definer, config), triggers, policies, relations and ACLs, columns, schemas, and the P4 guard registry.
+## 7. Rollback (order P8 → P7 → P6 → (P5b) → P5)
 
-All are compared before installation and after install, after preview and commit, and after rollback. They match. The catalog after rollback equals the pre-P7 catalog. Reinstall and a second rollback also work, and the P5 rollback then succeeds.
-
-## 7. Rollback
-
-1. Export the six P7 tables and get KK's approval.
-2. In one transaction, `SET LOCAL phase3_p7.rollback_archive_postings = 'on'`, then run `P7_balanced_posting.rollback.sql`. It:
-   - unguards the 5 entry points;
-   - drops the 4 hooks;
-   - moves the 6 tables, with their rows, to `security_rollback_archive.p7_*_<UTC microseconds>`, after removing policies, triggers and foreign keys to live tables;
-   - drops the functions and the schema.
-3. After that, the P5 rollback is allowed.
-4. **Data caveat.** Entries removed with `reverse_ledger_entry` are not put back into `expenses`. Their full rows stay in the archived `posting_reversals` for a separately approved repair.
+1. `P8_asset_depreciation_posting.rollback.sql`: restores the P7 hook body; refuses while depreciation postings exist unless `phase3_p8.rollback_with_postings = 'on'`.
+2. `P7_balanced_posting.rollback.sql`: refuses while P8 is installed; while postings exist unless `phase3_p7.rollback_archive_postings = 'on'`; while reversal rows exist unless `phase3_p7.rollback_keep_reversals = 'on'`. Unguards 9 entry points, drops the hooks, re-enables the 0016 trigger, restores `p5_entry_closed`, archives the 11 tables to `security_rollback_archive`, drops the functions, schema and (when no reversal row exists) the column.
+3. P6 and P5 rollbacks refuse while P8 is installed (and P5 while P6/P7 are).
 
 ## 8. Hosted pre-checks needing KK approval
 
-- **PostgreSQL version and extension.** Check the hosted version and confirm `hashtextextended`.
-- **Catalog pins.** Confirm 0088 + P1 + P2 + P4 + P5 are installed with exactly the pinned sources.
-- **Legacy data.**
-  - Counts of opening balances (`accounts.opening_balance <> 0`).
-  - Counts of adjustment, advance and accountless entries; each is an expected exception.
-  - Duplicate `statement_ref` values across entries.
-- **Personal-only periods.** Search `closedPeriods` for any `entityId` beginning `personal:`.
-- **Hard-deleting functions.** Check the hosted `restore_finance_backup`, `undo_statement_rows` and any hot-fixed function for hard deletes.
-- **Performance.**
-  - The AFTER trigger cost on bulk updates (`bulk_category_change`, P5 entity backfill).
-  - Preview time for the largest owner.
-- **Concurrency.** Advisory lock per owner, under parallel edits.
-- **Restored copy.** A production-like restored copy (Phase 4) for the dry-run preview and commit.
+As in revision 1, plus: count reimbursement entries without a claim link (they become `reimbursement_unlinked` exceptions); count JSON depreciation journals marked posted with a `transactionId`; search `closedPeriods` for `personal:` entity ids (now enforced); confirm no hosted function writes `expenses.receipt_details.reversal`.
 
 ## 9. Residual risks
 
-- **Derivation parity.** The SQL rules and the TypeScript reports overlap. Parity is proven on the seeded data set, not on real ledgers. The preview-versus-Reports comparison is a mandatory step.
-- **C11 identity.** C11 relies on the client stamping statement rows; the server and database enforce the stamp. A raw API insert without the stamp looks like a manual entry. The database cannot tell who classified a row.
-- **Personal-only periods.** A personal-only closed period is ignored by both the legacy guard and P7, consistently. Supporting one needs both changed together.
-- **Account re-assignment.** P5 `reassign_account_entity` relinks entries without immediately re-posting the ones it does not touch. Resync goes through preview and commit (DN-P3-12).
-- **Restores.** For active owners, restored rows post immediately as new events. A preview-gated restore re-sync is not implemented.
-- **Asset journals.** Asset depreciation journals in JSON (`books.journals`) are not posted. Asset postings belong to Phase 6.
-- **Foundation UI.** The foundation journal and accountant UI (`post_accounting_journal`) is not mapped to `post_journal_batch` and remains fail-closed.
-- **Hosted fidelity.** PGlite is not hosted Supabase. RLS, `security_invoker` behaviour, concurrency and timing all need the restored copy.
+- **Accrual vs cash P&L.** The journal recognises a claim's recovery when the claim is recorded; the app's cash view (`cashflow`) reduces spending when money arrives. Balances agree exactly; P&L differs by outstanding claim receivables, advance-claim recoveries and non-cash journals (depreciation, accruals). The identity is tested; screens must label which view they show.
+- **Claim category.** A claim's recovery uses the expense's primary category, not its split lines.
+- **Reversal and account moves.** A reversal row takes the legal entity of its own date; if the account moved entity in between, the reversal is refused (mirror check) and the prior-period / journal route must be used.
+- **Restore into active books.** Reversal rows are created only by the function for active owners, so restoring a backup containing a reversal pair into active books is refused for those rows (DN-P3-9 exception).
+- **Narrow readers.** The store's first paint and the MCP tools read the link from `receipt_details.reversal` (the database keeps it exactly on reversal rows); the column is authoritative wherever present.
+- **Depreciation duplicates.** When two approved journals name different entries for one asset-month, the already-posted one (else the lower entry id) keeps it; the other is an exception the owner resolves.
+- **PGlite is not hosted Supabase:** concurrency, performance and PostgREST alias selects (`reversal:receipt_details->reversal`) need the restored copy.
 
-## 10. Remaining
+## 10. Remaining Phase 3 items: status
 
-1. **Statement Desk Undo.** Rewrite it to use per-row `reverse_ledger_entry` (the staged SQL hard-deletes). Until then, Undo after activation fails closed.
-2. **Linked records after reversal.** Re-point or close them: mark `import_posts` and drafts as reversed, cancel `transfer_links`, keep claim receipts consistent. Today they are archived but left as they were.
-3. **Card payments.** Add a card-payment `finance_operation` action (P0-005b).
-4. **Journal UI.** Map the foundation journal and accountant UI to `post_journal_batch` and `reverse_journal_batch`, with UI for accountant grants.
-5. **Owner-facing screens.** Preview, commit and report screens for activation. Today these are database-only.
-6. **Interim UI for inactive owners.** An in-app delete confirmation (P0-005a R11), pending KK.
-7. **Hosted dry run.** On a restored copy, with KK approval.
+| # | Item | Status |
+|---|---|---|
+| 1 | Statement Desk Undo by audited per-entry reversal | **Done (database + app)**: `reverse_statement_upload`; server fn uses it when installed (falls back to the staged probe otherwise); client wraps it in step-up and reports exactly what was reversed, removed and unmatched |
+| 2 | Linked record states after reversals | **Done**: `posting_link_states`, transfer link `reversed`, claim receipts moved to `reversedReceipts`, P0-021 trigger disabled |
+| 3 | Card-payment duplicate (P0-005b) | **Done**: in-app form; `record_card_payment` with the request id as entry id and operation key; fallback `save()` with `createId`; lost-response retry posts once (SQL + UI tests) |
+| 4 | Depreciation in balanced accounting | **Done (P8)**: approved depreciation posts in the asset's entity; prepared (monthly job) never posts; archived assets depreciate; disposal stays separate |
+| 5 | Approval logic for journal, reversal and historical conversion | **Done (database + client functions)**; screens next (§12) |
+| 6 | Verify against the 14 decisions | **Done**: §2 |
+| 7 | Personal and company period closing | **Done**: both guards, both scopes, tested |
+| 8 | Preserve records and evidence | **Done**: §6 |
+| 9 | Independent tests | **Done**: `phase3-independent.test.ts` (per entity, month and code; ledger.ts; SQL legacy reader; P&L identity) |
+
+## 11. P8: asset depreciation posting
+
+Approved book depreciation (the app's Assets → "Approve & add": the non-cash adjustment entry, then `books.journals[]` marked `posted` with the entry id; or a P6 `depreciation_journals` row `posted` with `entry_id`) is classified by the P7 hook `phase3_p7.classify_adjustment` and posts **Dr `expense:Depreciation` / Cr `account:<asset ledger account>`** in the asset's legal entity (P6 register scope, else the JSON company, else personal; the asset account must be in that entity). Triggers on `finance_preferences` (journal approval) and `depreciation_journals` (register backfill) re-sync the entries. The monthly job only prepares journals: nothing posts. Archived assets still depreciate (P0-001). Impairment and disposal stay a separate authorised workflow (`asset_disposal_workflow` exception). One depreciation per asset-month; amount, month-end date, sign and account must equal the journal.
+
+## 12. Client functions for the screens developer (`src/lib/posting.ts`)
+
+All are capability-checked through `readPostingStatus()/usePostingStatus()` (`installed`, `active`, `canPost`, `version`, `features`). Step-up prompts are handled inside (`withStepUp`); pass a custom `prompt` in tests.
+
+| Function | Screen | Notes |
+|---|---|---|
+| `reverseLedgerEntry({ entryId, reason, requestId, correctionDate? })` → `{ entryId, reversalEntryId, correctionDate, replayed }` | entry detail "Reverse entry" (exists) | reason ≥ 5 chars; `P7_CLOSED_PERIOD` → offer a prior-period adjustment; `isNotPostedError` → delete instead (store does this) |
+| `submitPostingRequest({ requestId, reason, kind, payload })` | journal, reversal, conversion and prior-period request forms | kinds `journal`, `journal_reversal`, `reversal`, `backfill`, `prior_period_adjustment`; `validateJournalLines` checks balance per currency client-side |
+| `decidePostingRequest({ requestId, decision: 'approve' | 'reject' | 'cancel', note? })` | approval inbox | approve executes atomically (step-up) |
+| `postingRequestsOverview(limit?)` → `RequestOverview[]` | approval inbox / history | status pending/approved/rejected/cancelled with result |
+| `priorPeriodAdjustmentReport()` → `PriorPeriodRow[]` | period report | `asClosed`, `adjustments`, `restated`, `unchangedSinceClose` |
+| `postingReconciliationReport()`, `previewPostingBackfill()` | activation / reconciliation screens | read-only |
+| `undoPostingBackfill({ runId, reason })` | activation screen | step-up |
+| `postJournalBatch({...})`, `reverseJournalBatch({ requestId, batchId, reason, correctionDate? })` | journal screen (direct owner path) | the approval queue is preferred |
+| `recordCardPayment(input, rpc?, fallback?)` / `store.payCard(input)` | card payment form (built) | create `requestId` once per form; reuse on retry |
+| `ledger.ts`: `ledgerView`, `isReversalHistory`, `txnFromRow`, `LEDGER_COLUMNS` | every list or total | reversal rows are negative and `reversesEntryId` is set; originals have `reversedBy`; both read-only |
+| `reimbursements.ts`: `RECOVERY_KINDS`, `RECOVERY_LABEL`, `ReimbursementInfo.kind`, `reversedReceipts` | claim editor | set `kind` on a claim; a merchant refund is a `refund` entry, not a claim |
+| `statement-pipeline/atomic-undo.ts`: `StatementUndoReport`, `undoSummary` | Statement Desk Undo (wired) | exact counts of reversed / removed / unmatched |

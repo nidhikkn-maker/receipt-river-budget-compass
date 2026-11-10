@@ -6,7 +6,9 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { removalMode, usePostingStatus, validReason } from "@/lib/posting";
+import { correctionToday, removalMode, usePostingStatus, validReason } from "@/lib/posting";
+import { Input } from "@/components/ui/input";
+import { isReversalHistory } from "@/lib/ledger";
 import { Button } from "@/components/ui/button";
 import { ScopeToggle } from "./ScopeBadge";
 import { AllocationEditor, ReimbursementEditor } from "./SplitAndClaim";
@@ -47,6 +49,7 @@ export function ExpenseDetail({ expense, onClose }: { expense: Expense; onClose:
   const reverse = !!posting && removalMode(posting) === "reverse";
   const [reverseOpen, setReverseOpen] = useState(false);
   const [reason, setReason] = useState("");
+  const [correctionDate, setCorrectionDate] = useState(correctionToday);
   const [requestId, setRequestId] = useState(() => crypto.randomUUID());
   const [audit, setAudit] = useState<AuditEntry[]>([]);
   const [busy,setBusy]=useState(false);
@@ -64,11 +67,11 @@ export function ExpenseDetail({ expense, onClose }: { expense: Expense; onClose:
     try { await setScope(e.id, s); toast.success(`Moved to ${s}`); } catch (err) { toast.error((err as Error).message); }
   };
   const confirmReverse = async () => {
-    try { await remove(e, { reason, requestId }); toast.success("Entry reversed. Its postings, audit record and receipts are kept."); setReverseOpen(false); onClose(); }
+    try { await remove(e, { reason, requestId, correctionDate }); toast.success("Entry reversed on the correction date. The original, its reversal, the audit record and receipts are all kept."); setReverseOpen(false); onClose(); }
     catch (err) { toast.error((err as Error).message); }
   };
   const del = async () => {
-    if (reverse) { setReason(""); setRequestId(crypto.randomUUID()); setReverseOpen(true); return; }
+    if (reverse) { setReason(""); setCorrectionDate(correctionToday()); setRequestId(crypto.randomUUID()); setReverseOpen(true); return; }
     if (!confirm("Delete this expense and its receipts?")) return;
     try { await remove(e); toast.success("Expense deleted"); onClose(); } catch (err) { toast.error((err as Error).message); }
   };
@@ -118,20 +121,28 @@ export function ExpenseDetail({ expense, onClose }: { expense: Expense; onClose:
             </div>
           </details>
         )}
+        {isReversalHistory(e) ? (
+          // KK decision 1: a reversed entry and its reversal are kept as linked history; neither is edited or removed.
+          <p role="note" className="rounded-xl border p-2 text-sm text-muted-foreground">{e.reversesEntryId ? `This is the reversal of an earlier entry, recorded on ${e.date}. It cancels that entry; both are kept in your records.` : "This entry was reversed. It stays in your records with its linked reversal; record a new entry for any correction."}</p>
+        ) : (
         <div className="flex justify-between gap-2 pt-2">
           <Button variant="ghost" className="text-destructive" onClick={del}>{reverse ? "Reverse entry" : "Delete"}</Button>
           <Button variant="outline" onClick={() => { onClose(); nav({ to: "/new", search: { edit: e.id } }); }}>Edit</Button>
         </div>
+        )}
         <details className="border-t pt-3"><summary className="cursor-pointer text-sm">Change history</summary>{auditFailed&&<LoadError className="mt-2" what="the change history" onRetry={loadAudit} />}<ul className="mt-2 divide-y text-xs">{audit.map(a=><li key={a.id} className="py-2"><b className="capitalize">{a.action}</b> · {new Date(a.createdAt).toLocaleString()}<div>{a.summary}</div>{Object.entries(a.changes).map(([key,value])=><p key={key} className="break-words text-muted-foreground">{key.replaceAll("_"," ")}: {JSON.stringify(value)}</p>)}</li>)}</ul></details>
         <Dialog open={reverseOpen} onOpenChange={(o) => { if (!o) setReverseOpen(false); }}>
           <DialogContent aria-label="Reverse entry" className="max-h-[85dvh] overflow-y-auto sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Reverse this posted entry?</DialogTitle>
-              <DialogDescription>It is already in your books, so it is not deleted. A reversal is posted on the same date and the entry leaves your records. The original posting, an audit record with your reason and the receipts are kept. You will be asked to confirm it is you.</DialogDescription>
+              <DialogDescription>It is already in your books, so it is not deleted. The entry stays and a separate reversal that cancels it is recorded on the correction date, in an open period. The original, the reversal, an audit record with your reason and the receipts are all kept. You will be asked to confirm it is you.</DialogDescription>
             </DialogHeader>
             <div className="space-y-1">
               <Label htmlFor="reverse-reason">Reason (at least five characters)</Label>
               <Textarea id="reverse-reason" value={reason} maxLength={500} onChange={(ev) => setReason(ev.target.value)} placeholder="For example: duplicate of the bank import" />
+              <Label htmlFor="reverse-date">Correction date</Label>
+              <Input id="reverse-date" type="date" min={e.date} max={correctionToday()} value={correctionDate} onChange={(ev) => setCorrectionDate(ev.target.value)} />
+              <p className="text-xs text-muted-foreground">Closed periods are never reopened. If this date is in a closed period you will be told; a correction of a closed period is a separate prior-period adjustment.</p>
             </div>
             <DialogFooter className="gap-2"><Button variant="outline" onClick={() => setReverseOpen(false)}>Keep entry</Button><Button variant="destructive" disabled={!validReason(reason)} onClick={confirmReverse}>Reverse entry</Button></DialogFooter>
           </DialogContent>

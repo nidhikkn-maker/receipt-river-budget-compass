@@ -22,7 +22,7 @@ import { LoanBalanceReview } from './books/LoanBalanceReview';
 const months = (n: number) => (Number.isFinite(n) ? `${Math.floor(n / 12)}y ${n % 12}m` : "never");
 
 export function CardDetails({ a }: { a: Account }) {
-  const { updateAccount, transactions, loans, preferences, accounts, save } = useStore();
+  const { updateAccount, transactions, loans, preferences, accounts, payCard } = useStore();
   const [issuer, setIssuer] = useState(a.issuer ?? "");
   const [digits, setDigits] = useState(a.lastFour ?? "");
   const [statementDay, setStatementDay] = useState(String(a.statementDay ?? ""));
@@ -34,11 +34,21 @@ export function CardDetails({ a }: { a: Account }) {
   const util = a.creditLimit ? Math.round((due / a.creditLimit) * 100) : null;
   const cycle = cardCycle(a, transactions, cardEmisOf(loans), todayISO(), preferences.cardAlertPct);
   const [payFrom, setPayFrom] = useState("none");
+  // P0-005b: an in-app form (no window.prompt). One payment id per form: a retry after a lost response
+  // reuses it, so the payment is recorded once; a new id is made only after a confirmed save.
+  const [payAmount, setPayAmount] = useState(() => String(cycle.remainingDue || Math.max(0, due) || ""));
+  const [payDate, setPayDate] = useState(todayISO());
+  const [payId, setPayId] = useState(() => crypto.randomUUID());
+  const fromName = accounts.find((x) => x.id === payFrom)?.name;
+  const amountValue = Number(payAmount);
+  const payReady = payFrom !== "none" && Number.isFinite(amountValue) && amountValue > 0;
   const pay = async () => {
-    const amount = window.prompt("Card payment amount (₹)", String(cycle.remainingDue || Math.max(0, due)));
-    if (!amount || payFrom === "none") return;
-    setBusy(true);
-    try { await save({ title: `${a.name} bill payment`, merchant: a.issuer || null, category: "Card payment", scope: "personal", memberId: null, amount: Number(amount), currency: "INR", date: todayISO(), description: "Credit card settlement", paymentMethod: "bank_transfer", txnType: "card_payment", accountId: payFrom, toAccountId: a.id }); toast.success("Card payment recorded"); } catch(e) { toast.error((e as Error).message); } finally { setBusy(false); }
+    if (!payReady) return;
+    try {
+      const r = await payCard({ requestId: payId, fromAccountId: payFrom, cardAccountId: a.id, amount: amountValue, date: payDate, note: "Credit card settlement" });
+      toast.success(r.replayed ? "This card payment was already recorded" : "Card payment recorded");
+      setPayId(crypto.randomUUID());
+    } catch (e) { toast.error(`${(e as Error).message} Retrying records it once.`); }
   };
   return (
     <div className="mt-2 grid grid-cols-[1fr_1fr_auto] items-end gap-2 border-t pt-2">
@@ -47,7 +57,14 @@ export function CardDetails({ a }: { a: Account }) {
       <Button size="sm" variant="secondary" onClick={() => updateAccount(a.id, { issuer, lastFour: digits || null, statementDay: statementDay ? Number(statementDay) : null, interestRate: rate ? Number(rate) : null, creditLimit: limit ? Number(limit) : null, dueDay: day ? Number(day) : null }).then(() => toast.success("Card updated")).catch((e) => toast.error(e.message))}>Save</Button>
       <div className="col-span-3 grid grid-cols-2 gap-2"><div><Label htmlFor={`issuer-${a.id}`}>Bank / issuer</Label><Input id={`issuer-${a.id}`} value={issuer} onChange={e=>setIssuer(e.target.value)}/></div><div><Label htmlFor={`digits-${a.id}`}>Last four digits</Label><Input id={`digits-${a.id}`} maxLength={4} value={digits} onChange={e=>setDigits(e.target.value)}/></div><div><Label htmlFor={`statement-${a.id}`}>Statement day</Label><Input id={`statement-${a.id}`} type="number" min="1" max="31" value={statementDay} onChange={e=>setStatementDay(e.target.value)}/></div><div><Label htmlFor={`rate-${a.id}`}>Annual interest %</Label><Input id={`rate-${a.id}`} type="number" min="0" max="100" value={rate} onChange={e=>setRate(e.target.value)}/></div></div>
       <div className="col-span-3 grid grid-cols-2 gap-2 border-t pt-3 text-xs"><div>Status: <b>{CARD_STATUS_LABEL[cycle.status]}</b></div><div>Due: {cycle.dueDate ?? "—"}</div><div>Statement: {money(cycle.statementBalance)}</div><div>Remaining due: {money(cycle.remainingDue)}</div><div>Unbilled: {money(cycle.unbilled)}</div><div>Payments: {money(cycle.paymentsSinceStatement)}</div><div>Interest & charges: {money(cycle.interestSinceStatement)}</div><div>EMI principal left: {money(cycle.emiOutstanding)}</div></div>
-      <div className="col-span-3 flex gap-2"><Select value={payFrom} onValueChange={setPayFrom}><SelectTrigger aria-label={`Pay ${a.name} from`}><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">Payment account</SelectItem>{accounts.filter(x=>!x.archived&&["savings","current","cash","wallet"].includes(x.kind)).map(x=><SelectItem key={x.id} value={x.id}>{x.name}</SelectItem>)}</SelectContent></Select><Button size="sm" disabled={busy||payFrom==="none"} onClick={()=>void pay()}>Record payment</Button></div>
+      <fieldset className="col-span-3 grid grid-cols-2 gap-2 border-t pt-3" aria-label={`Record a payment to ${a.name}`}>
+        <legend className="text-xs font-semibold">Record a card payment</legend>
+        <div className="col-span-2 grid gap-1"><Label className="text-xs">Paid from</Label><Select value={payFrom} onValueChange={setPayFrom}><SelectTrigger aria-label={`Pay ${a.name} from`}><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">Payment account</SelectItem>{accounts.filter(x=>!x.archived&&["savings","current","cash","wallet"].includes(x.kind)).map(x=><SelectItem key={x.id} value={x.id}>{x.name}</SelectItem>)}</SelectContent></Select></div>
+        <div className="grid gap-1"><Label htmlFor={`pay-amount-${a.id}`} className="text-xs">Amount (₹)</Label><Input id={`pay-amount-${a.id}`} type="number" inputMode="decimal" min="0" step="0.01" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} /></div>
+        <div className="grid gap-1"><Label htmlFor={`pay-date-${a.id}`} className="text-xs">Paid on</Label><Input id={`pay-date-${a.id}`} type="date" max={todayISO()} value={payDate} onChange={(e) => setPayDate(e.target.value)} /></div>
+        {payReady && <p className="col-span-2 text-xs text-muted-foreground" role="status">{money(amountValue)} from {fromName} to {a.name} on {payDate}. This moves money between your accounts; it is not spending.</p>}
+        <div className="col-span-2"><Button size="sm" disabled={!payReady} onClick={pay}>Record payment</Button></div>
+      </fieldset>
       {util !== null && (
         <div className="col-span-3">
           <div className="h-2 overflow-hidden rounded-full bg-muted"><div className={util >= 70 ? "h-full bg-destructive" : "h-full bg-primary"} style={{ width: `${Math.min(100, Math.max(0, util))}%` }} /></div>

@@ -4,7 +4,7 @@ import { normalizePreferences, type FinancePreferences } from "./preferences";
 import { paymentReminderItems, reminderBatches } from "./push-rules";
 import { normalizeNotificationSettings } from "./notification-settings";
 import { sendDevicePush } from "./push-crypto.server";
-import { accountBalance, type Account, type AccountKind, type Txn, type TxnType } from "./ledger";
+import { accountBalance, ledgerView, txnFromRow, type Account, type AccountKind, type Txn } from "./ledger";
 import type { Commitment } from "./planning";
 import type { PositionLoan } from "./position";
 import type { LoanPayment } from "./cards";
@@ -29,7 +29,8 @@ export async function dispatchPaymentReminders(db: SupabaseClient<Database>, see
     const commitments = (c.data ?? []).map(x=>({id:x.id,name:x.name,kind:x.kind,direction:x.direction,amount:Number(x.amount),frequency:x.frequency,intervalDays:x.interval_days,nextDue:x.next_due,accountId:x.account_id,category:x.category,confirmed:x.confirmed,essential:x.essential,status:x.status})) as Commitment[];
     const loans: PositionLoan[] = (l.data ?? []).map(x=>({id:x.id,name:x.name,principal:Number(x.principal_outstanding),rate:Number(x.annual_rate),emi:Number(x.emi),nextDue:x.next_due,accountId:x.account_id,loanType:x.loan_type,sourceTransactionId:x.source_transaction_id,original:Number(x.original_principal ?? x.principal_outstanding),startDate:x.start_date,payments:(x.payments ?? []) as unknown as LoanPayment[],status:x.status}));
     const accounts: Account[] = (a.data ?? []).map(x=>({id:x.id,name:x.name,kind:x.kind as AccountKind,openingBalance:Number(x.opening_balance),archived:x.archived,statementDay:x.statement_day,dueDay:x.due_day,creditLimit:x.credit_limit,details:x.details as NonNullable<Account["details"]>}));
-    const transactions: Txn[] = (t.data ?? []).map(x=>({id:x.id,txnType:x.txn_type as TxnType,amount:Number(x.amount),accountId:x.account_id,toAccountId:x.to_account_id,date:x.expense_date,adjustmentSign:x.adjustment_sign === -1 ? -1 : 1,transferCounterpartOf:x.transfer_counterpart_of,principal:x.principal,interest:x.interest,...(x.original_amount == null ? {} : { originalAmount:x.original_amount })}));
+    // One row mapping for every reader; reversal rows cancel their original on their own date (decision 1).
+    const transactions: Txn[] = ledgerView((t.data ?? []).map(txnFromRow));
     for(const loan of loans){const account=accounts.find(a=>a.id===loan.accountId);if(account&&loan.loanType!=="credit_card_emi")loan.principal=accountBalance(account,transactions);}
     const items=paymentReminderItems({today,leadDays:p.reminderDays,enabled:p.reminders,notifications:p.notifications,commitments,loans,accounts,transactions,documents:(d.data ?? []).map(x=>({id:x.id,expiresOn:x.expires_on})),trips:(p.trips ?? []) as never});
     if (!items.length) { skipped++; return; }

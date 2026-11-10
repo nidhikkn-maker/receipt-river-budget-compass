@@ -23,6 +23,10 @@ BEGIN
   IF to_regnamespace('phase2_p6') IS NULL OR to_regclass('public.assets') IS NULL THEN
     RAISE EXCEPTION 'P6 is not installed';
   END IF;
+  -- P8 (asset depreciation posting) reads P6 assets and depreciation journals: roll P8 back first.
+  IF to_regnamespace('phase3_p8') IS NOT NULL THEN
+    RAISE EXCEPTION 'P6 rollback: P8_asset_depreciation_posting is installed; run P8_asset_depreciation_posting.rollback.sql first';
+  END IF;
 END $pre$;
 
 -- 1. P4 guards added by P6: drop wrapper and original, forget the registry rows.

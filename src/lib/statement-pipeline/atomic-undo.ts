@@ -27,3 +27,27 @@ export async function atomicStatementUndo(id: string, result: Pick<ApplyResult, 
   try { await api.commit(id, items); }
   catch (error) { if (!(await api.receipt(id).catch(() => false))) throw error; }
 }
+
+/** What the database reports one Statement Desk Undo did (P7 r2 reverse_statement_upload). */
+export interface StatementUndoReport {
+  request: string; upload: string;
+  /** Posted rows: each kept and cancelled by a linked reversal entry on the correction date (KK decision 1). */
+  reversed: { entryId: string; reversalEntryId: string; correctionDate: string }[];
+  /** Rows that never posted (listed exceptions): deleted as before. */
+  deleted: string[];
+  /** Existing rows that only lose their statement match (metadata). */
+  unreconciled: string[];
+  replayed: boolean;
+}
+/** The P7 manifest: 'delete' of a saved row becomes 'remove' (the database reverses it when posted). */
+export const statementUndoItems = (items: { action: 'delete' | 'unreconcile'; ref: string | null; snapshot: Record<string, unknown> }[]) =>
+  items.map(x => ({ action: x.action === 'delete' ? 'remove' as const : 'unreconcile' as const, ref: x.ref, snapshot: x.snapshot }));
+/** The reason recorded on every reversal of one upload Undo. */
+export const undoReason = (label: string | undefined) => `Statement Desk Undo of ${label?.trim() ? `"${label.trim().slice(0, 120)}"` : 'an upload'}`;
+/** Plain summary of exactly what was reversed, removed and unmatched. */
+export function undoSummary(r: StatementUndoReport | null): string {
+  if (!r) return 'Upload reversed — your records are as they were';
+  const parts = [r.reversed.length && `${r.reversed.length} posted entr${r.reversed.length === 1 ? 'y' : 'ies'} reversed (kept with a linked reversal)`,
+    r.deleted.length && `${r.deleted.length} unposted entr${r.deleted.length === 1 ? 'y' : 'ies'} removed`, r.unreconciled.length && `${r.unreconciled.length} match${r.unreconciled.length === 1 ? '' : 'es'} cleared`].filter(Boolean);
+  return parts.length ? `Upload undone: ${parts.join(', ')}.` : 'Nothing needed to change.';
+}

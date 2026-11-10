@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database, Json } from '@/integrations/supabase/types';
 import { parseStatementCsv, type Expense, type StatementLine } from './expenses';
+import { reversalOfRow } from './ledger';
 import { normalizePreferences, type FinancePreferences } from './preferences';
 import { stageImport, type ImportRule } from './historical-import';
 import type { Account } from './ledger';
@@ -14,7 +15,8 @@ async function paged(db: SupabaseClient<Database>, owner: string) {
   for(let from=0;;from+=1000) {
     const result=await db.from('expenses').select('*').eq('employee_id',owner).order('id').range(from,from+999);
     if(result.error) throw Error('Could not check existing transactions');
-    rows.push(...result.data.map(t=>({id:t.id,title:t.title,merchant:t.merchant,date:t.expense_date,amount:Number(t.amount),originalAmount:Number(t.original_amount ?? t.amount),currency:t.currency,fxRate:Number(t.fx_rate),paymentMethod:t.payment_method as Expense['paymentMethod'],category:t.category,scope:t.scope as Expense['scope'],memberId:t.member_id,splits:[],description:t.description,receipts:[],reconciledAt:t.reconciled_at,statementRef:t.statement_ref,txnType:t.txn_type as NonNullable<Expense['txnType']>,accountId:t.account_id,toAccountId:t.to_account_id})));
+    // A reversal entry (P7 r2) is never a duplicate candidate for a statement line: it cancels another entry.
+    rows.push(...result.data.filter(t=>!reversalOfRow(t)).map(t=>({id:t.id,title:t.title,merchant:t.merchant,date:t.expense_date,amount:Number(t.amount),originalAmount:Number(t.original_amount ?? t.amount),currency:t.currency,fxRate:Number(t.fx_rate),paymentMethod:t.payment_method as Expense['paymentMethod'],category:t.category,scope:t.scope as Expense['scope'],memberId:t.member_id,splits:[],description:t.description,receipts:[],reconciledAt:t.reconciled_at,statementRef:t.statement_ref,txnType:t.txn_type as NonNullable<Expense['txnType']>,accountId:t.account_id,toAccountId:t.to_account_id})));
     if(result.data.length<1000) break;
   }
   return rows;

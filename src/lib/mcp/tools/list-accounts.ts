@@ -1,5 +1,5 @@
 import { defineTool, ToolError } from "@lovable.dev/mcp-js";
-import { accountBalance, type AccountKind } from "@/lib/ledger";
+import { accountBalance, ledgerView, txnFromRow, LEDGER_COLUMNS, type AccountKind } from "@/lib/ledger";
 import { supabaseForUser } from "../supabase";
 
 export default defineTool({
@@ -13,11 +13,12 @@ export default defineTool({
     const sb = supabaseForUser(ctx);
     const [a, e] = await Promise.all([
       sb.from("accounts").select("id, name, kind, opening_balance, archived, credit_limit").eq("archived", false),
-      sb.from("expenses").select("id, expense_date, txn_type, amount, account_id, to_account_id, adjustment_sign").eq("employee_id", ctx.getUserId() ?? "").limit(20000),
+      sb.from("expenses").select(LEDGER_COLUMNS).eq("employee_id", ctx.getUserId() ?? "").limit(20000),
     ]);
     if (a.error) throw new ToolError(a.error.message);
     if (e.error) throw new ToolError(e.error.message);
-    const txns = (e.data ?? []).map((r) => ({ id: r.id, date: r.expense_date, txnType: r.txn_type as "expense", amount: Number(r.amount), accountId: r.account_id, toAccountId: r.to_account_id, adjustmentSign: (r.adjustment_sign === -1 ? -1 : 1) as 1 | -1 }));
+    // Same ledger rules as the app: counterparts skipped, loan interest split, reversals netted (decision 1).
+    const txns = ledgerView((e.data ?? []).map(txnFromRow));
     const accounts = (a.data ?? []).map((r) => ({ id: r.id, name: r.name, kind: r.kind, creditLimit: r.credit_limit, balance: accountBalance({ id: r.id, name: r.name, kind: r.kind as AccountKind, openingBalance: Number(r.opening_balance), archived: false }, txns) }));
     const text = accounts.length ? accounts.map((x) => `${x.name} (${x.kind}): ₹${x.balance}`).join("\n") : "No accounts.";
     return { content: [{ type: "text", text }], structuredContent: { accounts } };
