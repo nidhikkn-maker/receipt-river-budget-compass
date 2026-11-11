@@ -2,7 +2,7 @@
 -- P20_claim_receipt_correction.sql (PROPOSED ONLY: NOT APPLIED to Lovable Cloud, Live or any hosted DB).
 -- Prepared 11 Nov 2026 (Track A) for KK review. Tested only in isolated PGlite:
 -- src/lib/p20-claim-receipt-correction-sql.test.ts (applied schema + P19, and the whole proposed stack P1..P19,
--- each followed by P20; catalog-exact rollback).
+-- each followed by P20; rollback restores the previous catalog except the retained read-only audit trail; re-install).
 --
 -- Problem ("case J"): one money-back entry rr (5,000) is cited by two claims (hotel and visa). Money-back is allocated
 -- once across claims, so visa's citation is "already counted on hotel" and visa is really still owed 5,000, but
@@ -27,8 +27,11 @@
 --   The money-back entry rr itself is never changed: the correction only changes how much of it this claim cites.
 --
 -- Install AFTER P19 (needs phase3_p19 and P19's reviewed finance_operation bodies, checked by md5). Roll back P20
--- FIRST: P20_claim_receipt_correction.rollback.sql restores the saved finance_operation definitions and drops the
--- function, the audit table (its rows are lost) and the phase3_p20 schema.
+-- FIRST: P20_claim_receipt_correction.rollback.sql restores the saved finance_operation definitions, drops the
+-- function and the phase3_p20 schema, and RETAINS the audit table read-only (owner-readable, writes refused by grants,
+-- RLS and phase3_p20_retained triggers). Re-install after a rollback is supported: the retained table and its rows are
+-- kept (CREATE TABLE IF NOT EXISTS), the retained-mode triggers and schema are removed, grants and policies are
+-- re-applied, and new corrections append to the earlier rows.
 -- When applied, classify public.claim_receipt_corrections in backup-schema.ts (excluded: audit history, like
 -- transaction_audit). Erasure: rows cascade with the claim (claim_id REFERENCES expenses ON DELETE CASCADE).
 -- ============================================================================================
@@ -39,6 +42,10 @@ DECLARE f record;
 BEGIN
   IF to_regnamespace('phase3_p20') IS NOT NULL THEN RAISE EXCEPTION 'P20 is already installed'; END IF;
   IF to_regnamespace('phase3_p19') IS NULL THEN RAISE EXCEPTION 'P20 requires P19 (finance operation authority)'; END IF;
+  -- An existing audit table is accepted only as the trail a P20 rollback retained.
+  IF to_regclass('public.claim_receipt_corrections') IS NOT NULL AND to_regnamespace('phase3_p20_retained') IS NULL THEN
+    RAISE EXCEPTION 'P20: public.claim_receipt_corrections exists but is not an audit trail retained by a P20 rollback';
+  END IF;
   -- Only P19's reviewed bodies are extended.
   FOR f IN SELECT p.oid::regprocedure::text sig, md5(p.prosrc) m, p.prosecdef FROM pg_proc p
             WHERE p.pronamespace = 'public'::regnamespace AND p.proname IN ('finance_operation', 'finance_operation__unguarded') LOOP
@@ -56,8 +63,9 @@ INSERT INTO phase3_p20.saved_functions(signature, definition, prosrc_md5)
    WHERE p.pronamespace = 'public'::regnamespace AND p.proname IN ('finance_operation', 'finance_operation__unguarded');
 REVOKE ALL ON phase3_p20.saved_functions FROM PUBLIC, anon, authenticated, service_role;
 
--- K7 audit trail
-CREATE TABLE public.claim_receipt_corrections (
+-- K7 audit trail (kept, with its rows, when re-installing after a rollback)
+DROP SCHEMA IF EXISTS phase3_p20_retained CASCADE; -- the retained-mode write refusal triggers go with their function
+CREATE TABLE IF NOT EXISTS public.claim_receipt_corrections (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   owner_id uuid NOT NULL,
   claim_id uuid NOT NULL REFERENCES public.expenses(id) ON DELETE CASCADE,
@@ -74,14 +82,30 @@ CREATE TABLE public.claim_receipt_corrections (
   created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
   UNIQUE (owner_id, operation_key)
 );
-CREATE INDEX claim_receipt_corrections_claim ON public.claim_receipt_corrections(claim_id, created_at);
+DO $shape$
+BEGIN
+  IF (SELECT string_agg(column_name || ':' || data_type, ',' ORDER BY ordinal_position) FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'claim_receipt_corrections')
+     IS DISTINCT FROM 'id:uuid,owner_id:uuid,claim_id:uuid,receipt_id:text,txn_id:text,before_amount:numeric,after_amount:numeric,before_status:text,after_status:text,receipt:jsonb,reason:text,actor_id:uuid,operation_key:text,created_at:timestamp with time zone' THEN
+    RAISE EXCEPTION 'P20: public.claim_receipt_corrections does not have the P20 audit shape';
+  END IF;
+  IF obj_description('public.claim_receipt_corrections'::regclass, 'pg_class') IS NOT NULL THEN
+    EXECUTE format('COMMENT ON TABLE public.claim_receipt_corrections IS %L', obj_description('public.claim_receipt_corrections'::regclass, 'pg_class')
+      || format('; P20 re-installed %s: earlier rows kept, new corrections append', to_char(clock_timestamp() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')));
+  END IF;
+END $shape$;
+CREATE INDEX IF NOT EXISTS claim_receipt_corrections_claim ON public.claim_receipt_corrections(claim_id, created_at);
 ALTER TABLE public.claim_receipt_corrections ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.claim_receipt_corrections FROM PUBLIC, anon, authenticated, service_role;
 GRANT SELECT ON public.claim_receipt_corrections TO authenticated;
 GRANT SELECT ON public.claim_receipt_corrections TO service_role;
+DROP POLICY IF EXISTS "Owner reads claim receipt corrections" ON public.claim_receipt_corrections;
 CREATE POLICY "Owner reads claim receipt corrections" ON public.claim_receipt_corrections FOR SELECT TO authenticated USING (owner_id = auth.uid());
+DROP POLICY IF EXISTS "P20 corrections recorded only by the finance workflow" ON public.claim_receipt_corrections;
 CREATE POLICY "P20 corrections recorded only by the finance workflow" ON public.claim_receipt_corrections AS RESTRICTIVE FOR INSERT TO anon, authenticated WITH CHECK (false);
+DROP POLICY IF EXISTS "P20 corrections cannot be changed" ON public.claim_receipt_corrections;
 CREATE POLICY "P20 corrections cannot be changed" ON public.claim_receipt_corrections AS RESTRICTIVE FOR UPDATE TO anon, authenticated USING (false) WITH CHECK (false);
+DROP POLICY IF EXISTS "P20 corrections cannot be deleted" ON public.claim_receipt_corrections;
 CREATE POLICY "P20 corrections cannot be deleted" ON public.claim_receipt_corrections AS RESTRICTIVE FOR DELETE TO anon, authenticated USING (false);
 
 -- The correction step: definer, callable only inside finance_operation's transaction (P19 authority row).

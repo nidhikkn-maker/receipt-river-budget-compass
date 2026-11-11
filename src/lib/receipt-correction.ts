@@ -39,9 +39,12 @@ export function planReceiptCorrection(e: Claim, c: ReceiptCorrection): ReceiptCo
     payload: { operationId: c.operationId, id: e.id, receiptId: c.receiptId, expectedAmount: receipt.amount, newAmount: after, reason } };
 }
 
-/** The store's operation: refuses offline (same check as addReimbursementReceipt's workflow), then runs the audited RPC. */
-export async function submitReceiptCorrection(e: Claim, c: ReceiptCorrection, run: (action: string, payload: Record<string, unknown>) => Promise<unknown>) {
-  if (typeof navigator !== "undefined" && !navigator.onLine) throw new Error("Reconnect to update this claim");
+/**
+ * The store's operation: refuses offline, then runs the audited RPC. `online` is the store's own online state
+ * (useStore().online, the single offline signal), never navigator.onLine, so the claim screen and this refusal agree.
+ */
+export async function submitReceiptCorrection(e: Claim, c: ReceiptCorrection, run: (action: string, payload: Record<string, unknown>) => Promise<unknown>, online: boolean) {
+  if (online !== true) throw new Error("Reconnect to update this claim");
   const plan = planReceiptCorrection(e, c);
   const result = await run("correct_claim_receipt", plan.payload);
   return { plan, result };

@@ -275,6 +275,10 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   // R14b: the whole cloud read threw (set only in loadRun's catch path; cleared when a read completes).
   const [readFailure, setReadFailure] = useState<ReadFailure | null>(null);
   const [online, setOnline] = useState(() => typeof navigator === "undefined" || navigator.onLine);
+  // The store's online state is the single offline signal: money movements read it through this ref (kept in step on
+  // every render) instead of navigator.onLine, so they agree with what screens show from useStore().online.
+  const onlineRef = useRef(online);
+  onlineRef.current = online;
   useEffect(() => {
     const up = () => setOnline(true), down = () => setOnline(false);
     window.addEventListener("online", up); window.addEventListener("offline", down);
@@ -876,7 +880,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     await refresh();
   };
   const correctReimbursementReceipt: Ctx["correctReimbursementReceipt"] = async (e, c) => {
-    await submitReceiptCorrection(e, c, operation);
+    await submitReceiptCorrection(e, c, operation, onlineRef.current);
     await refresh();
   };
   const listReviews: Ctx["listReviews"] = async () => {
@@ -888,7 +892,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     check((await supabase.from("monthly_reviews").insert({ owner_id: userId, month: r.month, figures: r.figures as Json, data_hash: r.dataHash, narrative: r.narrative, data_cutoff: r.dataCutoff })).error);
   };
   const operation = async (action: string, payload: Record<string, unknown>) => {
-    if (!navigator.onLine) throw Error("Reconnect to record this payment");
+    if (!onlineRef.current) throw Error("Reconnect to record this payment");
     const { data, error } = await supabase.rpc("finance_operation", { action, payload: payload as Json });
     check(error); return data;
   };
