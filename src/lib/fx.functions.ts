@@ -6,6 +6,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { ReceiptDetailsSchema, postingPrecisionError, receiptBreakdownError } from "./receipt-reading";
 import { c11ReviewError } from "./statement-pipeline/review-gate";
 import { receiptReuseError, stampDuplicateReview } from "./duplicate-decision";
+import { decimal, multiplyMoney } from "./money";
 
 const BASE = "INR";
 
@@ -18,6 +19,28 @@ async function fetchRate(currency: string, date: string): Promise<{ rate: number
   const rate = j.rates[BASE];
   if (!rate) throw new Error(`No exchange rate available for ${currency}`);
   return { rate, date: j.date };
+}
+
+/**
+ * KK ruling (11 Nov 2026), lead decision: the posted INR amount is the source amount times the recorded rate in
+ * decimal arithmetic, rounded once half-up to paise (money.ts). USD 1.15 at 83.3 = 95.795 posts as 95.80.
+ */
+export function postedInrAmount(originalAmount: number, rate: number): number {
+  return Math.max(multiplyMoney(originalAmount, rate), 0.01);
+}
+const sameDecimal = (a: unknown, b: unknown) => {
+  if (a == null || b == null || !Number.isFinite(Number(a)) || !Number.isFinite(Number(b))) return false;
+  return decimal(Number(a)).toDecimalPlaces(8).eq(decimal(Number(b)).toDecimalPlaces(8));
+};
+export interface StoredPosting { original_amount: number | string | null; currency: string | null; fx_rate: number | string | null; amount: number | string | null }
+/**
+ * Posted records are never retroactively changed: an edit that keeps the source amount, currency and rate keeps the
+ * stored INR amount exactly (even one posted under the older binary rounding). Otherwise the amount is recomputed.
+ */
+export function postedAmountFor(stored: StoredPosting | null | undefined, next: { originalAmount: number; currency: string; rate: number }): number {
+  if (stored && stored.amount != null && Number.isFinite(Number(stored.amount)) && stored.currency === next.currency
+    && sameDecimal(stored.original_amount, next.originalAmount) && sameDecimal(stored.fx_rate, next.rate)) return Number(stored.amount);
+  return postedInrAmount(next.originalAmount, next.rate);
 }
 
 const RateInput = z.object({ currency: z.string().regex(/^[A-Z]{3}$/), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) });
@@ -107,11 +130,13 @@ export const saveExpense = createServerFn({ method: "POST" })
     }
     // RB-LED-01: a withdrawn entry is read-only until restored, and an edit never drops its withdrawal history.
     let keptWithdrawal: Json | undefined = undefined;
+    let storedPosting: StoredPosting | null = null;
     if (data.id) {
-      const stored = await supabase.from("expenses").select("id,receipt_details").eq("id", data.id).eq("employee_id", userId).maybeSingle();
+      const stored = await supabase.from("expenses").select("id,receipt_details,original_amount,currency,fx_rate,amount").eq("id", data.id).eq("employee_id", userId).maybeSingle();
       if (stored.error) return { ok: false as const, error: "Couldn't save the expense" };
       const w = stored.data ? withdrawalOfRow(stored.data) : null;
       if (isWithdrawn(w)) return { ok: false as const, error: "This entry is withdrawn. Restore it before editing." };
+      storedPosting = stored.data ?? null;
       const rd = stored.data?.receipt_details;
       if (w && rd && typeof rd === "object" && !Array.isArray(rd)) keptWithdrawal = rd["withdrawal"];
     }
@@ -126,7 +151,7 @@ export const saveExpense = createServerFn({ method: "POST" })
     const row = {
       title: data.title, merchant: data.merchant, category: data.category, scope: data.scope, member_id: data.memberId, splits: data.splits,
       currency: data.currency, original_amount: data.originalAmount, fx_rate: fx.rate, fx_date: fx.date,
-      amount: Math.max(Math.round(data.originalAmount * fx.rate * 100) / 100, 0.01),
+      amount: postedAmountFor(storedPosting, { originalAmount: data.originalAmount, currency: data.currency, rate: fx.rate }),
       payment_method: data.paymentMethod, expense_date: data.date, description: data.description,
       reimbursement_status: data.txnType === "expense" ? data.reimbursementStatus : "none", adjustment_sign: data.txnType === "adjustment" ? data.adjustmentSign : 1,
       txn_type: data.txnType, account_id: data.accountId, to_account_id: ["transfer", "card_payment", "loan_repayment", "investment"].includes(data.txnType) ? data.toAccountId : null, tags: data.tags,

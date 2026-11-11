@@ -78,10 +78,52 @@ Sum-then-round over stored two-decimal values cannot produce a wrong paise value
 - **`receipt-audit.test.ts`:** previously asserted that 450 → 450.001 is "rounded to paise" and not a correction. That contradicts the decision, so it now asserts binary noise is ignored (0.1 + 0.2 vs 0.3) and 450.001 is recorded as a correction.
 - **`receipt-reading.test.ts`:** one `toEqual` now includes the new `precision: []` field.
 
+## Follow-up after lead review of ed20f1a1
+
+**FX conversion: resolved by lead decision under KK's existing ruling.** The rule is to round once at the posting boundary and never retroactively change posted records.
+
+- **New entries, and edits that change the source amount, currency or rate:** `saveExpense` computes the posted INR amount with `postedInrAmount`, which is `multiplyMoney` rounded half-up once to paise. Example: USD 1.15 × 83.3 = ₹95.795, posted as ₹95.80; binary floating point gave ₹95.79.
+- **Edits that keep all three:** `postedAmountFor` keeps the stored INR amount exactly, even one posted under the old binary rounding. The edit read now also selects `original_amount`, `currency`, `fx_rate` and `amount`, so saveExpense tells these cases apart without any schema change. "Rate" means the rate fetched for the entry date, compared with the stored `fx_rate` at its `numeric(18,8)` precision.
+
+**Server-side test coverage.** The new tests call the real `saveExpense` server path with a fake Supabase client and a stubbed rate fetch.
+
+- `src/lib/save-expense-precision.test.ts`:
+  - ₹1234.567 is refused with the precision error, nothing is written and no rate is fetched;
+  - ₹1234.56 is accepted;
+  - JPY 1234.5 is accepted at the server but flagged for review;
+  - a new USD 1.15 entry at 83.3 posts 95.80;
+  - a category-only edit of an existing ₹95.79 entry keeps 95.79;
+  - an edit that changes the rate to 83.1 recomputes to 95.57 (binary rounding gave 95.56);
+  - an edit that changes the amount or currency recomputes half-up.
+- `src/components/smart-add/receipt-precision-flow.test.tsx`, the real NewExpense screen:
+  - Confirm details refuses a read ₹1234.567, even after the review dialog;
+  - Save refuses ₹1234.567;
+  - Save accepts ₹1234.56.
+
+**Mutation checks:**
+
+- **Precision refusal in `saveExpense` neutralised:** 1 test fails.
+- **Confirm check in `new.tsx` neutralised:** 1 test fails.
+- **Save check in `new.tsx` neutralised:** 1 test fails.
+- **The stored-amount rule in `postedAmountFor` disabled:** 2 tests fail.
+
+**Fails on ed20f1a1:**
+
+- the new-entry 95.80 test (got 95.79);
+- the rate-change test (got 95.56);
+- the helper test (the helper did not exist).
+
+The other four tests, and the UI tests, pass on ed20f1a1 because they guard checks that commit already had.
+
+**Other conversion sites still use binary rounding.** These are outside the reimbursement/claim scope and are not changed here:
+
+- `booking-import.ts:26` (booking drafts, not payments);
+- `historical-import.functions.ts:61` (import staging);
+- `books/market.ts:122` (valuation).
+
 ## What was left, with reasons
 
-- **Stopped: posting change needed.** INR conversion in `saveExpense` is `Math.round(originalAmount * fx.rate * 100) / 100` (`fx.functions.ts`). For example, USD 1.15 at 83.3 is exactly ₹95.795, which binary floating point posts as ₹95.79 instead of half-up ₹95.80. Changing it would alter the posted INR amount whenever an existing entry is re-saved, which would retroactively change posted records. The owner must approve that as a posting-boundary change; it is not changed here. `fx_rate` is stored at `numeric(18,8)` and the source amount and currency are kept.
-- **Stopped: schema change needed.** Three-decimal currencies (KWD, BHD, OMR, JOD, TND, LYD, IQD) cannot be stored at their own minor unit because `original_amount` is `numeric(14,2)`. They are kept in the reading evidence (`receipt_details.audit.read`, JSON), but `postingPrecisionError` refuses to post them rather than let the database round them. Supporting them needs a column-scale change.
+- **Blocked (lead-recorded, pending KK approval of a hosted migration): schema change needed.** Three-decimal currencies (KWD, BHD, OMR, JOD, TND, LYD, IQD) cannot be stored at their own minor unit because `original_amount` is `numeric(14,2)`. They are kept in the reading evidence (`receipt_details.audit.read`, JSON), but `postingPrecisionError` refuses to post them rather than let the database round them. Supporting them needs a column-scale change.
 - **Zero-decimal currencies** (JPY, KRW and others) with a stray fraction are flagged for review but still postable. Refusing them would block edits of any existing stored record that carries a fraction.
 - **Not present in this tree:** `trip-claims.ts` (`overReceived`) exists only on the WS-F1 branch (3690717f and earlier), not at 000ac2d2, so it was not converted. Apply the same `money.ts` rules when that branch lands.
 - **Display-only float left as is:**
