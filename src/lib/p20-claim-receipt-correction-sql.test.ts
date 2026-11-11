@@ -13,8 +13,8 @@ import { DEMO_GUEST_STEPS, removeDemoGuestRecords } from "./demo-cleanup";
 import type { Expense, ReimbursementStatus } from "./expenses";
 
 const u = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
-const O = u(1), V = u(2), E = u(3), G = u(4), M = u(5), F = u(6), G2 = u(7);
-const ACC_O = u(101), ACC_V = u(201), ACC_E = u(301), ACC_G = u(401), ACC_F = u(601), ACC_G2 = u(701);
+const O = u(1), V = u(2), E = u(3), G = u(4), M = u(5), F = u(6), G2 = u(7), X = u(8), Y = u(9);
+const ACC_O = u(101), ACC_V = u(201), ACC_E = u(301), ACC_G = u(401), ACC_F = u(601), ACC_G2 = u(701), ACC_X = u(801), ACC_Y = u(901);
 const D = ".lovable/staged-sql/proposed/";
 const P19 = `${D}P19_finance_operation_authority.sql`, P20 = `${D}P20_claim_receipt_correction.sql`, P20_RB = `${D}P20_claim_receipt_correction.rollback.sql`;
 const STACK = ["P1_security_containment", "P2_v31_role_model", "P4_step_up_and_assistant_limits", "P5_legal_entities_foundation", "P5b_restore_investments", "P6_registers",
@@ -79,14 +79,17 @@ async function caseJ(db: PGlite, hotelCites: number, owner = O, account = ACC_O)
 
 async function setup(extra: string[]) {
   const db = await fullSchemaDb(extra);
-  await addUsers(db, { [O]: "o@x.in", [V]: "v@x.in", [E]: "e@x.in", [G]: "", [M]: "m@x.in", [F]: "f@x.in", [G2]: "" });
-  for (const [id, acc] of [[O, ACC_O], [V, ACC_V], [E, ACC_E], [G, ACC_G], [F, ACC_F], [G2, ACC_G2]]) {
+  await addUsers(db, { [O]: "o@x.in", [V]: "v@x.in", [E]: "e@x.in", [G]: "", [M]: "m@x.in", [F]: "f@x.in", [G2]: "", [X]: "", [Y]: "y@x.in" });
+  for (const [id, acc] of [[O, ACC_O], [V, ACC_V], [E, ACC_E], [G, ACC_G], [F, ACC_F], [G2, ACC_G2], [X, ACC_X], [Y, ACC_Y]]) {
     await sql(db, "INSERT INTO public.finance_preferences(owner_id, data) VALUES ($1,'{}') ON CONFLICT (owner_id) DO NOTHING", [id]);
     await sql(db, "INSERT INTO public.accounts(id, owner_id, name, kind, opening_balance, archived) VALUES ($1,$2,'Savings','savings',50000,false)", [acc, id]);
   }
   // G and G2: visitor demo guests (demo_sessions row, anonymous identity), as start_demo_workspace leaves them.
   await sql(db, "UPDATE auth.users SET is_anonymous = true WHERE id IN ($1, $2)", [G, G2]);
   await sql(db, "INSERT INTO public.demo_sessions(owner_id, label) VALUES ($1,'guest-1'), ($2,'guest-2')", [G, G2]);
+  // Spoofing fixtures: X is anonymous but has no demo_sessions row; Y has a demo_sessions row but upgraded to a real account.
+  await sql(db, "UPDATE auth.users SET is_anonymous = true WHERE id = $1", [X]);
+  await sql(db, "INSERT INTO public.demo_sessions(owner_id, label) VALUES ($1,'upgraded')", [Y]);
   // Supabase's service_role bypasses RLS (BYPASSRLS); the P20 guard, not RLS, must stop it.
   await sql(db, "ALTER ROLE service_role BYPASSRLS");
   // M: a team delegate whose role may delete other people's expenses (0066 "Team expenses: delete").
@@ -322,7 +325,8 @@ for (const [label, extra, stack] of [["applied schema + P19", [P19], false], ["p
       // a client-set erasure flag opens nothing: the owner's own delete with it set fails as a whole and the trail stays
       const flagged = await corrected(db, O, ACC_O, "k8-flag");
       const withFlag = await outcome((async () => { await actAs(db, O); await db.exec("BEGIN"); try { await db.query("SELECT set_config('ledgerline.erasing','on',true)"); await db.query("DELETE FROM public.expenses WHERE id = $1", [flagged]); await db.exec("COMMIT"); } catch (e) { await db.exec("ROLLBACK"); throw e; } finally { await actAs(db, null); } })());
-      expect(withFlag).not.toBe("");
+      // applied: the follow-up runs as the signed-in caller, who holds no DELETE on the trail; stack: P10 refuses first
+      expect(withFlag).toMatch(stack ? /P10_WITHDRAW_ONLY/ : /permission denied for table claim_receipt_corrections/);
       expect(await claimRows(db, flagged)).toBe(1);
       expect(await audits(db, flagged)).toHaveLength(1);
       await expect(as(db, O, "DELETE FROM public.claim_receipt_corrections WHERE claim_id = $1", [flagged])).rejects.toThrow(/permission denied/);
@@ -360,10 +364,62 @@ for (const [label, extra, stack] of [["applied schema + P19", [P19], false], ["p
       await expect(sql(db, "DELETE FROM public.claim_receipt_corrections WHERE id = $1", [target["id"]])).rejects.toThrow(/P20_AUDIT_KEPT/);
       expect(await allAudits(db)).toEqual(expect.arrayContaining(others));
       expect(DEMO_GUEST_STEPS.map((x) => x.table)).toContain("claim_receipt_corrections");
-      expect(await demoCleanup(db, G)).toBe(true);
+      expect(await demoCleanup(db, G)).toEqual({ ok: true });
       expect(await num(db, "SELECT count(*) FROM public.claim_receipt_corrections WHERE owner_id = $1", [G])).toBe(0);
       expect(await num(db, "SELECT count(*) FROM public.expenses WHERE employee_id = $1", [G])).toBe(0);
       expect(await allAudits(db)).toEqual(others);
+    }, 600_000);
+
+    it("E2 spoofing: an anonymous user without a demo session, or an upgraded account that still has one, is refused", async () => {
+      await corrected(db, X, ACC_X, "spoof-x");
+      await corrected(db, Y, ACC_Y, "spoof-y");
+      const kept = await allAudits(db);
+      for (const who of [X, Y]) {
+        await expect(asRole(db, "service_role", "DELETE FROM public.claim_receipt_corrections WHERE owner_id = $1", [who])).rejects.toThrow(/P20_AUDIT_KEPT/);
+        await expect(sql(db, "DELETE FROM public.claim_receipt_corrections WHERE owner_id = $1", [who])).rejects.toThrow(/P20_AUDIT_KEPT/);
+        // the demo cleanup stops at the corrections step and reports it, so the route never deletes the identity
+        const result = await demoCleanup(db, who);
+        expect(result).toMatchObject({ ok: false, table: "claim_receipt_corrections" });
+        expect(result.ok ? "" : result.error).toMatch(/P20_AUDIT_KEPT/);
+      }
+      expect(await allAudits(db)).toEqual(kept);
+    }, 600_000);
+
+    it.runIf(stack)("full stack: the erasure flag in a definer path or a superuser session never opens the guard (P18 authority only)", async () => {
+      await corrected(db, O, ACC_O, "flag-guard");
+      const kept = await allAudits(db);
+      // a SECURITY DEFINER function deleting the caller's corrections, called by the signed-in owner with the flag set
+      const definer = await outcome((async () => {
+        await actAs(db, null); await db.exec("BEGIN");
+        try {
+          await db.exec("CREATE FUNCTION public.p20_test_purge() RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path = public AS $f$ DELETE FROM public.claim_receipt_corrections WHERE owner_id = auth.uid() $f$; GRANT EXECUTE ON FUNCTION public.p20_test_purge() TO authenticated");
+          await db.query("SELECT set_config('test.uid', $1, true), set_config('ledgerline.erasing', 'on', true)", [O]);
+          await db.exec("SET LOCAL ROLE authenticated");
+          await db.query("SELECT public.p20_test_purge()");
+        } finally { await db.exec("ROLLBACK"); await actAs(db, null); }
+      })());
+      expect(definer).toMatch(/P20_AUDIT_KEPT/);
+      // a superuser session acting for the owner (auth.uid() set) with the flag set
+      const superuser = await outcome((async () => {
+        await actAs(db, null); await db.exec("BEGIN");
+        try {
+          await db.query("SELECT set_config('test.uid', $1, true), set_config('ledgerline.erasing', 'on', true)", [O]);
+          await db.query("DELETE FROM public.claim_receipt_corrections WHERE owner_id = $1", [O]);
+        } finally { await db.exec("ROLLBACK"); await actAs(db, null); }
+      })());
+      expect(superuser).toMatch(/P20_AUDIT_KEPT/);
+      // the expenses follow-up in the same superuser context removes nothing
+      const claim = kept.find((r) => r["operation_key"] === "correct_claim_receipt:flag-guard")!["claim_id"] as string;
+      await actAs(db, null); await db.exec("BEGIN");
+      try {
+        await db.query("SELECT set_config('test.uid', $1, true), set_config('ledgerline.erasing', 'on', true)", [O]);
+        await db.exec("SAVEPOINT del");
+        await db.query("DELETE FROM public.expenses WHERE id = $1", [claim]).catch(() => db.exec("ROLLBACK TO SAVEPOINT del"));
+        expect(await num(db, "SELECT count(*) FROM public.claim_receipt_corrections WHERE owner_id = $1", [O])).toBe(kept.filter((r) => r["owner_id"] === O).length);
+      } finally { await db.exec("ROLLBACK"); await actAs(db, null); }
+      expect(await allAudits(db)).toEqual(kept);
+      // no installed function reads the setting with P18 in place (P18's own post-install check)
+      expect(await sql(db, "SELECT p.oid::regprocedure::text f FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname NOT IN ('pg_catalog', 'information_schema', 'phase3_p18', 'phase3_p18_private') AND p.prosrc LIKE '%current_setting(''ledgerline.erasing''%'")).toEqual([]);
     }, 600_000);
 
     it("rollback retains the audit trail read-only (owner-readable, writable by no one); everything else is restored exactly", async () => {
@@ -384,8 +440,9 @@ for (const [label, extra, stack] of [["applied schema + P19", [P19], false], ["p
       expect(afterRollback.filter((x) => !before.includes(x)).map((x) => x.split("|").slice(0, 2).join("|")).every((n) => /claim_receipt_corrections|phase3_p20_retained|phase3_p20_audit|p20_claim_corrections_follow_erasure/.test(n))).toBe(true);
       expect(afterRollback.filter((x) => /^[fnt]\|/.test(x) && !before.includes(x)).map((x) => x.split("|").slice(0, 2).join("|")).sort()).toEqual([
         "f|phase3_p20_audit.demo_guest(_owner uuid)", "f|phase3_p20_audit.follow_erasure()", "f|phase3_p20_audit.guard()", "f|phase3_p20_audit.removal_allowed(_owner uuid)",
-        "n|phase3_p20_audit", "n|phase3_p20_retained",
+        "f|phase3_p20_audit.track_retained()", "n|phase3_p20_audit", "n|phase3_p20_retained",
         "t|claim_receipt_corrections.claim_receipt_corrections_guard", "t|claim_receipt_corrections.claim_receipt_corrections_no_truncate",
+        "t|claim_receipt_corrections.claim_receipt_corrections_retained_record",
         "t|expenses.p20_claim_corrections_follow_erasure"]);
       expect(await num(db, "SELECT count(*) FROM pg_constraint WHERE conrelid = 'public.claim_receipt_corrections'::regclass AND contype = 'f'")).toBe(0);
       const [rec] = await sql<{ rows: string; ok: boolean }>(db, "SELECT r.rows::text, r.table_oid = 'public.claim_receipt_corrections'::regclass::oid AND r.content_md5 = (SELECT md5(coalesce(string_agg(c::text, E'\\n' ORDER BY c.id), '')) FROM public.claim_receipt_corrections c) ok FROM phase3_p20_retained.rollback r");
@@ -428,8 +485,11 @@ for (const [label, extra, stack] of [["applied schema + P19", [P19], false], ["p
       // confirmed erasure (F) and the demo cleanup (G2) remove exactly their own owner's rows
       await erase(db, F, stack);
       expect(await allAudits(db)).toEqual(kept.filter((r) => r["owner_id"] !== F));
-      expect(await demoCleanup(db, G2)).toBe(true);
+      expect(await demoCleanup(db, G2)).toEqual({ ok: true });
       expect(await allAudits(db)).toEqual(kept.filter((r) => r["owner_id"] !== F && r["owner_id"] !== G2));
+      // permitted E1/E2 deletes keep the rollback record describing the rows that remain
+      const [now] = await sql<{ ok: boolean }>(db, "SELECT r.rows = (SELECT count(*) FROM public.claim_receipt_corrections) AND r.content_md5 = (SELECT md5(coalesce(string_agg(c::text, E'\\n' ORDER BY c.id), '')) FROM public.claim_receipt_corrections c) ok FROM phase3_p20_retained.rollback r");
+      expect(now!.ok).toBe(true);
     }, 600_000);
 
     it("re-installing P20 after a rollback keeps every retained row and appends new corrections; a second rollback retains them all", async () => {
@@ -438,7 +498,7 @@ for (const [label, extra, stack] of [["applied schema + P19", [P19], false], ["p
       expect(await allAudits(db)).toEqual(kept);
       expect(await num(db, "SELECT count(*) FROM pg_namespace WHERE nspname = 'phase3_p20_retained'")).toBe(0);
       expect((await sql<{ t: string }>(db, "SELECT tgname t FROM pg_trigger WHERE tgrelid = 'public.claim_receipt_corrections'::regclass AND NOT tgisinternal ORDER BY 1")).map((r) => r.t))
-        .toEqual(["claim_receipt_corrections_guard", "claim_receipt_corrections_no_truncate"]);
+        .toEqual(["claim_receipt_corrections_guard", "claim_receipt_corrections_no_truncate", "claim_receipt_corrections_retained_record"]);
       expect((await sql<{ c: string }>(db, "SELECT obj_description('public.claim_receipt_corrections'::regclass, 'pg_class') c"))[0]!.c).toMatch(/P20 rolled back .*; P20 re-installed .*: earlier rows kept/);
       const j = await caseJ(db, 3000);
       await submitReceiptCorrection(await load(db, j.visa), { receiptId: j.visaReceipt, newAmount: 2000, reason: "after re-install", operationId: "re-1" }, rpc(db, O), true);
@@ -477,6 +537,11 @@ for (const [label, extra, stack] of [["applied schema + P19", [P19], false], ["p
         ["ALTER TABLE public.claim_receipt_corrections OWNER TO service_role", /not the audit trail the P20 rollback retained/],
         [`CREATE TABLE public.crc_copy (LIKE public.claim_receipt_corrections INCLUDING ALL); DROP TABLE public.claim_receipt_corrections; ALTER TABLE public.crc_copy RENAME TO claim_receipt_corrections`, /not the audit trail the P20 rollback retained/],
         ["DROP TABLE phase3_p20_retained.rollback; DROP SCHEMA phase3_p20_retained", /not an audit trail retained by a P20 rollback/],
+        // retained rows changed around the guards (superuser with triggers disabled / replica mode) are never adopted
+        ["ALTER TABLE public.claim_receipt_corrections DISABLE TRIGGER USER; UPDATE public.claim_receipt_corrections SET reason = 'rewritten', after_amount = 0 WHERE id = (SELECT id FROM public.claim_receipt_corrections ORDER BY id LIMIT 1); ALTER TABLE public.claim_receipt_corrections ENABLE TRIGGER USER", /retained audit rows changed since the P20 rollback/],
+        ["ALTER TABLE public.claim_receipt_corrections DISABLE TRIGGER USER; DELETE FROM public.claim_receipt_corrections WHERE id = (SELECT id FROM public.claim_receipt_corrections ORDER BY id LIMIT 1); ALTER TABLE public.claim_receipt_corrections ENABLE TRIGGER USER", /retained audit rows changed since the P20 rollback/],
+        ["ALTER TABLE public.claim_receipt_corrections DISABLE TRIGGER claim_receipt_corrections_guard; DELETE FROM public.claim_receipt_corrections WHERE id = (SELECT id FROM public.claim_receipt_corrections ORDER BY id LIMIT 1); ALTER TABLE public.claim_receipt_corrections ENABLE TRIGGER claim_receipt_corrections_guard", /retained audit rows changed since the P20 rollback/],
+        ["SET LOCAL session_replication_role = replica; INSERT INTO public.claim_receipt_corrections(owner_id, claim_id, receipt_id, before_amount, after_amount, before_status, after_status, receipt, reason, actor_id, operation_key) SELECT owner_id, claim_id, receipt_id, 2, 1, 'p', 'p', '{}', 'forged', actor_id, 'forged' FROM public.claim_receipt_corrections ORDER BY id LIMIT 1; SET LOCAL session_replication_role = origin", /retained audit rows changed since the P20 rollback/],
       ];
       for (const [ddl, re] of tampered) {
         await db.exec("BEGIN");
@@ -489,3 +554,82 @@ for (const [label, extra, stack] of [["applied schema + P19", [P19], false], ["p
     }, 600_000);
   });
 }
+
+// LOW 5: P20's erasure read follows the P18 rewrite pattern in both install orders, so P18's post-install check and the
+// P0-038 setting-read inventory hold whether P18 comes after P20 or P20 is (re-)installed after P18.
+const P18 = `${D}P18_erasure_authority.sql`, P18_RB = `${D}P18_erasure_authority.rollback.sql`;
+/** P18's own post-install check: functions outside phase3_p18 that still read ledgerline.erasing. */
+const readsErasing = async (db: PGlite) => (await sql<{ f: string }>(db, `SELECT p.oid::regprocedure::text f FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+  WHERE n.nspname NOT IN ('pg_catalog', 'information_schema', 'phase3_p18', 'phase3_p18_private') AND p.prosrc LIKE '%current_setting(''ledgerline.erasing''%'`)).map((r) => r.f);
+/** The P0-038 inventory: no function trusts a retired client-settable exemption setting. */
+const RETIRED = String.raw`current_setting\('(phase3_p11\.checked|phase3_p10\.writing|phase3_p13\.(applying|deciding)|phase3_p7\.(writer|reversal_insert|reason|request|meta)|phase3_p9\.(claiming|discarding)|phase3_p14\.writing|ledgerline\.(posting_writer|accounting_request|restoring))'`;
+const readsRetired = async (db: PGlite) => (await sql<{ f: string }>(db, "SELECT p.oid::regprocedure::text f FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname NOT IN ('pg_catalog', 'information_schema') AND p.prosrc ~ $1", [RETIRED])).map((r) => r.f);
+const removalSrc = async (db: PGlite) => (await sql<{ s: string }>(db, "SELECT prosrc s FROM pg_proc WHERE oid = 'phase3_p20_audit.removal_allowed(uuid)'::regprocedure"))[0]!.s;
+const removalDef = async (db: PGlite) => (await sql<{ s: string }>(db, "SELECT pg_get_functiondef('phase3_p20_audit.removal_allowed(uuid)'::regprocedure) s"))[0]!.s;
+/** The flag attack as the signed-in owner on the trail itself (any outcome) and whether the owner's rows survived. */
+const flagAttackKeeps = async (db: PGlite, owner: string) => {
+  const was = await num(db, "SELECT count(*) FROM public.claim_receipt_corrections WHERE owner_id = $1", [owner]);
+  await actAs(db, null); await db.exec("BEGIN");
+  let msg = "";
+  try { await db.query("SELECT set_config('test.uid', $1, true), set_config('ledgerline.erasing', 'on', true)", [owner]); await db.query("DELETE FROM public.claim_receipt_corrections WHERE owner_id = $1", [owner]); }
+  catch (e) { msg = (e as Error).message; } finally { await db.exec("ROLLBACK"); await actAs(db, null); }
+  return { msg, kept: (await num(db, "SELECT count(*) FROM public.claim_receipt_corrections WHERE owner_id = $1", [owner])) === was };
+};
+
+describe("P20 and P18 in either order (SQL, isolated PGlite)", () => {
+  afterAll(() => { vi.unstubAllGlobals(); });
+
+  it("P18 installed after P20: P18's check passes, the read moves to the authority, P18's rollback restores it, E1 still works", async () => {
+    vi.stubGlobal("navigator", { onLine: true });
+    const db = await setup([P19]);
+    try {
+      await db.exec(readSql(P20));
+      const pre18 = await removalDef(db);
+      expect(await readsErasing(db)).toContain("phase3_p20_audit.removal_allowed(uuid)"); // before P18, as the applied guards
+      await corrected(db, E, ACC_E, "o18-e");
+      await db.exec(readSql(P18)); // P18's own post-install check runs here
+      expect(await readsErasing(db)).toEqual([]);
+      expect(await readsRetired(db)).toEqual([]);
+      expect(await removalSrc(db)).toContain("phase3_p18.erasure_authorised()");
+      expect(await flagAttackKeeps(db, E)).toEqual({ msg: expect.stringMatching(/P20_AUDIT_KEPT/), kept: true });
+      // P20 rolled back and re-installed after P18: still no setting read
+      await db.exec(readSql(P20_RB));
+      await db.exec(readSql(P20));
+      expect(await readsErasing(db)).toEqual([]);
+      expect(await readsRetired(db)).toEqual([]);
+      // P18's rollback gives back exactly the pre-P18 read; re-installing P18 moves it again
+      await db.exec(readSql(P18_RB));
+      expect(await removalDef(db)).toBe(pre18);
+      await db.exec(readSql(P18));
+      expect(await readsErasing(db)).toEqual([]);
+      // E1 through the P18 authority removes the owner's corrections
+      await erase(db, E, false);
+      expect(await num(db, "SELECT count(*) FROM public.claim_receipt_corrections WHERE owner_id = $1", [E])).toBe(0);
+    } finally { await db.close(); }
+  }, 600_000);
+
+  it("P20 installed and re-installed after P18 (stack): no function reads the setting; P18's rollback restores the pre-P18 read", async () => {
+    vi.stubGlobal("navigator", { onLine: true });
+    const db = await setup([...STACK.map((n) => `${D}${n}.sql`), P19]);
+    try {
+      await db.exec(readSql(P20));
+      expect(await readsErasing(db)).toEqual([]);
+      expect(await readsRetired(db)).toEqual([]);
+      expect(await removalSrc(db)).toContain("phase3_p18.erasure_authorised()");
+      await corrected(db, O, ACC_O, "o20-o");
+      expect(await flagAttackKeeps(db, O)).toEqual({ msg: expect.stringMatching(/P20_AUDIT_KEPT/), kept: true });
+      await db.exec(readSql(P20_RB));
+      expect(await readsErasing(db)).toEqual([]);
+      await db.exec(readSql(P20));
+      expect(await readsErasing(db)).toEqual([]);
+      expect(await readsRetired(db)).toEqual([]);
+      expect(await flagAttackKeeps(db, O)).toEqual({ msg: expect.stringMatching(/P20_AUDIT_KEPT/), kept: true });
+      // P18 rolled back: the saved original (the pre-P18 setting read) comes back, as for every P18-rewritten guard
+      await db.exec(readSql(P18_RB));
+      expect(await readsErasing(db)).toContain("phase3_p20_audit.removal_allowed(uuid)");
+      expect(await removalSrc(db)).not.toContain("phase3_p18");
+      await db.exec(readSql(P18)); // and P18's post-install check passes again
+      expect(await readsErasing(db)).toEqual([]);
+    } finally { await db.close(); }
+  }, 600_000);
+});

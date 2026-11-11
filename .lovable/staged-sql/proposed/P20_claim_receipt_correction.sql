@@ -34,7 +34,10 @@
 --    (P19 authority row), and refuses DELETE except:
 --      E1 confirmed erasure of the caller's own data: the row's owner_id = auth.uid() AND the erasure is authorised
 --         (phase3_p18.erasure_authorised() when P18 is installed; otherwise ledgerline.erasing = 'on', exactly as the
---         P10/P13/P15 guards read it before P18). delete_my_finance_data (applied 0058 / P1 / P18 wrapper; not edited)
+--         P10/P13/P15 guards read it before P18). The read follows the P18 rewrite pattern exactly: installed before
+--         P18, removal_allowed() reads the setting and P18's install rewrites it (saving the original for P18's
+--         rollback); installed or re-installed after P18, P20 applies the same rewrite itself and saves the original in
+--         phase3_p18.saved_functions, so no installed function reads ledgerline.erasing once P18 is in place. delete_my_finance_data (applied 0058 / P1 / P18 wrapper; not edited)
 --         does not know this table, so phase3_p20_audit.follow_erasure() (AFTER DELETE ... FOR EACH STATEMENT on
 --         public.expenses; every erasure body deletes the caller's expenses) removes ALL of the caller's corrections in
 --         that statement under the same E1 condition; outside E1 it does nothing.
@@ -51,8 +54,12 @@
 -- FIRST: P20_claim_receipt_correction.rollback.sql restores the saved finance_operation definitions, drops the
 -- function and the phase3_p20 schema, and RETAINS the audit table read-only together with phase3_p20_audit (guard and
 -- erasure follow-up) and a phase3_p20_retained record of the rollback (table oid, owner, row count, content md5).
+-- While retained, a permitted E1/E2 delete updates that record (phase3_p20_audit.track_retained, definer, AFTER DELETE
+-- statement trigger, only while both guard triggers are enabled), so the record always describes the rows that may
+-- legitimately remain.
 -- Re-install after a rollback is supported: the retained table is adopted only if it is the same table (oid and owner
--- recorded by the rollback) with exactly the P20 shape (columns, types incl. numeric(14,2), NOT NULL, defaults, every
+-- recorded by the rollback), its rows still match the recorded row count and content md5 (any change made around the
+-- guards, e.g. with triggers disabled, is refused), with exactly the P20 shape (columns, types incl. numeric(14,2), NOT NULL, defaults, every
 -- CHECK / PRIMARY KEY / UNIQUE (owner_id, operation_key), no foreign key) and only P20's triggers, policies and grants;
 -- its rows are kept and new corrections append.
 -- When applied, classify public.claim_receipt_corrections in backup-schema.ts (excluded: audit history, like
@@ -77,6 +84,11 @@ BEGIN
        OR (SELECT n.nspowner FROM pg_namespace n WHERE n.nspname = 'phase3_p20_audit') IS DISTINCT FROM r.table_owner
        OR (SELECT n.nspowner FROM pg_namespace n WHERE n.nspname = 'phase3_p20_retained') IS DISTINCT FROM r.table_owner THEN
       RAISE EXCEPTION 'P20: public.claim_receipt_corrections is not the audit trail the P20 rollback retained (table or owner changed)';
+    END IF;
+    -- The retained rows must be exactly the rows the rollback recorded (kept current by permitted E1/E2 deletes).
+    IF (SELECT count(*) FROM public.claim_receipt_corrections) IS DISTINCT FROM r.rows
+       OR (SELECT md5(coalesce(string_agg(c::text, E'\n' ORDER BY c.id), '')) FROM public.claim_receipt_corrections c) IS DISTINCT FROM r.content_md5 THEN
+      RAISE EXCEPTION 'P20: the retained audit rows changed since the P20 rollback (recorded % rows, md5 %); review before re-installing', r.rows, r.content_md5;
     END IF;
   END IF;
   -- Only P19's reviewed bodies are extended.
@@ -140,8 +152,9 @@ BEGIN
     RAISE EXCEPTION 'P20: public.claim_receipt_corrections does not have the P20 audit shape';
   END IF;
   IF EXISTS (SELECT 1 FROM pg_trigger g WHERE g.tgrelid = t AND NOT g.tgisinternal
-              AND (g.tgname NOT IN ('claim_receipt_corrections_guard', 'claim_receipt_corrections_no_truncate')
-                   OR g.tgfoid IS DISTINCT FROM to_regprocedure('phase3_p20_audit.guard()')))
+              AND NOT ((g.tgname IN ('claim_receipt_corrections_guard', 'claim_receipt_corrections_no_truncate')
+                        AND g.tgfoid = to_regprocedure('phase3_p20_audit.guard()'))
+                    OR (g.tgname = 'claim_receipt_corrections_retained_record' AND g.tgfoid = to_regprocedure('phase3_p20_audit.track_retained()'))))
      OR EXISTS (SELECT 1 FROM pg_policy p WHERE p.polrelid = t AND p.polname NOT IN ('Owner reads claim receipt corrections',
               'P20 corrections recorded only by the finance workflow', 'P20 corrections cannot be changed', 'P20 corrections cannot be deleted',
               'P20 service reads claim receipt corrections', 'P20 demo cleanup removes guest corrections')) THEN
@@ -182,11 +195,7 @@ DECLARE erasing boolean;
 BEGIN
   IF auth.uid() IS NOT NULL THEN
     IF _owner IS DISTINCT FROM auth.uid() THEN RETURN false; END IF;
-    IF to_regprocedure('phase3_p18.erasure_authorised()') IS NOT NULL THEN
-      EXECUTE 'SELECT phase3_p18.erasure_authorised()' INTO erasing; -- P18: transaction-bound authority, not the setting
-    ELSE
-      erasing := current_setting('ledgerline.erasing', true) = 'on'; -- before P18, as P10/P13/P15 (P18 rewrites this read)
-    END IF;
+    erasing := current_setting('ledgerline.erasing', true) = 'on'; -- before P18, as P10/P13/P15; rewritten below / by P18
     RETURN coalesce(erasing, false);
   END IF;
   IF current_user IN ('authenticated', 'anon') THEN RETURN false; END IF;
@@ -205,6 +214,40 @@ BEGIN
   END IF;
   RAISE EXCEPTION 'P20_AUDIT_KEPT: claim receipt corrections are audit history; they are never changed or deleted' USING ERRCODE = '42501';
 END $$;
+-- P18 already installed (install or re-install after P18): apply P18's rewrite to removal_allowed() exactly as P18's
+-- install does for every guard (same patterns), saving the original so P18's rollback restores the setting read.
+DO $p18$
+DECLARE sig constant text := 'phase3_p20_audit.removal_allowed(uuid)'; def text; nd text;
+BEGIN
+  IF to_regclass('phase3_p18.saved_functions') IS NULL THEN RETURN; END IF;
+  def := pg_get_functiondef(to_regprocedure(sig));
+  nd := regexp_replace(def, 'coalesce\(current_setting\(''ledgerline\.erasing'',\s*true\),\s*''''\)\s*<>\s*''on''', 'NOT phase3_p18.erasure_authorised()', 'gi');
+  nd := regexp_replace(nd, 'current_setting\(''ledgerline\.erasing'',\s*true\)\s*IS\s+DISTINCT\s+FROM\s*''on''', 'NOT phase3_p18.erasure_authorised()', 'gi');
+  nd := regexp_replace(nd, 'coalesce\(current_setting\(''ledgerline\.erasing'',\s*true\),\s*''''\)\s*=\s*''on''', 'phase3_p18.erasure_authorised()', 'gi');
+  nd := regexp_replace(nd, 'current_setting\(''ledgerline\.erasing'',\s*true\)\s*=\s*''on''', 'phase3_p18.erasure_authorised()', 'gi');
+  IF nd LIKE '%current_setting(''ledgerline.erasing''%' OR nd IS NOT DISTINCT FROM def THEN
+    RAISE EXCEPTION 'P20: % could not be moved to the P18 erasure authority', sig;
+  END IF;
+  INSERT INTO phase3_p18.saved_functions(signature, definition) VALUES (sig, def)
+    ON CONFLICT (signature) DO UPDATE SET definition = EXCLUDED.definition;
+  EXECUTE nd;
+END $p18$;
+-- R4 record upkeep while retained: a permitted E1/E2 delete leaves the rollback record describing the remaining rows.
+-- Only while both guard triggers are enabled; a change made with the guards disabled leaves the record stale, so a
+-- re-install refuses it.
+CREATE OR REPLACE FUNCTION phase3_p20_audit.track_retained() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+BEGIN
+  IF to_regclass('phase3_p20_retained.rollback') IS NULL THEN RETURN NULL; END IF;
+  IF (SELECT count(*) FROM pg_trigger g WHERE g.tgrelid = 'public.claim_receipt_corrections'::regclass AND g.tgenabled = 'O'
+       AND g.tgname IN ('claim_receipt_corrections_guard', 'claim_receipt_corrections_no_truncate')
+       AND g.tgfoid = 'phase3_p20_audit.guard()'::regprocedure) <> 2 THEN
+    RETURN NULL;
+  END IF;
+  UPDATE phase3_p20_retained.rollback SET rows = (SELECT count(*) FROM public.claim_receipt_corrections),
+    content_md5 = (SELECT md5(coalesce(string_agg(c::text, E'\n' ORDER BY c.id), '')) FROM public.claim_receipt_corrections c);
+  RETURN NULL;
+END $$;
 -- E1 follow-up: every erasure body deletes the caller's expenses; in that statement the caller's corrections go too.
 CREATE OR REPLACE FUNCTION phase3_p20_audit.follow_erasure() RETURNS trigger
 LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
@@ -214,8 +257,8 @@ BEGIN
   END IF;
   RETURN NULL;
 END $$;
-REVOKE ALL ON FUNCTION phase3_p20_audit.demo_guest(uuid), phase3_p20_audit.removal_allowed(uuid), phase3_p20_audit.guard(), phase3_p20_audit.follow_erasure()
-  FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION phase3_p20_audit.demo_guest(uuid), phase3_p20_audit.removal_allowed(uuid), phase3_p20_audit.guard(), phase3_p20_audit.follow_erasure(),
+  phase3_p20_audit.track_retained() FROM PUBLIC, anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION phase3_p20_audit.removal_allowed(uuid) TO anon, authenticated, service_role; -- read-only answer for the caller
 GRANT EXECUTE ON FUNCTION phase3_p20_audit.demo_guest(uuid) TO service_role;
 DROP TRIGGER IF EXISTS claim_receipt_corrections_guard ON public.claim_receipt_corrections;
@@ -224,6 +267,9 @@ CREATE TRIGGER claim_receipt_corrections_guard BEFORE INSERT OR UPDATE OR DELETE
 DROP TRIGGER IF EXISTS claim_receipt_corrections_no_truncate ON public.claim_receipt_corrections;
 CREATE TRIGGER claim_receipt_corrections_no_truncate BEFORE TRUNCATE ON public.claim_receipt_corrections
   FOR EACH STATEMENT EXECUTE FUNCTION phase3_p20_audit.guard();
+DROP TRIGGER IF EXISTS claim_receipt_corrections_retained_record ON public.claim_receipt_corrections;
+CREATE TRIGGER claim_receipt_corrections_retained_record AFTER DELETE ON public.claim_receipt_corrections
+  FOR EACH STATEMENT EXECUTE FUNCTION phase3_p20_audit.track_retained();
 DROP TRIGGER IF EXISTS p20_claim_corrections_follow_erasure ON public.expenses;
 CREATE TRIGGER p20_claim_corrections_follow_erasure AFTER DELETE ON public.expenses
   FOR EACH STATEMENT EXECUTE FUNCTION phase3_p20_audit.follow_erasure();

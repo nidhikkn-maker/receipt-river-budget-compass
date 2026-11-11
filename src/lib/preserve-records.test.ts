@@ -185,17 +185,30 @@ describe("demo cleanup fails closed", () => {
   });
 
   it("removes a guest's records in order, including P20 claim corrections; a failed required step stops (identity kept)", async () => {
-    const run = async (fail: string[]) => {
+    const run = async (fail: Record<string, unknown>) => {
       const calls: string[] = [];
-      const ok = await removeDemoGuestRecords((table) => ({ delete: () => ({ eq: async (column: string, value: string) => {
-        calls.push(`${table}.${column}=${value}`); return { error: fail.includes(table) ? new Error(`${table} failed`) : null };
+      const result = await removeDemoGuestRecords((table) => ({ delete: () => ({ eq: async (column: string, value: string) => {
+        calls.push(`${table}.${column}=${value}`); return { error: fail[table] ?? null };
       } }) }), "g");
-      return { ok, calls };
+      return { ...result, calls };
     };
-    expect(await run([])).toEqual({ ok: true, calls: ["expenses.employee_id=g", "accounts.owner_id=g", "claim_receipt_corrections.owner_id=g", "finance_preferences.owner_id=g"] });
-    // before P20 is installed the corrections table is missing: ignored, the cleanup continues
-    expect((await run(["claim_receipt_corrections"])).ok).toBe(true);
-    expect(await run(["expenses"])).toEqual({ ok: false, calls: ["expenses.employee_id=g"] });
-    expect(await run(["accounts"])).toEqual({ ok: false, calls: ["expenses.employee_id=g", "accounts.owner_id=g"] });
+    const all = ["expenses.employee_id=g", "accounts.owner_id=g", "claim_receipt_corrections.owner_id=g", "finance_preferences.owner_id=g"];
+    expect(await run({})).toEqual({ ok: true, calls: all });
+    // before P20 is installed the corrections table is missing: only that answer is skipped, the cleanup continues
+    expect(await run({ claim_receipt_corrections: { code: "42P01", message: 'relation "public.claim_receipt_corrections" does not exist' } })).toEqual({ ok: true, calls: all });
+    expect(await run({ claim_receipt_corrections: { code: "PGRST205", message: "Could not find the table 'public.claim_receipt_corrections' in the schema cache" } })).toEqual({ ok: true, calls: all });
+    expect(await run({ expenses: new Error("expenses failed") })).toMatchObject({ ok: false, table: "expenses", calls: ["expenses.employee_id=g"] });
+    expect(await run({ accounts: new Error("accounts failed") })).toMatchObject({ ok: false, table: "accounts", calls: ["expenses.employee_id=g", "accounts.owner_id=g"] });
+  });
+
+  it("any other claim_receipt_corrections error stops before the identity is deleted and is reported", async () => {
+    for (const error of [{ code: "P0001", message: "P20_AUDIT_READ_ONLY" }, { code: "42501", message: "permission denied for table claim_receipt_corrections" }, new Error("fetch failed"), { message: "timeout" }]) {
+      const calls: string[] = [];
+      const result = await removeDemoGuestRecords((table) => ({ delete: () => ({ eq: async () => { calls.push(table); return { error: table === "claim_receipt_corrections" ? error : null }; } }) }), "g");
+      expect(result).toMatchObject({ ok: false, table: "claim_receipt_corrections" });
+      expect(result.ok ? "" : result.error).toContain((error as { message: string }).message);
+      // stopped at the corrections step: nothing after it ran, and the caller keeps the identity
+      expect(calls).toEqual(["expenses", "accounts", "claim_receipt_corrections"]);
+    }
   });
 });

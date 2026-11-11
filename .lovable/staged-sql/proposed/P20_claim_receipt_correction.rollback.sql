@@ -18,8 +18,9 @@
 --      with DDL (ALTER TABLE ... DISABLE TRIGGER, DROP TRIGGER/POLICY/TABLE) or session_replication_role = replica;
 --      that is outside what SQL inside this database can prevent.
 --   R4 the rollback is recorded on the table comment (time and retained row count) and in
---      phase3_p20_retained.rollback (table oid, table owner, row count, content md5); a later P20 install adopts the
---      table only if it is that same table with that owner and exactly the P20 shape.
+--      phase3_p20_retained.rollback (table oid, table owner, row count, content md5); permitted E1/E2 deletes keep that
+--      record current (phase3_p20_audit.track_retained); a later P20 install adopts the table only if it is that same
+--      table with that owner, its rows still match the recorded count and md5, and it has exactly the P20 shape.
 -- Re-installing P20 (P20_claim_receipt_correction.sql) keeps every retained row, removes phase3_p20_retained,
 -- re-applies the grants and policies and appends new corrections.
 -- Roll back P20 before P19. Claims already corrected keep their corrected receipts; idempotency records of corrections
@@ -34,6 +35,8 @@ BEGIN
   IF to_regnamespace('phase3_p20_retained') IS NOT NULL THEN RAISE EXCEPTION 'P20 rollback: phase3_p20_retained already exists'; END IF;
   IF (SELECT count(*) FROM pg_trigger g WHERE g.tgrelid = 'public.claim_receipt_corrections'::regclass AND NOT g.tgisinternal AND g.tgenabled <> 'D'
        AND g.tgname IN ('claim_receipt_corrections_guard', 'claim_receipt_corrections_no_truncate') AND g.tgfoid = to_regprocedure('phase3_p20_audit.guard()')) <> 2
+     OR NOT EXISTS (SELECT 1 FROM pg_trigger g WHERE g.tgrelid = 'public.claim_receipt_corrections'::regclass AND g.tgname = 'claim_receipt_corrections_retained_record'
+       AND g.tgenabled <> 'D' AND g.tgfoid = to_regprocedure('phase3_p20_audit.track_retained()'))
      OR NOT EXISTS (SELECT 1 FROM pg_trigger g WHERE g.tgrelid = 'public.expenses'::regclass AND g.tgname = 'p20_claim_corrections_follow_erasure' AND g.tgenabled <> 'D') THEN
     RAISE EXCEPTION 'P20 rollback: the audit trail guards are missing or disabled; review before rolling back';
   END IF;
