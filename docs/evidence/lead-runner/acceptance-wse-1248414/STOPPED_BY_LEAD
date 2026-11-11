@@ -1,0 +1,1 @@
+Stopped by the lead at 2026-11-11T10:54:30Z: the lead switched worktree /home/user/thapal-wsev to the superseding FROZEN 3b47135 (ws/e-records-next8) while this run was in progress, so this run is invalid (not a product failure). 1248414 is superseded; WS-E's own runner reported ACCEPTED, not relied on.

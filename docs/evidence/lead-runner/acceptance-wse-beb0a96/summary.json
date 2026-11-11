@@ -1,0 +1,71 @@
+{
+ "commit": "beb0a9623cc83aa86facb1a9185a0fb6780c942b",
+ "tree": "9ad51edf059e0010b933a1d356493028be9ae75b",
+ "runs_required": 3,
+ "verdict": "NOT_ACCEPTED",
+ "consistent_test_counts": true,
+ "steps": [
+  {
+   "name": "typecheck",
+   "commit": "beb0a9623cc83aa86facb1a9185a0fb6780c942b",
+   "started": "2026-11-11T07:05:45Z",
+   "ended": "2026-11-11T07:06:29Z",
+   "exit_code": "0",
+   "tree_before": "9ad51edf059e0010b933a1d356493028be9ae75b",
+   "tree_after": "9ad51edf059e0010b933a1d356493028be9ae75b",
+   "status": "PASSED"
+  },
+  {
+   "name": "build",
+   "commit": "beb0a9623cc83aa86facb1a9185a0fb6780c942b",
+   "started": "2026-11-11T07:06:29Z",
+   "ended": "2026-11-11T07:06:51Z",
+   "exit_code": "0",
+   "tree_before": "9ad51edf059e0010b933a1d356493028be9ae75b",
+   "tree_after": "9ad51edf059e0010b933a1d356493028be9ae75b",
+   "status": "PASSED"
+  },
+  {
+   "name": "run-1",
+   "commit": "beb0a9623cc83aa86facb1a9185a0fb6780c942b",
+   "started": "2026-11-11T07:06:51Z",
+   "ended": "2026-11-11T07:14:27Z",
+   "exit_code": "0",
+   "tree_before": "9ad51edf059e0010b933a1d356493028be9ae75b",
+   "tree_after": "9ad51edf059e0010b933a1d356493028be9ae75b",
+   "status": "PASSED",
+   "tests_total": 3720,
+   "tests_passed": 3720,
+   "tests_failed": 0,
+   "files_total": 465,
+   "files_failed": 0,
+   "success": true
+  },
+  {
+   "name": "run-2",
+   "commit": "beb0a9623cc83aa86facb1a9185a0fb6780c942b",
+   "started": "2026-11-11T07:14:28Z",
+   "ended": "2026-11-11T07:21:39Z",
+   "exit_code": "1",
+   "tree_before": "9ad51edf059e0010b933a1d356493028be9ae75b",
+   "tree_after": "9ad51edf059e0010b933a1d356493028be9ae75b",
+   "status": "FAILED"
+  },
+  {
+   "name": "run-3",
+   "commit": "beb0a9623cc83aa86facb1a9185a0fb6780c942b",
+   "started": "2026-11-11T07:21:39Z",
+   "ended": "2026-11-11T07:28:45Z",
+   "exit_code": "0",
+   "tree_before": "9ad51edf059e0010b933a1d356493028be9ae75b",
+   "tree_after": "9ad51edf059e0010b933a1d356493028be9ae75b",
+   "status": "PASSED",
+   "tests_total": 3720,
+   "tests_passed": 3720,
+   "tests_failed": 0,
+   "files_total": 465,
+   "files_failed": 0,
+   "success": true
+  }
+ ]
+}

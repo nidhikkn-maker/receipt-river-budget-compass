@@ -1,0 +1,59 @@
+{
+ "commit": "8312fdec7bef5079f464d1e2753b9c992ed5298c",
+ "tree": "f2567cd70662fe8b8bccbfa0e4cecadaf519769c",
+ "runs_required": 3,
+ "verdict": "INTERRUPTED",
+ "consistent_test_counts": true,
+ "steps": [
+  {
+   "name": "typecheck",
+   "commit": "8312fdec7bef5079f464d1e2753b9c992ed5298c",
+   "started": "2026-11-11T09:22:29Z",
+   "ended": "2026-11-11T09:23:14Z",
+   "exit_code": "0",
+   "tree_before": "f2567cd70662fe8b8bccbfa0e4cecadaf519769c",
+   "tree_after": "f2567cd70662fe8b8bccbfa0e4cecadaf519769c",
+   "status": "PASSED"
+  },
+  {
+   "name": "build",
+   "commit": "8312fdec7bef5079f464d1e2753b9c992ed5298c",
+   "started": "2026-11-11T09:23:14Z",
+   "ended": "2026-11-11T09:23:36Z",
+   "exit_code": "0",
+   "tree_before": "f2567cd70662fe8b8bccbfa0e4cecadaf519769c",
+   "tree_after": "f2567cd70662fe8b8bccbfa0e4cecadaf519769c",
+   "status": "PASSED"
+  },
+  {
+   "name": "run-1",
+   "commit": "8312fdec7bef5079f464d1e2753b9c992ed5298c",
+   "started": "2026-11-11T09:23:36Z",
+   "ended": "2026-11-11T09:30:53Z",
+   "exit_code": "0",
+   "tree_before": "f2567cd70662fe8b8bccbfa0e4cecadaf519769c",
+   "tree_after": "f2567cd70662fe8b8bccbfa0e4cecadaf519769c",
+   "status": "PASSED",
+   "tests_total": 3799,
+   "tests_passed": 3799,
+   "tests_failed": 0,
+   "files_total": 468,
+   "files_failed": 0,
+   "success": true
+  },
+  {
+   "name": "run-2",
+   "commit": "8312fdec7bef5079f464d1e2753b9c992ed5298c",
+   "started": "2026-11-11T09:30:53Z",
+   "ended": null,
+   "exit_code": null,
+   "tree_before": "f2567cd70662fe8b8bccbfa0e4cecadaf519769c",
+   "tree_after": null,
+   "status": "INTERRUPTED"
+  },
+  {
+   "name": "run-3",
+   "status": "NOT_RUN"
+  }
+ ]
+}

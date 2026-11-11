@@ -1,0 +1,1 @@
+Stopped by the lead at 2026-11-11T11:03:48Z: independent review found two HIGH regressions (whole-read failure shows false not-found/no-access/empty; any unrelated area failure puts ErrorState on organisation pages). 3b47135 will be replaced; full runs are not continued on a commit about to be replaced.
