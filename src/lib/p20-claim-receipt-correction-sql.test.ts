@@ -9,11 +9,12 @@ import type { PGlite } from "@electric-sql/pglite";
 import { actAs, addUsers, fullSchemaDb, readSql } from "@/test/full-schema-pglite";
 import { outstandingOf, receivedOf, statusColumn, validateReceipt, type ReimbursementInfo } from "./reimbursements";
 import { planReceiptCorrection, submitReceiptCorrection, type ReceiptCorrection } from "./receipt-correction";
+import { DEMO_GUEST_STEPS, removeDemoGuestRecords } from "./demo-cleanup";
 import type { Expense, ReimbursementStatus } from "./expenses";
 
 const u = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
-const O = u(1), V = u(2);
-const ACC_O = u(101), ACC_V = u(201);
+const O = u(1), V = u(2), E = u(3), G = u(4), M = u(5), F = u(6), G2 = u(7);
+const ACC_O = u(101), ACC_V = u(201), ACC_E = u(301), ACC_G = u(401), ACC_F = u(601), ACC_G2 = u(701);
 const D = ".lovable/staged-sql/proposed/";
 const P19 = `${D}P19_finance_operation_authority.sql`, P20 = `${D}P20_claim_receipt_correction.sql`, P20_RB = `${D}P20_claim_receipt_correction.rollback.sql`;
 const STACK = ["P1_security_containment", "P2_v31_role_model", "P4_step_up_and_assistant_limits", "P5_legal_entities_foundation", "P5b_restore_investments", "P6_registers",
@@ -78,11 +79,38 @@ async function caseJ(db: PGlite, hotelCites: number, owner = O, account = ACC_O)
 
 async function setup(extra: string[]) {
   const db = await fullSchemaDb(extra);
-  await addUsers(db, { [O]: "o@x.in", [V]: "v@x.in" });
-  await sql(db, "INSERT INTO public.finance_preferences(owner_id, data) VALUES ($1,'{}'),($2,'{}') ON CONFLICT (owner_id) DO NOTHING", [O, V]);
-  await sql(db, "INSERT INTO public.accounts(id, owner_id, name, kind, opening_balance, archived) VALUES ($1,$2,'HDFC savings','savings',50000,false), ($3,$4,'V savings','savings',1000,false)", [ACC_O, O, ACC_V, V]);
+  await addUsers(db, { [O]: "o@x.in", [V]: "v@x.in", [E]: "e@x.in", [G]: "", [M]: "m@x.in", [F]: "f@x.in", [G2]: "" });
+  for (const [id, acc] of [[O, ACC_O], [V, ACC_V], [E, ACC_E], [G, ACC_G], [F, ACC_F], [G2, ACC_G2]]) {
+    await sql(db, "INSERT INTO public.finance_preferences(owner_id, data) VALUES ($1,'{}') ON CONFLICT (owner_id) DO NOTHING", [id]);
+    await sql(db, "INSERT INTO public.accounts(id, owner_id, name, kind, opening_balance, archived) VALUES ($1,$2,'Savings','savings',50000,false)", [acc, id]);
+  }
+  // G and G2: visitor demo guests (demo_sessions row, anonymous identity), as start_demo_workspace leaves them.
+  await sql(db, "UPDATE auth.users SET is_anonymous = true WHERE id IN ($1, $2)", [G, G2]);
+  await sql(db, "INSERT INTO public.demo_sessions(owner_id, label) VALUES ($1,'guest-1'), ($2,'guest-2')", [G, G2]);
+  // Supabase's service_role bypasses RLS (BYPASSRLS); the P20 guard, not RLS, must stop it.
+  await sql(db, "ALTER ROLE service_role BYPASSRLS");
+  // M: a team delegate whose role may delete other people's expenses (0066 "Team expenses: delete").
+  await sql(db, "INSERT INTO public.user_roles(user_id, role) VALUES ($1,'manager')", [M]);
+  await sql(db, "UPDATE public.role_permissions SET allowed = true WHERE role = 'manager' AND action IN ('view_expenses','edit_expenses','delete_expenses')");
   return db;
 }
+/** P4 step-up (stack only) before the erasure, as the app's server function records it. */
+const stepUp = async (db: PGlite, uid: string) => { await actAs(db, null); await db.exec("SET ROLE service_role"); await db.query("SELECT public.record_step_up($1,'password',300)", [uid]); await actAs(db, null); };
+/** The user's confirmed erasure (Settings: delete my data), as the signed-in user. */
+const erase = async (db: PGlite, uid: string, stack: boolean) => { if (stack) await stepUp(db, uid); await as(db, uid, "SELECT public.delete_my_finance_data()"); };
+/** The hourly demo cleanup's record removal (src/lib/demo-cleanup.ts, as the route runs it) as the service role. */
+const demoCleanup = async (db: PGlite, uid: string) => removeDemoGuestRecords((table) => ({ delete: () => ({ eq: async (column: string, value: string) => {
+  try { await asRole(db, "service_role", `DELETE FROM public.${table} WHERE ${column} = $1`, [value]); return { error: null }; } catch (error) { return { error }; }
+} }) }), uid);
+/** A statement's outcome: "" when it committed, else the error message. */
+const outcome = (p: Promise<unknown>) => p.then(() => "", (e: Error) => e.message);
+/** One corrected claim (visa's citation removed) for the owner; returns the claim id. */
+const corrected = async (db: PGlite, owner: string, account: string, op: string) => {
+  const j = await caseJ(db, 5000, owner, account);
+  await submitReceiptCorrection(await load(db, j.visa), { receiptId: j.visaReceipt, newAmount: 0, reason: "Already counted on the hotel claim", operationId: op }, rpc(db, owner), true);
+  return j.visa;
+};
+const claimRows = (db: PGlite, id: string) => num(db, "SELECT count(*) FROM public.expenses WHERE id = $1", [id]);
 
 describe("receipt correction plan (client rules, no database)", () => {
   const visa = { id: "visa", amount: 5000, date: "2026-10-12", title: "Visa", reimbursementStatus: "received" as const,
@@ -129,11 +157,12 @@ describe("receipt correction plan (client rules, no database)", () => {
   });
 });
 
-for (const [label, extra] of [["applied schema + P19", [P19]], ["proposed stack P1..P19", [...STACK.map((n) => `${D}${n}.sql`), P19]]] as const) {
+for (const [label, extra, stack] of [["applied schema + P19", [P19], false], ["proposed stack P1..P19", [...STACK.map((n) => `${D}${n}.sql`), P19], true]] as const) {
   describe(`P20 claim receipt correction — ${label} (SQL, isolated PGlite)`, () => {
     let db: PGlite;
     let before: string[];
     let afterRollback: string[];
+    let idem: { stale: Expense; c: ReceiptCorrection; claim: string } | null = null;
     beforeAll(async () => {
       db = await setup([...extra]);
       before = await catalog(db);
@@ -255,6 +284,7 @@ for (const [label, extra] of [["applied schema + P19", [P19]], ["proposed stack 
       const j = await caseJ(db, 3000);
       const c: ReceiptCorrection = { receiptId: j.visaReceipt, newAmount: 2000, reason: "3,000 counted on hotel", operationId: "idem-1" };
       const stale = await load(db, j.visa); // the screen's copy, as a retry after a lost response would still hold it
+      idem = { stale, c, claim: j.visa };
       const first = await submitReceiptCorrection(stale, c, rpc(db, O), true);
       const again = await submitReceiptCorrection(stale, c, rpc(db, O), true);
       expect(again.result).toEqual({ ...(first.result as object), replayed: true });
@@ -269,10 +299,79 @@ for (const [label, extra] of [["applied schema + P19", [P19]], ["proposed stack 
       expect(await num(db, "SELECT count(*) FROM phase3_p19.authority")).toBe(0);
     }, 600_000);
 
+    it("K8: deleting a corrected claim (owner, team delegate, operator, statement undo) never removes its corrections", async () => {
+      const own = await corrected(db, O, ACC_O, "k8-own");
+      const team = await corrected(db, O, ACC_O, "k8-team");
+      const op = await corrected(db, O, ACC_O, "k8-op");
+      const kept = await allAudits(db);
+      // the signed-in owner's direct PostgREST delete (0002 "Own expenses: delete"; P10 refuses it on the stack)
+      const ownDelete = await outcome(as(db, O, "DELETE FROM public.expenses WHERE id = $1", [own]));
+      // a team delegate allowed to delete other people's expenses (0066 "Team expenses: delete"; P13 drops it on the stack)
+      await outcome(as(db, M, "DELETE FROM public.expenses WHERE id = $1", [team]));
+      // the operator / service path
+      await sql(db, "DELETE FROM public.expenses WHERE id = $1", [op]);
+      if (!stack) {
+        expect(ownDelete).toBe("");
+        expect([await claimRows(db, own), await claimRows(db, team)]).toEqual([0, 0]); // the claim rows really went
+      } else {
+        expect(ownDelete).toMatch(/P10_WITHDRAW_ONLY/);
+      }
+      expect(await claimRows(db, op)).toBe(0);
+      expect(await allAudits(db)).toEqual(kept);
+      for (const c of [own, team, op]) expect(await audits(db, c)).toHaveLength(1);
+      // a client-set erasure flag opens nothing: the owner's own delete with it set fails as a whole and the trail stays
+      const flagged = await corrected(db, O, ACC_O, "k8-flag");
+      const withFlag = await outcome((async () => { await actAs(db, O); await db.exec("BEGIN"); try { await db.query("SELECT set_config('ledgerline.erasing','on',true)"); await db.query("DELETE FROM public.expenses WHERE id = $1", [flagged]); await db.exec("COMMIT"); } catch (e) { await db.exec("ROLLBACK"); throw e; } finally { await actAs(db, null); } })());
+      expect(withFlag).not.toBe("");
+      expect(await claimRows(db, flagged)).toBe(1);
+      expect(await audits(db, flagged)).toHaveLength(1);
+      await expect(as(db, O, "DELETE FROM public.claim_receipt_corrections WHERE claim_id = $1", [flagged])).rejects.toThrow(/permission denied/);
+      // the operator cannot delete or change a correction directly either
+      await expect(sql(db, "DELETE FROM public.claim_receipt_corrections WHERE claim_id = $1", [own])).rejects.toThrow(/P20_AUDIT_KEPT/);
+      await expect(sql(db, "UPDATE public.claim_receipt_corrections SET reason = 'x' WHERE claim_id = $1", [own])).rejects.toThrow(/P20_AUDIT_KEPT/);
+      await expect(sql(db, "TRUNCATE public.claim_receipt_corrections")).rejects.toThrow(/P20_AUDIT_KEPT/);
+      // statement undo of a never-posted, uncorrected row is unaffected: it deletes as before (P16 withdraws on the stack)
+      const line = u(++seq);
+      await sql(db, "INSERT INTO public.expenses(id, employee_id, title, category, amount, original_amount, currency, expense_date, account_id, description, statement_ref) VALUES ($1,$2,'UPI transfer','Other',120,120,'INR','2026-11-03',$3,'','stmt-1#1')", [line, O, ACC_O]);
+      const undo = await outcome(as(db, O, "DELETE FROM public.expenses WHERE id = $1 AND employee_id = $2", [line, O]));
+      if (!stack) { expect(undo).toBe(""); expect(await claimRows(db, line)).toBe(0); } else expect(undo).toMatch(/P10_WITHDRAW_ONLY/);
+      expect(await allAudits(db)).toHaveLength(kept.length + 1);
+    }, 600_000);
+
+    it("E1: confirmed erasure removes that owner's corrections only (also one whose claim was already gone)", async () => {
+      const a = await corrected(db, E, ACC_E, "e1-a");
+      const b = await corrected(db, E, ACC_E, "e1-b");
+      await sql(db, "DELETE FROM public.expenses WHERE id = $1", [b]); // claim gone earlier; its correction stays until erasure
+      const others = (await allAudits(db)).filter((r) => r["owner_id"] !== E);
+      expect((await allAudits(db)).filter((r) => r["owner_id"] === E).map((r) => r["claim_id"]).sort()).toEqual([a, b].sort());
+      await erase(db, E, stack);
+      expect(await num(db, "SELECT count(*) FROM public.claim_receipt_corrections WHERE owner_id = $1", [E])).toBe(0);
+      expect(await num(db, "SELECT count(*) FROM public.expenses WHERE employee_id = $1", [E])).toBe(0);
+      expect(await allAudits(db)).toEqual(others);
+      if (stack) expect(await num(db, "SELECT count(*) FROM phase3_p18.erasure_authority")).toBe(0);
+    }, 600_000);
+
+    it("E2: the demo cleanup removes an anonymous guest's corrections; the service role cannot remove anyone else's", async () => {
+      await corrected(db, G, ACC_G, "e2-g");
+      const others = (await allAudits(db)).filter((r) => r["owner_id"] !== G);
+      const target = others.find((r) => r["owner_id"] === O)!;
+      // not a demo guest: the service role (RLS bypassed, as on Supabase) and the operator are refused by the guard
+      await expect(asRole(db, "service_role", "DELETE FROM public.claim_receipt_corrections WHERE owner_id = $1", [O])).rejects.toThrow(/P20_AUDIT_KEPT/);
+      await expect(sql(db, "DELETE FROM public.claim_receipt_corrections WHERE id = $1", [target["id"]])).rejects.toThrow(/P20_AUDIT_KEPT/);
+      expect(await allAudits(db)).toEqual(expect.arrayContaining(others));
+      expect(DEMO_GUEST_STEPS.map((x) => x.table)).toContain("claim_receipt_corrections");
+      expect(await demoCleanup(db, G)).toBe(true);
+      expect(await num(db, "SELECT count(*) FROM public.claim_receipt_corrections WHERE owner_id = $1", [G])).toBe(0);
+      expect(await num(db, "SELECT count(*) FROM public.expenses WHERE employee_id = $1", [G])).toBe(0);
+      expect(await allAudits(db)).toEqual(others);
+    }, 600_000);
+
     it("rollback retains the audit trail read-only (owner-readable, writable by no one); everything else is restored exactly", async () => {
-      // one more correction whose claim is erased after the rollback (the documented erasure cascade)
-      const je = await caseJ(db, 5000);
-      await submitReceiptCorrection(await load(db, je.visa), { receiptId: je.visaReceipt, newAmount: 0, reason: "dup before erasure", operationId: "rb-erase" }, rpc(db, O), true);
+      // corrections whose claims are deleted after the rollback (owner, team delegate, operator), and two owners whose
+      // data is removed after it (F: confirmed erasure; G2: demo cleanup)
+      const rbOwn = await corrected(db, O, ACC_O, "rb-own"), rbTeam = await corrected(db, O, ACC_O, "rb-team"), rbOp = await corrected(db, O, ACC_O, "rb-op");
+      await corrected(db, F, ACC_F, "rb-f");
+      await corrected(db, G2, ACC_G2, "rb-g2");
       const kept = await allAudits(db);
       const ownCount = (uid: string) => kept.filter((r) => r["owner_id"] === uid).length;
       expect(ownCount(O)).toBeGreaterThan(0);
@@ -282,10 +381,15 @@ for (const [label, extra] of [["applied schema + P19", [P19]], ["proposed stack 
       afterRollback = await catalog(db);
       // nothing P20 added remains except the retained audit trail and its write refusal
       expect(before.filter((x) => !afterRollback.includes(x))).toEqual([]);
-      expect(afterRollback.filter((x) => !before.includes(x)).map((x) => x.split("|").slice(0, 2).join("|")).every((n) => /claim_receipt_corrections|phase3_p20_retained/.test(n))).toBe(true);
+      expect(afterRollback.filter((x) => !before.includes(x)).map((x) => x.split("|").slice(0, 2).join("|")).every((n) => /claim_receipt_corrections|phase3_p20_retained|phase3_p20_audit|p20_claim_corrections_follow_erasure/.test(n))).toBe(true);
       expect(afterRollback.filter((x) => /^[fnt]\|/.test(x) && !before.includes(x)).map((x) => x.split("|").slice(0, 2).join("|")).sort()).toEqual([
-        "f|phase3_p20_retained.refuse_write()", "n|phase3_p20_retained",
-        "t|claim_receipt_corrections.claim_receipt_corrections_retained", "t|claim_receipt_corrections.claim_receipt_corrections_retained_truncate"]);
+        "f|phase3_p20_audit.demo_guest(_owner uuid)", "f|phase3_p20_audit.follow_erasure()", "f|phase3_p20_audit.guard()", "f|phase3_p20_audit.removal_allowed(_owner uuid)",
+        "n|phase3_p20_audit", "n|phase3_p20_retained",
+        "t|claim_receipt_corrections.claim_receipt_corrections_guard", "t|claim_receipt_corrections.claim_receipt_corrections_no_truncate",
+        "t|expenses.p20_claim_corrections_follow_erasure"]);
+      expect(await num(db, "SELECT count(*) FROM pg_constraint WHERE conrelid = 'public.claim_receipt_corrections'::regclass AND contype = 'f'")).toBe(0);
+      const [rec] = await sql<{ rows: string; ok: boolean }>(db, "SELECT r.rows::text, r.table_oid = 'public.claim_receipt_corrections'::regclass::oid AND r.content_md5 = (SELECT md5(coalesce(string_agg(c::text, E'\\n' ORDER BY c.id), '')) FROM public.claim_receipt_corrections c) ok FROM phase3_p20_retained.rollback r");
+      expect(rec).toEqual({ rows: String(kept.length), ok: true });
       expect(await num(db, "SELECT count(*) FROM pg_proc WHERE proname = 'correct_claim_receipt'")).toBe(0);
       expect(await num(db, "SELECT count(*) FROM pg_namespace WHERE nspname = 'phase3_p20'")).toBe(0);
       // every row is still there, unchanged, and the rollback is recorded
@@ -296,14 +400,15 @@ for (const [label, extra] of [["applied schema + P19", [P19]], ["proposed stack 
       expect((await as(db, V, "SELECT count(*)::int n FROM public.claim_receipt_corrections"))[0]!["n"]).toBe(ownCount(V));
       expect((await as(db, V, "SELECT count(*)::int n FROM public.claim_receipt_corrections WHERE owner_id = $1", [O]))[0]!["n"]).toBe(0);
       await expect(asRole(db, "anon", "SELECT count(*) FROM public.claim_receipt_corrections")).rejects.toThrow(/permission denied/);
-      // not writable by anyone: signed-in owners, the service role, or the table owner
+      // not writable by anyone: signed-in owners, the service role, or the table owner (DML; DDL is out of scope)
       const row = kept.find((r) => r["owner_id"] === O)!;
       const ins = ["INSERT INTO public.claim_receipt_corrections(owner_id, claim_id, receipt_id, before_amount, after_amount, before_status, after_status, receipt, reason, actor_id, operation_key) VALUES ($1,$2,'r',2,1,'p','p','{}','x',$1,'forged')", [O, row["claim_id"]]] as const;
       const upd = ["UPDATE public.claim_receipt_corrections SET reason = 'rewritten', after_amount = 0 WHERE id = $1", [row["id"]]] as const;
       const del = ["DELETE FROM public.claim_receipt_corrections WHERE id = $1", [row["id"]]] as const;
       for (const [q, p] of [ins, upd, del]) {
         await expect(as(db, O, q, [...p])).rejects.toThrow(/permission denied/);
-        await expect(asRole(db, "service_role", q, [...p])).rejects.toThrow(/permission denied/);
+        // service_role keeps DELETE for E2 only: the guard refuses a non-guest row (RLS bypassed, as on Supabase)
+        await expect(asRole(db, "service_role", q, [...p])).rejects.toThrow(q === del[0] ? /retained audit history/ : /permission denied/);
         await expect(asRole(db, null, q, [...p])).rejects.toThrow(/retained audit history/);
       }
       await expect(as(db, O, "TRUNCATE public.claim_receipt_corrections")).rejects.toThrow(/permission denied/);
@@ -313,10 +418,18 @@ for (const [label, extra] of [["applied schema + P19", [P19]], ["proposed stack 
       // the workflow no longer offers the correction
       const j = await caseJ(db, 5000);
       await expect(rpc(db, O)("correct_claim_receipt", { operationId: "after-rb", id: j.visa, receiptId: j.visaReceipt, expectedAmount: 5000, newAmount: 0, reason: "dup" })).rejects.toThrow(/Unknown operation/);
-      // erasing a claim still removes its own audit rows (ON DELETE CASCADE); nothing else goes
-      await sql(db, "DELETE FROM public.expenses WHERE id = $1", [je.visa]);
-      expect(await allAudits(db)).toEqual(kept.filter((r) => r["claim_id"] !== je.visa));
-      expect(kept.some((r) => r["claim_id"] === je.visa)).toBe(true);
+      // deleting the claims (owner, team delegate, operator) leaves every retained row
+      const ownDelete = await outcome(as(db, O, "DELETE FROM public.expenses WHERE id = $1", [rbOwn]));
+      await outcome(as(db, M, "DELETE FROM public.expenses WHERE id = $1", [rbTeam]));
+      await sql(db, "DELETE FROM public.expenses WHERE id = $1", [rbOp]);
+      if (!stack) { expect(ownDelete).toBe(""); expect([await claimRows(db, rbOwn), await claimRows(db, rbTeam)]).toEqual([0, 0]); }
+      expect(await claimRows(db, rbOp)).toBe(0);
+      expect(await allAudits(db)).toEqual(kept);
+      // confirmed erasure (F) and the demo cleanup (G2) remove exactly their own owner's rows
+      await erase(db, F, stack);
+      expect(await allAudits(db)).toEqual(kept.filter((r) => r["owner_id"] !== F));
+      expect(await demoCleanup(db, G2)).toBe(true);
+      expect(await allAudits(db)).toEqual(kept.filter((r) => r["owner_id"] !== F && r["owner_id"] !== G2));
     }, 600_000);
 
     it("re-installing P20 after a rollback keeps every retained row and appends new corrections; a second rollback retains them all", async () => {
@@ -324,7 +437,8 @@ for (const [label, extra] of [["applied schema + P19", [P19]], ["proposed stack 
       await db.exec(readSql(P20));
       expect(await allAudits(db)).toEqual(kept);
       expect(await num(db, "SELECT count(*) FROM pg_namespace WHERE nspname = 'phase3_p20_retained'")).toBe(0);
-      expect(await num(db, "SELECT count(*) FROM pg_trigger WHERE tgrelid = 'public.claim_receipt_corrections'::regclass AND NOT tgisinternal")).toBe(0);
+      expect((await sql<{ t: string }>(db, "SELECT tgname t FROM pg_trigger WHERE tgrelid = 'public.claim_receipt_corrections'::regclass AND NOT tgisinternal ORDER BY 1")).map((r) => r.t))
+        .toEqual(["claim_receipt_corrections_guard", "claim_receipt_corrections_no_truncate"]);
       expect((await sql<{ c: string }>(db, "SELECT obj_description('public.claim_receipt_corrections'::regclass, 'pg_class') c"))[0]!.c).toMatch(/P20 rolled back .*; P20 re-installed .*: earlier rows kept/);
       const j = await caseJ(db, 3000);
       await submitReceiptCorrection(await load(db, j.visa), { receiptId: j.visaReceipt, newAmount: 2000, reason: "after re-install", operationId: "re-1" }, rpc(db, O), true);
@@ -333,7 +447,13 @@ for (const [label, extra] of [["applied schema + P19", [P19]], ["proposed stack 
       expect(now.filter((r) => kept.every((k) => k["id"] !== r["id"])).map((r) => [r["claim_id"], r["before_amount"], r["after_amount"], r["operation_key"]]))
         .toEqual([[j.visa, "5000.00", "2000.00", "correct_claim_receipt:re-1"]]);
       expect(now.filter((r) => kept.some((k) => k["id"] === r["id"]))).toEqual(kept);
-      // an operation corrected before the rollback still replays (no second change, no duplicate audit row)
+      // an operation corrected before the rollback, retried now, replays: no second change, no duplicate audit row
+      const claimBefore = await load(db, idem!.claim);
+      const auditBefore = await audits(db, idem!.claim);
+      const replay = await submitReceiptCorrection(idem!.stale, idem!.c, rpc(db, O), true);
+      expect((replay.result as { replayed?: boolean }).replayed).toBe(true);
+      expect(await load(db, idem!.claim)).toEqual(claimBefore);
+      expect(await audits(db, idem!.claim)).toEqual(auditBefore);
       expect(await num(db, "SELECT count(*) FROM public.claim_receipt_corrections WHERE operation_key = 'correct_claim_receipt:idem-1'")).toBe(1);
       // the installed rules are back: owner-read-only, client writes refused, the workflow writes
       await expect(as(db, O, "DELETE FROM public.claim_receipt_corrections")).rejects.toThrow(/permission denied/);
@@ -344,10 +464,28 @@ for (const [label, extra] of [["applied schema + P19", [P19]], ["proposed stack 
       await db.exec(readSql(P20_RB));
       expect(await allAudits(db)).toEqual(now);
       expect(await catalog(db)).toEqual(afterRollback);
-      // a stray table of the same name is never adopted as P20's audit trail
-      await sql(db, "DROP SCHEMA phase3_p20_retained CASCADE");
-      await expect(db.exec(readSql(P20))).rejects.toThrow(/not an audit trail retained by a P20 rollback/);
-      await db.exec("ROLLBACK");
+      // a retained table that lost part of its P20 shape, or is no longer the same table / owner, is never adopted
+      const tampered: [string, RegExp][] = [
+        [`DO $d$ BEGIN EXECUTE (SELECT format('ALTER TABLE public.claim_receipt_corrections DROP CONSTRAINT %I', conname) FROM pg_constraint
+          WHERE conrelid = 'public.claim_receipt_corrections'::regclass AND pg_get_constraintdef(oid) LIKE '%after_amount < before_amount%'); END $d$`, /does not have the P20 audit shape/],
+        ["ALTER TABLE public.claim_receipt_corrections DROP CONSTRAINT claim_receipt_corrections_owner_id_operation_key_key", /does not have the P20 audit shape/],
+        ["ALTER TABLE public.claim_receipt_corrections ALTER COLUMN reason DROP NOT NULL", /does not have the P20 audit shape/],
+        ["ALTER TABLE public.claim_receipt_corrections ALTER COLUMN before_amount TYPE numeric", /does not have the P20 audit shape/],
+        ["ALTER TABLE public.claim_receipt_corrections ADD CONSTRAINT stray_fk FOREIGN KEY (claim_id) REFERENCES public.expenses(id) ON DELETE CASCADE NOT VALID", /does not have the P20 audit shape/],
+        ["CREATE POLICY \"anyone writes\" ON public.claim_receipt_corrections FOR INSERT TO authenticated WITH CHECK (true)", /triggers or policies P20 did not create/],
+        ["CREATE ROLE p20_stray; GRANT INSERT ON public.claim_receipt_corrections TO p20_stray", /unexpected privilege/],
+        ["ALTER TABLE public.claim_receipt_corrections OWNER TO service_role", /not the audit trail the P20 rollback retained/],
+        [`CREATE TABLE public.crc_copy (LIKE public.claim_receipt_corrections INCLUDING ALL); DROP TABLE public.claim_receipt_corrections; ALTER TABLE public.crc_copy RENAME TO claim_receipt_corrections`, /not the audit trail the P20 rollback retained/],
+        ["DROP TABLE phase3_p20_retained.rollback; DROP SCHEMA phase3_p20_retained", /not an audit trail retained by a P20 rollback/],
+      ];
+      for (const [ddl, re] of tampered) {
+        await db.exec("BEGIN");
+        await db.exec(ddl);
+        await expect(db.exec(readSql(P20)), ddl).rejects.toThrow(re);
+        await db.exec("ROLLBACK");
+        expect(await num(db, "SELECT count(*) FROM pg_namespace WHERE nspname = 'phase3_p20'")).toBe(0);
+      }
+      expect(await allAudits(db)).toEqual(now);
     }, 600_000);
   });
 }

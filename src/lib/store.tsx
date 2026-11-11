@@ -275,12 +275,15 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   // R14b: the whole cloud read threw (set only in loadRun's catch path; cleared when a read completes).
   const [readFailure, setReadFailure] = useState<ReadFailure | null>(null);
   const [online, setOnline] = useState(() => typeof navigator === "undefined" || navigator.onLine);
-  // The store's online state is the single offline signal: money movements read it through this ref (kept in step on
-  // every render) instead of navigator.onLine, so they agree with what screens show from useStore().online.
+  // The store's online state is the single offline signal: every cloud write path, the offline queue and the cloud read
+  // decide "offline" from this ref (kept in step on every render, and set at once by the online/offline events and the
+  // read below, before any listener or awaited step reads it) instead of navigator.onLine, so they agree with what
+  // screens show from useStore().online. navigator.onLine is only an input that moves the store's signal.
   const onlineRef = useRef(online);
   onlineRef.current = online;
+  const markOnline = (v: boolean) => { onlineRef.current = v; setOnline(v); };
   useEffect(() => {
-    const up = () => setOnline(true), down = () => setOnline(false);
+    const up = () => markOnline(true), down = () => markOnline(false);
     window.addEventListener("online", up); window.addEventListener("offline", down);
     return () => { window.removeEventListener("online", up); window.removeEventListener("offline", down); };
   }, []);
@@ -357,12 +360,12 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       if (sess && !sess.error && sess.data.session?.user.id !== userId) {
         firstLoad.current = false;
         denyAreas(ALL_AREAS); writeDeniedMarker(userId, ALL_AREAS); setSettledAreas(ALL_AREAS);
-        setLoading(false); setSyncState(navigator.onLine ? "error" : "offline"); if (!navigator.onLine) setOnline(false);
+        setLoading(false); setSyncState(navigator.onLine ? "error" : "offline"); if (!navigator.onLine) markOnline(false);
         return;
       }
     }
     // Show this device's saved copy straight away, then refresh from the cloud.
-    if (!navigator.onLine || firstLoad.current) {
+    if (!onlineRef.current || firstLoad.current) {
       const cached = await getSnapshot<Snapshot>(userId).catch(() => undefined);
       if (!run.live()) return;
       firstLoad.current = false;
@@ -381,10 +384,9 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       if (cached) {
         setLoading(false);
       }
-      if (!navigator.onLine) { setOnline(false); setLoading(false); setSyncState("offline"); return; }
+      if (!onlineRef.current) { setLoading(false); setSyncState("offline"); return; }
     }
     setSyncState("syncing");
-    setOnline(true);
     try {
     // Essential records first; the rest load in the background so the first screen is not held up.
     const restP = Promise.all([
@@ -507,7 +509,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       setReadFailure({ kind: navigator.onLine ? "failed" : "offline", at: new Date().toISOString(), message: err instanceof Error ? err.message : String(err) });
       setSyncState(navigator.onLine ? "error" : "offline");
       // Keep the store's online signal truthful (the 'offline' event may not have fired yet); 'online' then reconnects.
-      if (!navigator.onLine) setOnline(false);
+      if (!navigator.onLine) markOnline(false);
       throw err;
     }
   }
@@ -517,8 +519,8 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   useEffect(() => {
     // Never overwrite the device copy with a partial load: it is the last known good copy. A whole-read failure
     // (readFailure) leaves loadErrors empty, so it is checked too.
-    if (!loading && navigator.onLine && !loadErrors.length && !readFailure) void putSnapshot(userId, { name, members, expenses, accounts, commitments, rawLoans, goals, budgets, preferences, valuations, documents } satisfies Snapshot).catch(() => {});
-  }, [loading, loadErrors, readFailure, userId, name, members, expenses, accounts, commitments, rawLoans, goals, budgets, preferences, valuations, documents]);
+    if (!loading && online && !loadErrors.length && !readFailure) void putSnapshot(userId, { name, members, expenses, accounts, commitments, rawLoans, goals, budgets, preferences, valuations, documents } satisfies Snapshot).catch(() => {});
+  }, [loading, online, loadErrors, readFailure, userId, name, members, expenses, accounts, commitments, rawLoans, goals, budgets, preferences, valuations, documents]);
 
   // Loan principal comes from the linked loan account's ledger, so EMI transfers keep it right.
   const loans = useMemo(() => rawLoans.map((l) => {
@@ -536,7 +538,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     // Edits need full records (receipts, notes); wait for the background load if it is still arriving.
     if (liteActive.current && opts?.id && inFlight.current) await inFlight.current.catch(() => {});
     validateActiveCategory(preferences.categories, s.category, !!opts?.id);
-    if (!navigator.onLine) {
+    if (!onlineRef.current) {
       if (opts?.id) throw Error("Reconnect to edit an existing transaction");
       await queueEntry({ id: opts?.createId ?? crypto.randomUUID(), owner: userId, input: s, files: opts?.files ?? [], createdAt: new Date().toISOString() });
       void syncRef.current();
@@ -581,13 +583,13 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       if (!active) return 0;
       setPendingCount(entries.length);
       setPendingItems((prev) => mergePending(prev, entries));
-      if (!navigator.onLine || syncing.current || deleting.current || !entries.length) return 0;
+      if (!onlineRef.current || syncing.current || deleting.current || !entries.length) return 0;
       syncing.current = true;
       let failed = 0, saved = 0;
       try {
         for (const entry of entries) {
           if (only && entry.id !== only) continue;
-          if (!navigator.onLine || deleting.current) break;
+          if (!onlineRef.current || deleting.current) break;
           if (gate.paused()) { gate.defer(); break; }
           setPendingItems((prev) => setItem(prev, entry.id, { status: "saving", error: undefined }));
           try {
@@ -619,7 +621,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
         const need = reconnectNeed.current, seq = loadSeq.current;
         if (need && !gate.paused()) setSyncState("syncing");
         const saved = await sync(undefined, true);
-        if (!active || !navigator.onLine) return;
+        if (!active || !onlineRef.current) return;
         if (inFlight.current) { await inFlight.current.catch(() => {}); if (!saved) return; }
         else if (!saved && (!need || loadSeq.current !== seq)) return;
         // A whole-read failure is reported through readFailure / syncState / areaStatus, not as an unhandled rejection.
@@ -663,7 +665,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     catch(e){setPreferences(previous);throw e;}
   };
   const saveStatementUpload: Ctx["saveStatementUpload"] = async upload => {
-    if (!navigator.onLine) throw Error('Reconnect before syncing statement progress');
+    if (!onlineRef.current) throw Error('Reconnect before syncing statement progress');
     await checkpointUpload(upload, {
       read: async () => {
         // A new account has no saved preferences row yet; -1 here becomes a null expected revision, which tells the database to create it.
@@ -679,7 +681,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     });
   };
   const commitDocumentRecords: Ctx["commitDocumentRecords"] = async (documentId, p, lock, attempt) => {
-    if (!navigator.onLine) throw new Error('Reconnect before saving document records');
+    if (!onlineRef.current) throw new Error('Reconnect before saving document records');
     const expected = attempt?.expected ?? preferencesRevision.current;
     if (expected == null) throw new Error('Refresh your records before reviewing this document');
     const key = JSON.stringify([p, lock]);
@@ -697,7 +699,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     await refresh();
   };
   const postOpening: Ctx["postOpening"] = async (x) => {
-    if (!navigator.onLine) throw new Error("Reconnect to post opening balances");
+    if (!onlineRef.current) throw new Error("Reconnect to post opening balances");
     check((await supabase.rpc("post_opening_balances", { _id: x.id, _entity: x.entityId, _fy: x.fy, _date: x.date, _lines: x.lines as unknown as Json, _exceptions: x.exceptions as unknown as Json, ...(x.docId ? { _doc: x.docId } : {}) } as never)).error);
     await refresh();
   };
@@ -707,7 +709,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   };
   const postAccounting:Ctx['postAccounting']=async attempt=>{
     if(attempt.owner!==userId)throw Error('Accounting owner differs.');
-    if(!navigator.onLine)throw Error('Reconnect to confirm this journal. Your draft is retained.');
+    if(!onlineRef.current)throw Error('Reconnect to confirm this journal. Your draft is retained.');
     await postAccountingWithRecovery(attempt,{read:async()=>{const r=await supabase.from('accounting_journal_evidence' as never).select('owner_id,request_id,journal,entry_ids').eq('id',attempt.journal.id).eq('owner_id',userId).maybeSingle();check(r.error);return r.data as unknown as AccountingReceipt|null;},post:async()=>{validateAccountingAttempt(attempt,accounts,preferences.books??{closedPeriods:[]} as never,documents);const r=await supabase.rpc('post_accounting_journal' as never,{_request:attempt.requestId,_journal:attempt.journal,_expected:attempt.expected} as never);check(r.error);}});
     await refresh();
   };
@@ -763,13 +765,13 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     setName(v);
   };
   const correctFinancialEntries: Ctx["correctFinancialEntries"] = async (preview, id) => {
-    if (!navigator.onLine) throw Error("Reconnect before applying financial corrections.");
+    if (!onlineRef.current) throw Error("Reconnect before applying financial corrections.");
     if (!correctionStillCurrent(preview, expenses, accounts)) throw Error("The preview changed. Review it again before saving.");
     check((await supabase.rpc("correct_financial_entries", { _id: id, _items: preview.snapshots as unknown as Json, _choice: preview.choice as Json, _accounts: preview.accounts as unknown as Json })).error);
     await refresh();
   };
   const confirmTransfer: Ctx["confirmTransfer"] = async ({ id, debit, destId, credit }) => {
-    if (!navigator.onLine) throw Error("Reconnect before linking transfers.");
+    if (!onlineRef.current) throw Error("Reconnect before linking transfers.");
     const { transferApprovalBlocker } = await import('./transfer-match');
     const blocker = transferApprovalBlocker(debit,credit,destId,accounts);if(blocker)throw Error(blocker);
     const r = await supabase.rpc("confirm_transfer", { _id: id, _debit: debit.id, _debit_rev: debit.correctionRevision ?? 0, _dest: destId, _credit: (credit?.id ?? null) as string, _credit_rev: (credit?.correctionRevision ?? null) as number });
@@ -785,7 +787,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     check(result.error); return (result.data ?? []).filter(r => !(r.request && typeof r.request === 'object' && !Array.isArray(r.request) && r.request['kind'] === 'review_metadata')).slice(0, 20).map(r => ({ id: r.id, createdAt: r.created_at, undoneAt: r.undone_at, count: Array.isArray(r.entries) ? r.entries.length : 0, entries: r.entries as unknown as FinancialCorrectionHistory["entries"] }));
   };
   const applyReviewMetadata: Ctx['applyReviewMetadata'] = async (preview,id) => {
-    if (!navigator.onLine) throw Error('Reconnect before applying mappings.');
+    if (!onlineRef.current) throw Error('Reconnect before applying mappings.');
     if (!metadataStillCurrent(preview,expenses,preferences,accounts)) throw Error('Records changed. Prepare a new preview.');
     const result=await supabase.rpc('apply_review_metadata',{_id:id,_items:preview.items as unknown as Json,_config:preview.config as unknown as Json});
     check(result.error);if(result.data!==id)throw Error('Saved result could not be confirmed. Retry the same preview.');await refresh();
@@ -835,7 +837,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     check(error); if (data == null) throw Error("No expenses were updated"); await refresh(); return data;
   };
   const applyReviewMapping: Ctx['applyReviewMapping'] = async preview => {
-    if (!navigator.onLine) throw Error('Reconnect before applying mappings.');
+    if (!onlineRef.current) throw Error('Reconnect before applying mappings.');
     if (!mappingStillCurrent(preview, expenses, preferences)) throw Error('Records changed. Review a new preview.');
     if (preview.action === 'activity') {
       const result = await supabase.rpc('link_activity_expenses', { _tag: preview.value, _items: preview.snapshots as unknown as Json });
@@ -844,7 +846,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     } else await manageTripExpenses(preview.tripId, preview.records, preview.action === 'trip' ? 'link' : 'organisation', preview.value);
   };
   const saveRecurringReview: Ctx['saveRecurringReview'] = async (x, id) => {
-    if (!navigator.onLine) throw Error('Reconnect before saving a recurring profile.');
+    if (!onlineRef.current) throw Error('Reconnect before saving a recurring profile.');
     if (!x.name.trim() || !Number.isFinite(x.amount) || x.amount <= 0 || !/^\d{4}-\d{2}-\d{2}$/.test(x.nextDue)) throw Error('Enter a name, positive amount and next date.');
     if (!accounts.some(a => a.id === x.accountId && !a.archived)) throw Error('Confirm an active account.');
     if (recurringDuplicates(x, commitments).some(c => c.id !== id)) throw Error('A matching active profile already exists. Review your plan.');

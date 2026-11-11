@@ -8,7 +8,7 @@ import { withPreparedJournals, scheduledRun } from "./books/assets-ledger";
 import { addSnapshot } from "./books/market";
 import { recordProgress } from "./intelligence";
 import { unmappedFields } from "./books/intake";
-import { demoCleanupDecision } from "./demo-cleanup";
+import { demoCleanupDecision, removeDemoGuestRecords } from "./demo-cleanup";
 import type { StatementUpload } from "./preferences";
 
 const pad = (n: number, w = 5) => String(n).padStart(w, "0");
@@ -182,5 +182,20 @@ describe("demo cleanup fails closed", () => {
     expect(demoCleanupDecision({ user: null, error: new Error("auth api down") })).toBe("skip-unconfirmed");
     expect(demoCleanupDecision({ user: { is_anonymous: null } })).toBe("keep-upgraded-account");
     expect(demoCleanupDecision(null)).toBe("skip-unconfirmed");
+  });
+
+  it("removes a guest's records in order, including P20 claim corrections; a failed required step stops (identity kept)", async () => {
+    const run = async (fail: string[]) => {
+      const calls: string[] = [];
+      const ok = await removeDemoGuestRecords((table) => ({ delete: () => ({ eq: async (column: string, value: string) => {
+        calls.push(`${table}.${column}=${value}`); return { error: fail.includes(table) ? new Error(`${table} failed`) : null };
+      } }) }), "g");
+      return { ok, calls };
+    };
+    expect(await run([])).toEqual({ ok: true, calls: ["expenses.employee_id=g", "accounts.owner_id=g", "claim_receipt_corrections.owner_id=g", "finance_preferences.owner_id=g"] });
+    // before P20 is installed the corrections table is missing: ignored, the cleanup continues
+    expect((await run(["claim_receipt_corrections"])).ok).toBe(true);
+    expect(await run(["expenses"])).toEqual({ ok: false, calls: ["expenses.employee_id=g"] });
+    expect(await run(["accounts"])).toEqual({ ok: false, calls: ["expenses.employee_id=g", "accounts.owner_id=g"] });
   });
 });

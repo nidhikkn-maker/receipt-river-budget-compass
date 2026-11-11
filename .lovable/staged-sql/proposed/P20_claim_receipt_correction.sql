@@ -23,28 +23,61 @@
 --    K6 reimbursement_status is recomputed exactly as reimbursements.ts statusColumn does with receipt lines present:
 --       stage rejected/written_off -> 'none'; received >= claimable > 0 -> 'received'; otherwise 'pending'.
 --    K7 audit: one public.claim_receipt_corrections row (before/after amount and status, the receipt as it was,
---       reason, actor, operation key, time); readable by the owner only, written only by this workflow.
+--       reason, actor, operation key, time); readable by the owner only, written only by this workflow (K8).
 --   The money-back entry rr itself is never changed: the correction only changes how much of it this claim cites.
+--
+-- K8 the audit trail survives its claim (lead ruling 11 Nov 2026, transaction_audit precedent, 0009): claim_id is a plain
+--    uuid (indexed), NOT a foreign key, so deleting a claim row never removes its corrections. Signed-in deletes of a
+--    corrected claim (the 0002 "Own expenses: delete" and 0066 "Team expenses: delete" policies while P10/P13 are not
+--    installed), operator deletes and statement undo of never-posted rows all leave the corrections in place.
+--    phase3_p20_audit.guard() refuses every UPDATE and TRUNCATE, refuses INSERT except inside the finance workflow
+--    (P19 authority row), and refuses DELETE except:
+--      E1 confirmed erasure of the caller's own data: the row's owner_id = auth.uid() AND the erasure is authorised
+--         (phase3_p18.erasure_authorised() when P18 is installed; otherwise ledgerline.erasing = 'on', exactly as the
+--         P10/P13/P15 guards read it before P18). delete_my_finance_data (applied 0058 / P1 / P18 wrapper; not edited)
+--         does not know this table, so phase3_p20_audit.follow_erasure() (AFTER DELETE ... FOR EACH STATEMENT on
+--         public.expenses; every erasure body deletes the caller's expenses) removes ALL of the caller's corrections in
+--         that statement under the same E1 condition; outside E1 it does nothing.
+--      E2 the service / operator path (no auth.uid(), not the anon/authenticated role) for an anonymous demo guest
+--         (public.demo_sessions row AND auth.users.is_anonymous): the hourly demo cleanup
+--         (src/routes/api/public/jobs/cleanup-demos.ts, steps in src/lib/demo-cleanup.ts) deletes the guest's corrections
+--         by owner_id. service_role holds SELECT and DELETE (RLS: guest rows only); any other owner's row is refused.
+--    These guards stop DML only. The table owner / a superuser can still change or bypass them with DDL (ALTER TABLE ...
+--    DISABLE TRIGGER, DROP TABLE/TRIGGER/POLICY) or session_replication_role = replica; that is outside what SQL inside
+--    this database can prevent. FORCE ROW LEVEL SECURITY is NOT set: the SECURITY DEFINER workflow writes as the table
+--    owner, and forcing RLS would need owner policies that add nothing over the guard trigger.
 --
 -- Install AFTER P19 (needs phase3_p19 and P19's reviewed finance_operation bodies, checked by md5). Roll back P20
 -- FIRST: P20_claim_receipt_correction.rollback.sql restores the saved finance_operation definitions, drops the
--- function and the phase3_p20 schema, and RETAINS the audit table read-only (owner-readable, writes refused by grants,
--- RLS and phase3_p20_retained triggers). Re-install after a rollback is supported: the retained table and its rows are
--- kept (CREATE TABLE IF NOT EXISTS), the retained-mode triggers and schema are removed, grants and policies are
--- re-applied, and new corrections append to the earlier rows.
+-- function and the phase3_p20 schema, and RETAINS the audit table read-only together with phase3_p20_audit (guard and
+-- erasure follow-up) and a phase3_p20_retained record of the rollback (table oid, owner, row count, content md5).
+-- Re-install after a rollback is supported: the retained table is adopted only if it is the same table (oid and owner
+-- recorded by the rollback) with exactly the P20 shape (columns, types incl. numeric(14,2), NOT NULL, defaults, every
+-- CHECK / PRIMARY KEY / UNIQUE (owner_id, operation_key), no foreign key) and only P20's triggers, policies and grants;
+-- its rows are kept and new corrections append.
 -- When applied, classify public.claim_receipt_corrections in backup-schema.ts (excluded: audit history, like
--- transaction_audit). Erasure: rows cascade with the claim (claim_id REFERENCES expenses ON DELETE CASCADE).
+-- transaction_audit).
 -- ============================================================================================
 BEGIN;
 
 DO $pre$
-DECLARE f record;
+DECLARE f record; t oid := to_regclass('public.claim_receipt_corrections'); r record;
 BEGIN
   IF to_regnamespace('phase3_p20') IS NOT NULL THEN RAISE EXCEPTION 'P20 is already installed'; END IF;
   IF to_regnamespace('phase3_p19') IS NULL THEN RAISE EXCEPTION 'P20 requires P19 (finance operation authority)'; END IF;
-  -- An existing audit table is accepted only as the trail a P20 rollback retained.
-  IF to_regclass('public.claim_receipt_corrections') IS NOT NULL AND to_regnamespace('phase3_p20_retained') IS NULL THEN
-    RAISE EXCEPTION 'P20: public.claim_receipt_corrections exists but is not an audit trail retained by a P20 rollback';
+  -- An existing audit table (or audit guard schema) is accepted only as the trail a P20 rollback retained AND recorded:
+  -- the same table (oid) with the same owner, and the guard schemas owned by that owner (shape checked below).
+  IF t IS NOT NULL OR to_regnamespace('phase3_p20_audit') IS NOT NULL THEN
+    IF to_regclass('phase3_p20_retained.rollback') IS NULL THEN
+      RAISE EXCEPTION 'P20: public.claim_receipt_corrections exists but is not an audit trail retained by a P20 rollback';
+    END IF;
+    SELECT * INTO r FROM phase3_p20_retained.rollback;
+    IF (SELECT count(*) FROM phase3_p20_retained.rollback) <> 1 OR t IS DISTINCT FROM r.table_oid
+       OR (SELECT c.relowner FROM pg_class c WHERE c.oid = t) IS DISTINCT FROM r.table_owner
+       OR (SELECT n.nspowner FROM pg_namespace n WHERE n.nspname = 'phase3_p20_audit') IS DISTINCT FROM r.table_owner
+       OR (SELECT n.nspowner FROM pg_namespace n WHERE n.nspname = 'phase3_p20_retained') IS DISTINCT FROM r.table_owner THEN
+      RAISE EXCEPTION 'P20: public.claim_receipt_corrections is not the audit trail the P20 rollback retained (table or owner changed)';
+    END IF;
   END IF;
   -- Only P19's reviewed bodies are extended.
   FOR f IN SELECT p.oid::regprocedure::text sig, md5(p.prosrc) m, p.prosecdef FROM pg_proc p
@@ -63,12 +96,13 @@ INSERT INTO phase3_p20.saved_functions(signature, definition, prosrc_md5)
    WHERE p.pronamespace = 'public'::regnamespace AND p.proname IN ('finance_operation', 'finance_operation__unguarded');
 REVOKE ALL ON phase3_p20.saved_functions FROM PUBLIC, anon, authenticated, service_role;
 
--- K7 audit trail (kept, with its rows, when re-installing after a rollback)
-DROP SCHEMA IF EXISTS phase3_p20_retained CASCADE; -- the retained-mode write refusal triggers go with their function
-CREATE TABLE IF NOT EXISTS public.claim_receipt_corrections (
+-- K7 audit trail (kept, with its rows, when re-installing after a rollback). K8: claim_id is NOT a foreign key.
+-- The same definition also builds phase3_p20.shape_reference, the exact shape a retained table must still have.
+DO $ddl$
+DECLARE ddl constant text := $t$CREATE TABLE IF NOT EXISTS %s (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   owner_id uuid NOT NULL,
-  claim_id uuid NOT NULL REFERENCES public.expenses(id) ON DELETE CASCADE,
+  claim_id uuid NOT NULL,
   receipt_id text NOT NULL,
   txn_id text,
   before_amount numeric(14,2) NOT NULL CHECK (before_amount > 0),
@@ -81,24 +115,123 @@ CREATE TABLE IF NOT EXISTS public.claim_receipt_corrections (
   operation_key text NOT NULL,
   created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
   UNIQUE (owner_id, operation_key)
-);
-DO $shape$
+)$t$;
 BEGIN
-  IF (SELECT string_agg(column_name || ':' || data_type, ',' ORDER BY ordinal_position) FROM information_schema.columns
-       WHERE table_schema = 'public' AND table_name = 'claim_receipt_corrections')
-     IS DISTINCT FROM 'id:uuid,owner_id:uuid,claim_id:uuid,receipt_id:text,txn_id:text,before_amount:numeric,after_amount:numeric,before_status:text,after_status:text,receipt:jsonb,reason:text,actor_id:uuid,operation_key:text,created_at:timestamp with time zone' THEN
+  EXECUTE format(ddl, 'public.claim_receipt_corrections');
+  EXECUTE format(ddl, 'phase3_p20.shape_reference');
+END $ddl$;
+-- Columns (type with typmod, NOT NULL, default), every constraint definition (PK, UNIQUE, CHECKs; a foreign key would
+-- show here and be refused), plain permanent table, no inheritance, no rules.
+CREATE FUNCTION phase3_p20.shape(_t regclass) RETURNS text LANGUAGE sql STABLE SET search_path = public, pg_temp AS $$
+  SELECT concat_ws(E'\n',
+    (SELECT string_agg(a.attname || ' ' || format_type(a.atttypid, a.atttypmod) || CASE WHEN a.attnotnull THEN ' NOT NULL' ELSE '' END
+        || coalesce(' DEFAULT ' || pg_get_expr(d.adbin, d.adrelid), ''), ', ' ORDER BY a.attnum)
+       FROM pg_attribute a LEFT JOIN pg_attrdef d ON d.adrelid = a.attrelid AND d.adnum = a.attnum
+      WHERE a.attrelid = _t AND a.attnum > 0 AND NOT a.attisdropped),
+    (SELECT string_agg(x.def, '; ' ORDER BY x.def) FROM (SELECT c.contype::text || ' ' || pg_get_constraintdef(c.oid) def FROM pg_constraint c WHERE c.conrelid = _t) x),
+    (SELECT c.relkind::text || c.relpersistence::text || c.relispartition::text FROM pg_class c WHERE c.oid = _t),
+    (SELECT 'inherits ' || count(*) FROM pg_inherits i WHERE i.inhrelid = _t OR i.inhparent = _t),
+    (SELECT 'rules ' || count(*) FROM pg_rewrite w WHERE w.ev_class = _t))
+$$;
+DO $shape$
+DECLARE t constant regclass := 'public.claim_receipt_corrections'::regclass;
+BEGIN
+  IF phase3_p20.shape(t) IS DISTINCT FROM phase3_p20.shape('phase3_p20.shape_reference'::regclass) THEN
     RAISE EXCEPTION 'P20: public.claim_receipt_corrections does not have the P20 audit shape';
   END IF;
-  IF obj_description('public.claim_receipt_corrections'::regclass, 'pg_class') IS NOT NULL THEN
-    EXECUTE format('COMMENT ON TABLE public.claim_receipt_corrections IS %L', obj_description('public.claim_receipt_corrections'::regclass, 'pg_class')
+  IF EXISTS (SELECT 1 FROM pg_trigger g WHERE g.tgrelid = t AND NOT g.tgisinternal
+              AND (g.tgname NOT IN ('claim_receipt_corrections_guard', 'claim_receipt_corrections_no_truncate')
+                   OR g.tgfoid IS DISTINCT FROM to_regprocedure('phase3_p20_audit.guard()')))
+     OR EXISTS (SELECT 1 FROM pg_policy p WHERE p.polrelid = t AND p.polname NOT IN ('Owner reads claim receipt corrections',
+              'P20 corrections recorded only by the finance workflow', 'P20 corrections cannot be changed', 'P20 corrections cannot be deleted',
+              'P20 service reads claim receipt corrections', 'P20 demo cleanup removes guest corrections')) THEN
+    RAISE EXCEPTION 'P20: public.claim_receipt_corrections has triggers or policies P20 did not create';
+  END IF;
+  IF obj_description(t, 'pg_class') IS NOT NULL THEN
+    EXECUTE format('COMMENT ON TABLE public.claim_receipt_corrections IS %L', obj_description(t, 'pg_class')
       || format('; P20 re-installed %s: earlier rows kept, new corrections append', to_char(clock_timestamp() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')));
   END IF;
 END $shape$;
+DROP FUNCTION phase3_p20.shape(regclass);
+DROP TABLE phase3_p20.shape_reference;
+-- The retained trail is adopted: its rollback record goes (the table, its rows and phase3_p20_audit stay).
+DO $adopt$
+BEGIN
+  IF to_regnamespace('phase3_p20_retained') IS NOT NULL THEN
+    DROP TABLE phase3_p20_retained.rollback;
+    DROP SCHEMA phase3_p20_retained RESTRICT;
+  END IF;
+END $adopt$;
 CREATE INDEX IF NOT EXISTS claim_receipt_corrections_claim ON public.claim_receipt_corrections(claim_id, created_at);
+
+-- K8 guards (kept by the rollback, so a retained trail keeps them)
+CREATE SCHEMA IF NOT EXISTS phase3_p20_audit;
+REVOKE ALL ON SCHEMA phase3_p20_audit FROM PUBLIC, anon, authenticated, service_role;
+GRANT USAGE ON SCHEMA phase3_p20_audit TO anon, authenticated, service_role; -- the invoker guards call removal_allowed()
+-- E2: an anonymous demo guest (demo_sessions row and still-anonymous identity), as the demo cleanup decides.
+CREATE OR REPLACE FUNCTION phase3_p20_audit.demo_guest(_owner uuid) RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+  SELECT EXISTS (SELECT 1 FROM public.demo_sessions d WHERE d.owner_id = _owner)
+     AND EXISTS (SELECT 1 FROM auth.users u WHERE u.id = _owner AND u.is_anonymous IS TRUE)
+$$;
+-- May this transaction remove _owner's corrections? E1 (confirmed erasure of the caller's own data) or E2. SECURITY
+-- INVOKER on purpose: the role check reads the caller's current_user, as the P10/P13/P15 guards do.
+CREATE OR REPLACE FUNCTION phase3_p20_audit.removal_allowed(_owner uuid) RETURNS boolean
+LANGUAGE plpgsql STABLE SET search_path = public, pg_temp AS $$
+DECLARE erasing boolean;
+BEGIN
+  IF auth.uid() IS NOT NULL THEN
+    IF _owner IS DISTINCT FROM auth.uid() THEN RETURN false; END IF;
+    IF to_regprocedure('phase3_p18.erasure_authorised()') IS NOT NULL THEN
+      EXECUTE 'SELECT phase3_p18.erasure_authorised()' INTO erasing; -- P18: transaction-bound authority, not the setting
+    ELSE
+      erasing := current_setting('ledgerline.erasing', true) = 'on'; -- before P18, as P10/P13/P15 (P18 rewrites this read)
+    END IF;
+    RETURN coalesce(erasing, false);
+  END IF;
+  IF current_user IN ('authenticated', 'anon') THEN RETURN false; END IF;
+  RETURN phase3_p20_audit.demo_guest(_owner);
+END $$;
+CREATE OR REPLACE FUNCTION phase3_p20_audit.guard() RETURNS trigger
+LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
+BEGIN
+  IF TG_OP = 'DELETE' AND phase3_p20_audit.removal_allowed(OLD.owner_id) THEN RETURN OLD; END IF;
+  IF to_regnamespace('phase3_p20_retained') IS NOT NULL THEN
+    RAISE EXCEPTION 'Claim receipt corrections are retained audit history (P20 rolled back); they cannot be changed' USING ERRCODE = '42501';
+  END IF;
+  IF TG_OP = 'INSERT' THEN
+    IF phase3_p19.authorised('finance_operation') THEN RETURN NEW; END IF;
+    RAISE EXCEPTION 'P20_AUDIT_KEPT: claim receipt corrections are recorded only by the claim correction workflow' USING ERRCODE = '42501';
+  END IF;
+  RAISE EXCEPTION 'P20_AUDIT_KEPT: claim receipt corrections are audit history; they are never changed or deleted' USING ERRCODE = '42501';
+END $$;
+-- E1 follow-up: every erasure body deletes the caller's expenses; in that statement the caller's corrections go too.
+CREATE OR REPLACE FUNCTION phase3_p20_audit.follow_erasure() RETURNS trigger
+LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
+BEGIN
+  IF auth.uid() IS NOT NULL AND phase3_p20_audit.removal_allowed(auth.uid()) THEN
+    DELETE FROM public.claim_receipt_corrections c WHERE c.owner_id = auth.uid();
+  END IF;
+  RETURN NULL;
+END $$;
+REVOKE ALL ON FUNCTION phase3_p20_audit.demo_guest(uuid), phase3_p20_audit.removal_allowed(uuid), phase3_p20_audit.guard(), phase3_p20_audit.follow_erasure()
+  FROM PUBLIC, anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION phase3_p20_audit.removal_allowed(uuid) TO anon, authenticated, service_role; -- read-only answer for the caller
+GRANT EXECUTE ON FUNCTION phase3_p20_audit.demo_guest(uuid) TO service_role;
+DROP TRIGGER IF EXISTS claim_receipt_corrections_guard ON public.claim_receipt_corrections;
+CREATE TRIGGER claim_receipt_corrections_guard BEFORE INSERT OR UPDATE OR DELETE ON public.claim_receipt_corrections
+  FOR EACH ROW EXECUTE FUNCTION phase3_p20_audit.guard();
+DROP TRIGGER IF EXISTS claim_receipt_corrections_no_truncate ON public.claim_receipt_corrections;
+CREATE TRIGGER claim_receipt_corrections_no_truncate BEFORE TRUNCATE ON public.claim_receipt_corrections
+  FOR EACH STATEMENT EXECUTE FUNCTION phase3_p20_audit.guard();
+DROP TRIGGER IF EXISTS p20_claim_corrections_follow_erasure ON public.expenses;
+CREATE TRIGGER p20_claim_corrections_follow_erasure AFTER DELETE ON public.expenses
+  FOR EACH STATEMENT EXECUTE FUNCTION phase3_p20_audit.follow_erasure();
+
 ALTER TABLE public.claim_receipt_corrections ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.claim_receipt_corrections FROM PUBLIC, anon, authenticated, service_role;
 GRANT SELECT ON public.claim_receipt_corrections TO authenticated;
-GRANT SELECT ON public.claim_receipt_corrections TO service_role;
+GRANT SELECT, DELETE ON public.claim_receipt_corrections TO service_role; -- DELETE: E2 demo cleanup only (RLS + guard)
 DROP POLICY IF EXISTS "Owner reads claim receipt corrections" ON public.claim_receipt_corrections;
 CREATE POLICY "Owner reads claim receipt corrections" ON public.claim_receipt_corrections FOR SELECT TO authenticated USING (owner_id = auth.uid());
 DROP POLICY IF EXISTS "P20 corrections recorded only by the finance workflow" ON public.claim_receipt_corrections;
@@ -107,6 +240,10 @@ DROP POLICY IF EXISTS "P20 corrections cannot be changed" ON public.claim_receip
 CREATE POLICY "P20 corrections cannot be changed" ON public.claim_receipt_corrections AS RESTRICTIVE FOR UPDATE TO anon, authenticated USING (false) WITH CHECK (false);
 DROP POLICY IF EXISTS "P20 corrections cannot be deleted" ON public.claim_receipt_corrections;
 CREATE POLICY "P20 corrections cannot be deleted" ON public.claim_receipt_corrections AS RESTRICTIVE FOR DELETE TO anon, authenticated USING (false);
+DROP POLICY IF EXISTS "P20 service reads claim receipt corrections" ON public.claim_receipt_corrections;
+CREATE POLICY "P20 service reads claim receipt corrections" ON public.claim_receipt_corrections FOR SELECT TO service_role USING (true);
+DROP POLICY IF EXISTS "P20 demo cleanup removes guest corrections" ON public.claim_receipt_corrections;
+CREATE POLICY "P20 demo cleanup removes guest corrections" ON public.claim_receipt_corrections FOR DELETE TO service_role USING (phase3_p20_audit.demo_guest(owner_id));
 
 -- The correction step: definer, callable only inside finance_operation's transaction (P19 authority row).
 CREATE FUNCTION public.correct_claim_receipt(payload jsonb, operation_key text) RETURNS jsonb
@@ -183,6 +320,15 @@ BEGIN
      OR has_table_privilege('authenticated', 'public.claim_receipt_corrections', 'DELETE') OR has_table_privilege('anon', 'public.claim_receipt_corrections', 'SELECT')
      OR NOT has_function_privilege('authenticated', 'public.finance_operation(text,jsonb)', 'EXECUTE') THEN
     RAISE EXCEPTION 'P20: unexpected client privilege on the claim receipt correction';
+  END IF;
+  -- Only the table owner, authenticated (SELECT) and service_role (SELECT, DELETE) hold any privilege on the trail.
+  IF EXISTS (SELECT 1 FROM pg_class c, aclexplode(c.relacl) x WHERE c.oid = 'public.claim_receipt_corrections'::regclass AND x.grantee <> c.relowner
+              AND NOT ((x.grantee = 'authenticated'::regrole AND x.privilege_type = 'SELECT')
+                    OR (x.grantee = 'service_role'::regrole AND x.privilege_type IN ('SELECT', 'DELETE')))) THEN
+    RAISE EXCEPTION 'P20: unexpected privilege on public.claim_receipt_corrections';
+  END IF;
+  IF (SELECT count(*) FROM pg_constraint c WHERE c.conrelid = 'public.claim_receipt_corrections'::regclass AND c.contype = 'f') <> 0 THEN
+    RAISE EXCEPTION 'P20: the audit trail must not depend on the claim row (K8)';
   END IF;
 END $post$;
 COMMIT;
