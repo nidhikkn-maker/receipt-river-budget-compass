@@ -68,6 +68,9 @@ const writePaths = (s: Seen): [string, () => Promise<unknown>][] => [
   ["applyReviewMapping", () => s.applyReviewMapping({} as never)],
   ["saveRecurringReview", () => s.saveRecurringReview({} as never, "id")],
   ["save (edit)", () => s.save(entry as never, { id: visa.id })],
+  ["addDocument", () => s.addDocument(new File(["x"], "r.pdf", { type: "application/pdf" }), { title: "Receipt", docType: "receipt", docDate: null, amount: null, currency: "INR", merchant: null, notes: "", transactionId: null, accountId: null, loanId: null, expiresOn: null } as never)],
+  ["updateDocument (rename)", () => s.updateDocument("doc", { title: "Renamed" })],
+  ["removeDocument", () => s.removeDocument({ id: "doc", notes: "pending-receipt", transactionId: null, filePath: `${OWNER}/docs/r.pdf` } as never)],
 ];
 const message = (p: Promise<unknown>) => Promise.race([p.then(() => "", (e: Error) => e?.message ?? String(e)), new Promise<string>((r) => setTimeout(() => r("(still running)"), 500))]);
 
@@ -113,9 +116,6 @@ describe("useStore().online is the single offline signal for every store write p
     await act(async () => { await s.save(entry as never, { createId: "44444444-4444-4444-8444-444444444444" }); });
     expect(h.queued).toHaveLength(1);
     expect((h.queued[0] as { id: string }).id).toBe("44444444-4444-4444-8444-444444444444");
-    // the cloud read does not run either
-    await act(async () => { await s.refresh().catch(() => {}); });
-    await settle();
     expect(cloudWrites()).toEqual([]);
   });
 
@@ -142,17 +142,119 @@ describe("useStore().online is the single offline signal for every store write p
     await mount();
     expect(seen.s!.online).toBe(false);
     expect(h.saved).toEqual([]);
-    // navigator back without the event: the store still reads offline, so nothing is flushed
-    setNavigatorOnline(true);
-    await act(async () => { await seen.s!.refresh().catch(() => {}); });
-    await settle();
-    expect(h.saved).toEqual([]);
     expect(h.removed).toEqual([]);
+    setNavigatorOnline(true);
     await act(async () => { window.dispatchEvent(new Event("online")); });
     await settle();
     expect(seen.s!.online).toBe(true);
     expect(h.saved).toHaveLength(1);
     expect(h.removed).toEqual(["66666666-6666-4666-8666-666666666666"]);
     expect(h.queued).toEqual([]);
+  });
+});
+
+const reads = () => h.from.filter((t) => t === "profiles").length;
+const QUEUED = "77777777-7777-4777-8777-777777777777";
+/** Mounted while the browser was offline, one entry queued, then the browser came back but the 'online' event was missed. */
+const offlineThenMissedOnline = async () => {
+  setNavigatorOnline(false);
+  h.pending = [{ id: QUEUED, owner: OWNER, input: entry, files: [], createdAt: "2026-11-01T00:00:00Z" }];
+  await mount();
+  expect(seen.s!.online).toBe(false);
+  reset();
+  setNavigatorOnline(true); // no 'online' event (iOS PWA frozen, laptop asleep)
+};
+const fire = (target: EventTarget, type: string) => act(async () => { target.dispatchEvent(new Event(type)); });
+
+describe("a missed 'online' event: the store re-syncs its signal from the browser", () => {
+  for (const [label, wake] of [
+    ["visibilitychange (visible)", () => fire(document, "visibilitychange")],
+    ["window focus", () => fire(window, "focus")],
+    ["pageshow", () => fire(window, "pageshow")],
+    ["refresh (start of loadRun)", () => act(async () => { await seen.s!.refresh().catch(() => {}); })],
+  ] as const) {
+    it(`${label}: store goes online, the queue is flushed exactly once and one refresh runs`, async () => {
+      await offlineThenMissedOnline();
+      await wake();
+      await settle();
+      expect(seen.s!.online).toBe(true);
+      expect(h.saved).toHaveLength(1);
+      expect(h.removed).toEqual([QUEUED]);
+      expect(reads()).toBe(1);
+      // repeated wake-ups once online: no second flush, no second refresh
+      await fire(window, "focus"); await fire(document, "visibilitychange"); await fire(window, "pageshow"); await fire(window, "focus");
+      await settle();
+      expect(h.saved).toHaveLength(1);
+      expect(h.removed).toEqual([QUEUED]);
+      expect(reads()).toBe(1);
+    });
+  }
+
+  it("several wake-ups and a late 'online' event at once share one reconnect: one flush, one refresh", async () => {
+    await offlineThenMissedOnline();
+    await act(async () => {
+      window.dispatchEvent(new Event("focus")); document.dispatchEvent(new Event("visibilitychange")); window.dispatchEvent(new Event("pageshow"));
+      window.dispatchEvent(new Event("online")); window.dispatchEvent(new Event("focus"));
+    });
+    await settle();
+    expect(seen.s!.online).toBe(true);
+    expect(h.saved).toHaveLength(1);
+    expect(h.removed).toEqual([QUEUED]);
+    expect(reads()).toBe(1);
+  });
+
+  it("navigator.onLine still false: focus, visibilitychange, pageshow and refresh leave the store offline; nothing is flushed or read", async () => {
+    await offlineThenMissedOnline();
+    setNavigatorOnline(false);
+    await fire(window, "focus"); await fire(document, "visibilitychange"); await fire(window, "pageshow");
+    await act(async () => { await seen.s!.refresh().catch(() => {}); });
+    await settle();
+    expect(seen.s!.online).toBe(false);
+    expect(h.saved).toEqual([]);
+    expect(h.removed).toEqual([]);
+    expect(reads()).toBe(0);
+  });
+
+  it("a hidden page does not heal on visibilitychange", async () => {
+    await offlineThenMissedOnline();
+    Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
+    try {
+      await fire(document, "visibilitychange");
+      await settle();
+      expect(seen.s!.online).toBe(false);
+      expect(h.saved).toEqual([]);
+    } finally { delete (document as unknown as Record<string, unknown>)["visibilityState"]; }
+  });
+
+  it("the 'offline' event still takes the store offline at once", async () => {
+    setNavigatorOnline(true);
+    await mount();
+    expect(seen.s!.online).toBe(true);
+    await fire(window, "offline");
+    expect(seen.s!.online).toBe(false);
+  });
+});
+
+describe("document record writes refuse while the store is offline", () => {
+  it("rename, edit, link, archive, lock, add and remove: honest refusal, no request or upload reaches the cloud", async () => {
+    setNavigatorOnline(true);
+    await mount();
+    await fire(window, "offline");
+    const s = seen.s!;
+    reset();
+    const offline = "You're offline. Nothing was saved. Reconnect to update this document.";
+    for (const meta of [{ title: "Renamed" }, { notes: "archived" }, { transactionId: visa.id }, { transactionId: null }, { evidenceLocked: true }, { replacesId: "old" }])
+      await expect(s.updateDocument("doc", meta as never)).rejects.toThrow(offline);
+    await expect(s.addDocument(new File(["x"], "r.pdf", { type: "application/pdf" }), { title: "Receipt", docType: "receipt", docDate: null, amount: null, currency: "INR", merchant: null, notes: "", transactionId: null, accountId: null, loanId: null, expiresOn: null } as never)).rejects.toThrow(offline);
+    await expect(s.removeDocument({ id: "doc", notes: "pending-receipt", transactionId: null, filePath: `${OWNER}/docs/r.pdf` } as never)).rejects.toThrow(offline);
+    expect(cloudWrites()).toEqual([]);
+  });
+
+  it("online, a rename is written to the documents table", async () => {
+    setNavigatorOnline(true);
+    await mount();
+    reset();
+    await act(async () => { await seen.s!.updateDocument("doc", { title: "Renamed" }); });
+    expect(h.from).toContain("documents");
   });
 });

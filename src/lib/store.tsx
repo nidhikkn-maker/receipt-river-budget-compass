@@ -290,7 +290,17 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   // R14b reconnect truth (see reconnectRef below): whether the in-memory view still needs a cloud read once online.
   const reconnectNeed = useRef(false);
   const reconnecting = useRef<Promise<void> | null>(null);
-  const reconnectRef = useRef<() => Promise<void>>(async () => {});
+  const reconnectRef = useRef<(force?: boolean) => Promise<void>>(async () => {});
+  // The store re-syncs its signal from the browser: a missed 'online' event (frozen iOS PWA, laptop sleep) must not keep
+  // the store offline forever. When the store says offline but navigator.onLine is true (checked on visibilitychange to
+  // visible, pageshow, window focus and at the start of every refresh/loadRun), the store goes online and runs the
+  // normal single reconnect (queue flushed once, then exactly one refresh); concurrent triggers share that run. Going
+  // offline stays immediate on the 'offline' event. Returns the reconnect run, or null when nothing changed.
+  const resyncFromBrowser = useRef((): Promise<void> | null => {
+    if (onlineRef.current || typeof navigator === "undefined" || !navigator.onLine) return null;
+    markOnline(true);
+    return reconnectRef.current(true);
+  }).current;
   // The store's own online state going false→true (e.g. a read succeeded after the device was offline) reconnects too;
   // the 'online' event already started the same run, so it is shared, never doubled.
   const wasOnline = useRef(online);
@@ -326,6 +336,9 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   // Overlapping refresh calls share requests; a call made mid-load gets one follow-up load so saves are never missed.
   const refresh = useCallback((): Promise<void> => {
     if (gate.paused()) { gate.defer(); return Promise.resolve(); }
+    // Start of every loadRun: a store left offline by a missed 'online' event heals here (the reconnect refreshes once).
+    const healed = resyncFromBrowser();
+    if (healed) return healed;
     if (!inFlight.current) { inFlight.current = load().finally(() => { inFlight.current = null; }); return inFlight.current; }
     if (!queued.current) queued.current = inFlight.current.catch(() => {}).then(() => { queued.current = null; return refresh(); });
     return queued.current;
@@ -615,10 +628,11 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     // cloud-truthful (syncState 'offline', a readFailure, or a settled area the cloud has not confirmed this session) or
     // queued entries were saved. Concurrent triggers (the 'online' event and online false→true) share one run; a read
     // already in flight is joined, and a read that completed while the queue flushed counts as the refresh.
-    reconnectRef.current = () => {
+    reconnectRef.current = (force) => {
       if (reconnecting.current) return reconnecting.current;
       const run = (async () => {
-        const need = reconnectNeed.current, seq = loadSeq.current;
+        // force: the store healed from the browser after a missed 'online' event, so no read ran while it was offline.
+        const need = reconnectNeed.current || !!force, seq = loadSeq.current;
         if (need && !gate.paused()) setSyncState("syncing");
         const saved = await sync(undefined, true);
         if (!active || !onlineRef.current) return;
@@ -631,8 +645,13 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       return run;
     };
     const onOnline = () => void reconnectRef.current();
+    const onWake = () => { if (typeof document !== "undefined" && document.visibilityState === "hidden") return; void resyncFromBrowser(); };
     void sync(); window.addEventListener("online", onOnline);
-    return () => { active = false; window.removeEventListener("online", onOnline); };
+    window.addEventListener("focus", onWake); window.addEventListener("pageshow", onWake); document.addEventListener("visibilitychange", onWake);
+    return () => {
+      active = false; window.removeEventListener("online", onOnline);
+      window.removeEventListener("focus", onWake); window.removeEventListener("pageshow", onWake); document.removeEventListener("visibilitychange", onWake);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
@@ -680,6 +699,9 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       },
     });
   };
+  // Every document record write (add, rename/edit, archive/restore, link/unlink, version, lock/unlock all go through
+  // addDocument/updateDocument/removeDocument) refuses while the store is offline, before any upload or request.
+  const assertDocumentWriteOnline = () => { if (!onlineRef.current) throw new Error("You're offline. Nothing was saved. Reconnect to update this document."); };
   const commitDocumentRecords: Ctx["commitDocumentRecords"] = async (documentId, p, lock, attempt) => {
     if (!onlineRef.current) throw new Error('Reconnect before saving document records');
     const expected = attempt?.expected ?? preferencesRevision.current;
@@ -1036,6 +1058,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     await refresh();
   };
   const addDocument: Ctx["addDocument"] = async (file, meta) => {
+    assertDocumentWriteOnline();
     validateDocument({ title: meta.title, size: file.size, docType: meta.docType, amount: meta.amount });
     // A retried Statement Desk run reuses its id, so a second attempt never stores the file twice.
     if (meta.id) {
@@ -1067,6 +1090,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     return docId;
   };
   const updateDocument: Ctx["updateDocument"] = async (id, m) => {
+    assertDocumentWriteOnline();
     const row: Database["public"]["Tables"]["documents"]["Update"] = {};
     if (m.title !== undefined) { if (!m.title.trim()) throw new Error("Give the document a title"); row["title"] = m.title.trim(); }
     if (m.docType !== undefined) row["doc_type"] = m.docType;
@@ -1096,6 +1120,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   const reportedReadFailure = useMemo(() => online && readFailure?.kind === "offline" ? { ...readFailure, kind: "failed" as const } : readFailure, [online, readFailure]);
   const areaStatus: Ctx["areaStatus"] = (area) => statusOf({ settled: settledAreas.includes(area), online, errors: loadErrors, denied: deniedAreas, empty: areaEmpty[area], hasData: loadedAreas.includes(area), cloudConfirmed: confirmedAreas.includes(area), readFailed: !!readFailure }, area);
   const removeDocument: Ctx["removeDocument"] = async (d) => {
+    assertDocumentWriteOnline();
     // D8: a locked original is audit evidence; refuse before touching the row or the file (P17 refuses it server-side too).
     assertNotLockedEvidence(d);
     // P0-026: only the staging copy of a used "saved to add later" receipt is ever removed (see pending-documents.ts).
