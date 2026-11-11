@@ -68,6 +68,11 @@ verify:
     - if: $CI_COMMIT_BRANCH
       changes: *code_paths
   script:
+    # Test-only PDF text extraction used by three persistence suites (frozen PDFs, owner/entity report isolation,
+    # interrupted-save recovery). Debian's packaged pypdf keeps it pinned to the image's distribution; never skip
+    # those suites instead.
+    - apt-get update -qq && apt-get install -y -qq --no-install-recommends python3-pypdf
+    - python3 -c "import pypdf; print('pypdf', pypdf.__version__)"
     - bun run typecheck
     - bun run build
     - mkdir -p reports
