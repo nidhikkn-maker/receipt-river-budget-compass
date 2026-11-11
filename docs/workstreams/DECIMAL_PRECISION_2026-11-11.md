@@ -83,7 +83,8 @@ Sum-then-round over stored two-decimal values cannot produce a wrong paise value
 **FX conversion: resolved by lead decision under KK's existing ruling.** The rule is to round once at the posting boundary and never retroactively change posted records.
 
 - **New entries, and edits that change the source amount, currency or rate:** `saveExpense` computes the posted INR amount with `postedInrAmount`, which is `multiplyMoney` rounded half-up once to paise. Example: USD 1.15 × 83.3 = ₹95.795, posted as ₹95.80; binary floating point gave ₹95.79.
-- **Edits that keep all three:** `postedAmountFor` keeps the stored INR amount exactly, even one posted under the old binary rounding. The edit read now also selects `original_amount`, `currency`, `fx_rate` and `amount`, so saveExpense tells these cases apart without any schema change. "Rate" means the rate fetched for the entry date, compared with the stored `fx_rate` at its `numeric(18,8)` precision.
+- **Edits that keep the source amount, currency and entry date (tightened after review of 50fe4c56):** `unchangedPosting` keeps the stored `fx_rate`, `fx_date` and INR amount exactly, and no rate is fetched. A provider revising a historical rate can therefore never move a posted record. This holds even for an amount posted under the old binary rounding. The edit read selects `original_amount, currency, expense_date, fx_rate, fx_date, amount`; no schema change was needed.
+- **Edits that change the amount, currency or date:** the rate for that date is fetched, and the INR amount is computed with `postedInrAmount` and rounded half-up once. The earlier rule, which recomputed whenever the newly fetched rate differed from the stored one, is withdrawn.
 
 **Server-side test coverage.** The new tests call the real `saveExpense` server path with a fake Supabase client and a stubbed rate fetch.
 
@@ -93,7 +94,8 @@ Sum-then-round over stored two-decimal values cannot produce a wrong paise value
   - JPY 1234.5 is accepted at the server but flagged for review;
   - a new USD 1.15 entry at 83.3 posts 95.80;
   - a category-only edit of an existing ₹95.79 entry keeps 95.79;
-  - an edit that changes the rate to 83.1 recomputes to 95.57 (binary rounding gave 95.56);
+  - a category-only edit while the provider now returns 83.1 keeps ₹95.79 and fx_rate 83.3, and fetches no rate;
+  - a date-only edit recomputes: 95.80 at 83.3, and 95.57 at 83.1 (binary rounding gave 95.56);
   - an edit that changes the amount or currency recomputes half-up.
 - `src/components/smart-add/receipt-precision-flow.test.tsx`, the real NewExpense screen:
   - Confirm details refuses a read ₹1234.567, even after the review dialog;
@@ -105,12 +107,18 @@ Sum-then-round over stored two-decimal values cannot produce a wrong paise value
 - **Precision refusal in `saveExpense` neutralised:** 1 test fails.
 - **Confirm check in `new.tsx` neutralised:** 1 test fails.
 - **Save check in `new.tsx` neutralised:** 1 test fails.
-- **The stored-amount rule in `postedAmountFor` disabled:** 2 tests fail.
+- **The stored-amount rule disabled:** 2 tests fail.
+
+**Fails on 50fe4c56:**
+
+- the category-only edit under a revised provider rate (50fe4c56 refetched the rate and posted ₹95.57 at fx_rate 83.1);
+- the date-only edit at an unchanged rate (50fe4c56 kept 95.79);
+- the `unchangedPosting` helper test (the helper did not exist).
 
 **Fails on ed20f1a1:**
 
 - the new-entry 95.80 test (got 95.79);
-- the rate-change test (got 95.56);
+- the date-only edit test (got 95.79 at 83.3);
 - the helper test (the helper did not exist).
 
 The other four tests, and the UI tests, pass on ed20f1a1 because they guard checks that commit already had.

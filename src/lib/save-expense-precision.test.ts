@@ -91,23 +91,39 @@ describe("posting boundary: INR rounded once, half-up; posted records never reco
     expect(r.ok).toBe(true);
     expect(writes[0]!.row).toMatchObject({ original_amount: 1.15, currency: "USD", fx_rate: 83.3, amount: 95.8 });
   });
-  const stored = { id: ENTRY, receipt_details: null, original_amount: 1.15, currency: "USD", fx_rate: 83.3, amount: 95.79 };
+  const stored = { id: ENTRY, receipt_details: null, original_amount: 1.15, currency: "USD", expense_date: "2026-11-10", fx_rate: 83.3, fx_date: "2026-11-10", amount: 95.79 };
   it("editing only the category of an existing ₹95.79 entry keeps 95.79", async () => {
     rate = 83.3;
     const { r, writes } = await call(input({ id: ENTRY, createId: undefined, currency: "USD", originalAmount: 1.15, category: "Travel" }), stored);
     expect(r.ok).toBe(true);
     expect(writes).toEqual([{ op: "update", row: expect.objectContaining({ category: "Travel", amount: 95.79, fx_rate: 83.3 }) }]);
   });
-  it("an edit whose rate changes recomputes half-up", async () => {
-    rate = 83.1; // 1.15 × 83.1 = 95.565 → 95.57 (binary rounding gave 95.56)
-    const { writes } = await call(input({ id: ENTRY, createId: undefined, currency: "USD", originalAmount: 1.15 }), stored);
-    expect(writes[0]!.row).toMatchObject({ amount: 95.57, fx_rate: 83.1 });
+  it("a category-only edit keeps ₹95.79 and fx_rate 83.3 even when the provider now returns 83.1, and fetches no rate", async () => {
+    rate = 83.1; // a revised historical rate must not move a posted record
+    const { r, writes } = await call(input({ id: ENTRY, createId: undefined, currency: "USD", originalAmount: 1.15, category: "Travel" }), stored);
+    expect(r.ok).toBe(true);
+    expect(writes).toEqual([{ op: "update", row: expect.objectContaining({ category: "Travel", amount: 95.79, fx_rate: 83.3, fx_date: "2026-11-10", original_amount: 1.15 }) }]);
+    expect(fetch).not.toHaveBeenCalled();
   });
-  it("an edit whose source amount or currency changes recomputes half-up", () => {
+  it("a date-only edit recomputes half-up with the new date's rate, even when that rate equals the stored one", async () => {
+    rate = 83.3; // same rate on the new date: the date changed, so ₹95.79 (old binary rounding) is recomputed to 95.80
+    const same = await call(input({ id: ENTRY, createId: undefined, currency: "USD", originalAmount: 1.15, date: "2026-11-09" }), stored);
+    expect(same.writes[0]!.row).toMatchObject({ amount: 95.8, fx_rate: 83.3, expense_date: "2026-11-09" });
+    vi.mocked(fetch).mockClear();
+    rate = 83.1; // 1.15 × 83.1 = 95.565 → 95.57 (binary rounding gave 95.56)
+    const { writes } = await call(input({ id: ENTRY, createId: undefined, currency: "USD", originalAmount: 1.15, date: "2026-11-09" }), stored);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(String(vi.mocked(fetch).mock.calls[0]![0])).toContain("/2026-11-09?from=USD");
+    expect(writes[0]!.row).toMatchObject({ amount: 95.57, fx_rate: 83.1, expense_date: "2026-11-09" });
+  });
+  it("an edit whose source amount or currency changes recomputes half-up", async () => {
     expect(fx.postedInrAmount(1.15, 83.3)).toBe(95.8);
-    const { postedAmountFor } = fx;
-    expect(postedAmountFor(stored, { originalAmount: 2.15, currency: "USD", rate: 83.3 })).toBe(179.1); // 179.095
-    expect(postedAmountFor(stored, { originalAmount: 1.15, currency: "EUR", rate: 83.3 })).toBe(95.8);
-    expect(postedAmountFor({ ...stored, fx_rate: "83.30000000", original_amount: "1.15", amount: "95.79" }, { originalAmount: 1.15, currency: "USD", rate: 83.3 })).toBe(95.79);
+    const { unchangedPosting } = fx;
+    expect(unchangedPosting(stored, { originalAmount: 2.15, currency: "USD", date: "2026-11-10" })).toBeNull();
+    expect(unchangedPosting(stored, { originalAmount: 1.15, currency: "EUR", date: "2026-11-10" })).toBeNull();
+    expect(unchangedPosting({ ...stored, fx_rate: "83.30000000", original_amount: "1.15", amount: "95.79" }, { originalAmount: 1.15, currency: "USD", date: "2026-11-10" })).toEqual({ rate: 83.3, date: "2026-11-10", amount: 95.79 });
+    rate = 83.3;
+    const { writes } = await call(input({ id: ENTRY, createId: undefined, currency: "USD", originalAmount: 2.15 }), stored);
+    expect(writes[0]!.row).toMatchObject({ amount: 179.1, fx_rate: 83.3 }); // 179.095
   });
 });

@@ -32,15 +32,17 @@ const sameDecimal = (a: unknown, b: unknown) => {
   if (a == null || b == null || !Number.isFinite(Number(a)) || !Number.isFinite(Number(b))) return false;
   return decimal(Number(a)).toDecimalPlaces(8).eq(decimal(Number(b)).toDecimalPlaces(8));
 };
-export interface StoredPosting { original_amount: number | string | null; currency: string | null; fx_rate: number | string | null; amount: number | string | null }
+export interface StoredPosting { original_amount: number | string | null; currency: string | null; expense_date: string | null; fx_rate: number | string | null; fx_date: string | null; amount: number | string | null }
 /**
- * Posted records are never retroactively changed: an edit that keeps the source amount, currency and rate keeps the
- * stored INR amount exactly (even one posted under the older binary rounding). Otherwise the amount is recomputed.
+ * Posted records are never retroactively changed (lead review of 50fe4c56): an edit that keeps the source amount,
+ * currency and entry date keeps the stored rate, rate date and INR amount exactly, and no rate is fetched — so a
+ * provider revising a historical rate can never move an old entry. Returns null when the posting must be recomputed.
  */
-export function postedAmountFor(stored: StoredPosting | null | undefined, next: { originalAmount: number; currency: string; rate: number }): number {
-  if (stored && stored.amount != null && Number.isFinite(Number(stored.amount)) && stored.currency === next.currency
-    && sameDecimal(stored.original_amount, next.originalAmount) && sameDecimal(stored.fx_rate, next.rate)) return Number(stored.amount);
-  return postedInrAmount(next.originalAmount, next.rate);
+export function unchangedPosting(stored: StoredPosting | null | undefined, next: { originalAmount: number; currency: string; date: string }): { rate: number; date: string; amount: number } | null {
+  if (!stored || stored.currency !== next.currency || stored.expense_date !== next.date || !sameDecimal(stored.original_amount, next.originalAmount)) return null;
+  const rate = Number(stored.fx_rate), amount = Number(stored.amount);
+  if (stored.fx_rate == null || stored.amount == null || !Number.isFinite(rate) || !Number.isFinite(amount)) return null;
+  return { rate, date: stored.fx_date ?? next.date, amount };
 }
 
 const RateInput = z.object({ currency: z.string().regex(/^[A-Z]{3}$/), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) });
@@ -132,7 +134,7 @@ export const saveExpense = createServerFn({ method: "POST" })
     let keptWithdrawal: Json | undefined = undefined;
     let storedPosting: StoredPosting | null = null;
     if (data.id) {
-      const stored = await supabase.from("expenses").select("id,receipt_details,original_amount,currency,fx_rate,amount").eq("id", data.id).eq("employee_id", userId).maybeSingle();
+      const stored = await supabase.from("expenses").select("id,receipt_details,original_amount,currency,expense_date,fx_rate,fx_date,amount").eq("id", data.id).eq("employee_id", userId).maybeSingle();
       if (stored.error) return { ok: false as const, error: "Couldn't save the expense" };
       const w = stored.data ? withdrawalOfRow(stored.data) : null;
       if (isWithdrawn(w)) return { ok: false as const, error: "This entry is withdrawn. Restore it before editing." };
@@ -142,8 +144,11 @@ export const saveExpense = createServerFn({ method: "POST" })
     }
     // The stored details are the server-stamped review plus any withdrawal history kept from the saved row.
     const receiptDetails = stampedDetails && keptWithdrawal !== undefined ? { ...stampedDetails, withdrawal: keptWithdrawal } : stampedDetails;
+    // Unchanged amount, currency and date: keep the stored posting exactly, without fetching a rate.
+    const kept = unchangedPosting(storedPosting, { originalAmount: data.originalAmount, currency: data.currency, date: data.date });
     let fx: { rate: number; date: string };
-    try {
+    if (kept) fx = { rate: kept.rate, date: kept.date };
+    else try {
       fx = await fetchRate(data.currency, data.date);
     } catch (e) {
       return { ok: false as const, error: (e as Error).message };
@@ -151,7 +156,7 @@ export const saveExpense = createServerFn({ method: "POST" })
     const row = {
       title: data.title, merchant: data.merchant, category: data.category, scope: data.scope, member_id: data.memberId, splits: data.splits,
       currency: data.currency, original_amount: data.originalAmount, fx_rate: fx.rate, fx_date: fx.date,
-      amount: postedAmountFor(storedPosting, { originalAmount: data.originalAmount, currency: data.currency, rate: fx.rate }),
+      amount: kept ? kept.amount : postedInrAmount(data.originalAmount, fx.rate),
       payment_method: data.paymentMethod, expense_date: data.date, description: data.description,
       reimbursement_status: data.txnType === "expense" ? data.reimbursementStatus : "none", adjustment_sign: data.txnType === "adjustment" ? data.adjustmentSign : 1,
       txn_type: data.txnType, account_id: data.accountId, to_account_id: ["transfer", "card_payment", "loan_repayment", "investment"].includes(data.txnType) ? data.toAccountId : null, tags: data.tags,
