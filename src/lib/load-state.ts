@@ -40,25 +40,38 @@ export function areaReadState(errors: readonly LoadArea[] | undefined, denied: r
 }
 
 // R14: one status per record area, in priority order. Screens map them to the shared States:
-//  loading -> LoadingState · offline -> OfflineState (cached values, never "fresh") · denied -> UnauthorizedState ·
+//  loading -> LoadingState · offline -> OfflineState (cached values, never "fresh") ·
+//  unavailable -> OfflineUnavailableState (offline and this area was never read on this device: no figures, no
+//  EmptyState, no "Not linked", no ₹0.00 — there are no values to show, not zero values) · denied -> UnauthorizedState ·
 //  failed -> ErrorState with Retry · empty -> EmptyState · ready -> the records.
+// `hasData` is the store's per-area signal: true once the area holds values from the encrypted device copy or a cloud read
+// that succeeded on this device; a denial clears it (the area leaves memory). Offline needs it: without it "offline"
+// would present never-loaded, empty arrays as cached data.
 // A denied area never reads as empty or ready: its last-known values (device copy / earlier load) stay in memory only as
 // flagged, so screens must not present them as current. Offline wins over denied (no check is possible offline); the
-// note says the last online check was refused.
-export type AreaStatus = 'loading' | 'offline' | 'denied' | 'failed' | 'empty' | 'ready';
+// status stays 'offline' with a note that the last online check was refused, and the screen shows the note, no records.
+export type AreaStatus = 'loading' | 'offline' | 'unavailable' | 'denied' | 'failed' | 'empty' | 'ready';
 export interface AreaStatusInfo { status: AreaStatus; note: string | null }
 export const DENIED_OFFLINE_NOTE = "Your access was refused at the last online check. Reconnect to check again; nothing shown here is current.";
 
 export function areaStatus(i: {
   settled: boolean; online: boolean; errors: readonly LoadArea[] | undefined; denied: readonly LoadArea[] | undefined; empty: boolean;
+  /** Values from the device copy or a successful read are in memory for this area (store.tsx loadedAreas). */
+  hasData: boolean;
 }, area: LoadArea): AreaStatusInfo {
   const wasDenied = !!i.denied?.includes(area);
-  if (!i.online) return { status: 'offline', note: wasDenied ? DENIED_OFFLINE_NOTE : null };
+  if (!i.online) {
+    if (wasDenied) return { status: 'offline', note: DENIED_OFFLINE_NOTE };
+    return { status: i.hasData ? 'offline' : 'unavailable', note: null };
+  }
   if (wasDenied) return { status: 'denied', note: null };
   if (i.errors?.includes(area)) return { status: 'failed', note: null };
   if (!i.settled) return { status: 'loading', note: null };
   return { status: i.empty ? 'empty' : 'ready', note: null };
 }
+
+/** True only for statuses whose in-memory values may be shown (ready / empty, or offline cached values without a denial note). */
+export const areaShowsValues = (s: AreaStatusInfo) => s.status === 'ready' || s.status === 'empty' || (s.status === 'offline' && !s.note);
 
 // R14: areas denied on the last online check, remembered per owner on this device so the encrypted device copy is not
 // painted for them on the next start (offline included) until a read of that area succeeds again. Only area names are

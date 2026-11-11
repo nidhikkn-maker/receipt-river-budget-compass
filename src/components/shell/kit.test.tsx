@@ -10,7 +10,7 @@ vi.mock("@tanstack/react-router", async () => {
   return { Link: MockLink, useNavigate: () => () => {} };
 });
 
-import { EmptyState, ErrorState, LoadingState, OfflineState, ProposedBadge, StaleState, UnauthorizedState, UnsavedDraftState } from "./States";
+import { EmptyState, ErrorState, LoadingState, OfflineState, OfflineUnavailableState, ProposedBadge, StaleState, UnauthorizedState, UnsavedDraftState } from "./States";
 import { SplitView } from "./SplitView";
 import { SearchPalette } from "./SearchPalette";
 
@@ -40,6 +40,12 @@ describe("states kit", () => {
     render(<OfflineState waiting={2} />);
     expect(screen.getByRole("status")).toHaveTextContent("You're offline");
     expect(screen.getByRole("status")).toHaveTextContent("2 changes waiting to sync");
+  });
+  it("offline with nothing saved says so and claims no saved copy", () => {
+    render(<OfflineUnavailableState what="your budget" />);
+    expect(screen.getByRole("status")).toHaveTextContent("You're offline");
+    expect(screen.getByRole("status")).toHaveTextContent("No copy of your budget is saved on this device yet");
+    expect(screen.getByRole("status")).not.toHaveTextContent("Showing the copy saved on this device");
   });
   it("unauthorized explains without revealing content", () => {
     render(<UnauthorizedState what="Thapal Ventures" />);
