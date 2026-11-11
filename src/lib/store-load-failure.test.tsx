@@ -10,14 +10,17 @@ const h = vi.hoisted(() => ({
   fail: new Set<string>(),
   snapshot: null as unknown,
   put: [] as { expenses: unknown[]; preferences: { trips: unknown[] } }[],
+  /** Tables whose read rejects: the whole cloud read throws (R14b). */
+  throwOn: new Set<string>(),
 }));
 vi.mock("@/integrations/supabase/client", () => {
   const result = (table: string) => h.fail.has(table)
     ? { data: null, error: { message: "Could not connect to the database", code: "PGRST000" } }
     : { data: table === "finance_preferences" || table === "profiles" ? null : [], error: null };
+  const settle = (table: string) => h.throwOn.has(table) ? Promise.reject(new TypeError("Failed to fetch")) : Promise.resolve(result(table));
   const builder = (table: string): unknown => new Proxy({}, {
-    get: (_t, k) => k === "then" ? (ok: (v: unknown) => void, bad: (e: unknown) => void) => Promise.resolve(result(table)).then(ok, bad)
-      : k === "maybeSingle" || k === "single" ? () => Promise.resolve(result(table)) : () => builder(table),
+    get: (_t, k) => k === "then" ? (ok: (v: unknown) => void, bad: (e: unknown) => void) => settle(table).then(ok, bad)
+      : k === "maybeSingle" || k === "single" ? () => settle(table) : () => builder(table),
   });
   return { supabase: { from: (t: string) => builder(t), rpc: async () => ({ data: null, error: null }), storage: { from: () => ({ remove: async () => ({ error: null }) }) } } };
 });
@@ -38,7 +41,7 @@ function Probe() { seen.s = useStore(); return null; }
 const cachedExpense = { id: "e1", title: "Swiggy order", amount: 640, originalAmount: 640, currency: "INR", fxRate: 1, date: "2026-11-01", category: "Food", scope: "personal", txnType: "expense", accountId: "bank", receipts: [], tags: [], splits: [], allocations: [], paymentMethod: "upi" };
 const trip = { id: "t1", name: "Goa", start: "2026-12-01", end: "2026-12-05" };
 
-afterEach(() => { cleanup(); h.fail.clear(); h.put.length = 0; seen.s = null; });
+afterEach(() => { cleanup(); h.fail.clear(); h.throwOn.clear(); h.put.length = 0; seen.s = null; });
 
 const mount = async () => {
   await act(async () => { render(<StoreProvider userId="11111111-1111-4111-8111-111111111111"><Probe /></StoreProvider>); });
@@ -85,5 +88,29 @@ describe("P0-017: a failed ledger/preferences read never wipes records or the de
     expect(s.loadErrors).toContain("transactions");
     expect(s.syncState).toBe("error");
     expect(h.put).toHaveLength(0);
+  });
+});
+
+describe("R14b: a whole-read failure after the device copy was painted", () => {
+  it("is reported as readFailure (not only syncState), keeps the cached records flagged, and never overwrites the device copy", async () => {
+    Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
+    h.snapshot = snapshot();
+    h.throwOn.add("expenses");
+    let s = await mount();
+    expect(s.syncState).toBe("error");
+    expect(s.readFailure).toMatchObject({ kind: "failed" });
+    expect(s.loadErrors).toEqual([]);
+    expect(s.transactions.map((t) => t.id)).toEqual(["e1"]); // values kept in memory
+    expect(s.areaStatus("transactions")).toEqual({ status: "failed", note: null, cached: true });
+    expect(s.areaStatus("accounts")).toEqual({ status: "failed", note: null, cached: true });
+    expect(h.put).toHaveLength(0);
+    h.throwOn.clear();
+    await act(async () => { await seen.s!.refresh(); });
+    await act(async () => { await new Promise((r) => setTimeout(r, 50)); });
+    s = seen.s!;
+    expect(s.readFailure).toBeNull();
+    expect(s.syncState).toBe("synced");
+    expect(s.areaStatus("transactions").status).toBe("empty");
+    expect(h.put.length).toBeGreaterThan(0);
   });
 });

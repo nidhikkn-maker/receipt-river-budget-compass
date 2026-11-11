@@ -14,13 +14,15 @@ const h = vi.hoisted(() => ({
   /** Signed-in user the fake auth reports; null = no session. */
   session: "11111111-1111-4111-8111-111111111111" as string | null,
   sessionError: false,
+  /** Tables whose read rejects (the whole cloud read throws, e.g. "Failed to fetch"), as opposed to returning an error. */
+  throwOn: new Set<string>(),
 }));
 vi.mock("@/integrations/supabase/client", () => {
   const result = (table: string) => {
     const f = h.fail.get(table);
     return f ? { data: null, error: f.error, status: f.status } : { data: table === "finance_preferences" || table === "profiles" ? null : h.rows.get(table) ?? [], error: null, status: 200 };
   };
-  const settle = (table: string) => (h.hold.get(table) ?? Promise.resolve()).then(() => result(table));
+  const settle = (table: string) => (h.hold.get(table) ?? Promise.resolve()).then(() => { if (h.throwOn.has(table)) throw new TypeError("Failed to fetch"); return result(table); });
   const builder = (table: string): unknown => new Proxy({}, {
     get: (_t, k) => k === "then" ? (ok: (v: unknown) => void, bad: (e: unknown) => void) => settle(table).then(ok, bad)
       : k === "maybeSingle" || k === "single" ? () => settle(table) : () => builder(table),
@@ -41,7 +43,7 @@ vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { error: vi.fn(), succe
 vi.mock("@tanstack/react-router", () => ({ Link: ({ children }: { children: unknown }) => children }));
 
 import { StoreProvider, useAreaStatus, useReadState, useStore } from "./store";
-import { ALL_LOAD_AREAS, areaReadState, areaShowsValues, areaStatus, DENIED_OFFLINE_NOTE, isDeniedRead, type AreaStatus } from "./load-state";
+import { ALL_LOAD_AREAS, areaConfirmedEmpty, areaMayPaintValues, areaReadState, areaShowsValues, areaStatus, DENIED_OFFLINE_NOTE, isDeniedRead, type AreaStatus } from "./load-state";
 import { money } from "./expenses";
 import { defaultPreferences } from "./preferences";
 import { LOCKED_EVIDENCE_MESSAGE } from "./evidence-lock";
@@ -101,7 +103,7 @@ function MoneyScreen() {
   </>;
 }
 
-afterEach(() => { cleanup(); h.fail.clear(); h.calls.length = 0; h.rows.clear(); h.hold.clear(); h.snapshot = undefined; h.session = USER; h.sessionError = false; seen.s = null; localStorage.clear(); });
+afterEach(() => { cleanup(); h.fail.clear(); h.throwOn.clear(); h.calls.length = 0; h.rows.clear(); h.hold.clear(); h.snapshot = undefined; h.session = USER; h.sessionError = false; seen.s = null; localStorage.clear(); });
 const USER = "11111111-1111-4111-8111-111111111111";
 /** Every documents title any render of the screen ever showed (to prove denied data never painted, even briefly). */
 const painted = new Set<string>();
@@ -460,5 +462,129 @@ describe("R14: offline with nothing loaded is 'unavailable', never cached, empty
     expect(screen.getByText(money(1500))).toBeTruthy();
     expect(screen.getByText(money(4000))).toBeTruthy();
     expect(screen.queryByText(/No copy of these figures/)).toBeNull();
+  });
+});
+
+describe("R14b: the device copy is not cloud-confirmed; a whole-read failure is its own signal (readFailure)", () => {
+  const outage = { error: { code: "PGRST000", message: "Could not connect to the database" }, status: 503 };
+  const emptySnapshot = () => ({ ...snapshot(), documents: [] });
+
+  it("pure: every combination including cloudConfirmed and readFailed follows the documented priority", () => {
+    const bools = [false, true];
+    let n = 0;
+    for (const online of bools) for (const settled of bools) for (const failed of bools) for (const denied of bools) for (const empty of bools) for (const hasData of bools)
+    for (const cloudConfirmed of bools) for (const readFailed of bools) {
+      const input = { online, settled, empty, hasData, cloudConfirmed, readFailed };
+      const got = areaStatus({ ...input, errors: failed || denied ? ["documents"] : [], denied: denied ? ["documents"] : [] }, "documents");
+      const want: AreaStatus = !online ? (denied || hasData ? "offline" : "unavailable")
+        : denied ? "denied" : failed ? "failed" : !cloudConfirmed ? (readFailed ? "failed" : "loading") : !settled ? "loading" : empty ? "empty" : "ready";
+      const cached = online && !denied && !cloudConfirmed && hasData;
+      expect(got, JSON.stringify({ ...input, failed, denied })).toEqual(cached ? { status: want, note: null, cached: true } : { status: want, note: !online && denied ? DENIED_OFFLINE_NOTE : null });
+      // other areas' errors / denials never change this area's status
+      expect(areaStatus({ ...input, errors: ["goals"], denied: ["goals"] }, "documents").status)
+        .toBe(!online ? (hasData ? "offline" : "unavailable") : !cloudConfirmed ? (readFailed ? "failed" : "loading") : !settled ? "loading" : empty ? "empty" : "ready");
+      // absence is claimed only from a confirmed empty read; an unconfirmed device copy never claims it
+      if (online && !cloudConfirmed) expect(areaConfirmedEmpty(got)).toBe(false);
+      n++;
+    }
+    expect(n).toBe(256);
+    expect(areaMayPaintValues({ status: "loading", note: null, cached: true })).toBe(true);
+    expect(areaMayPaintValues({ status: "failed", note: null, cached: true })).toBe(true);
+    expect(areaMayPaintValues({ status: "loading", note: null })).toBe(false);
+    expect(areaShowsValues({ status: "loading", note: null, cached: true })).toBe(false);
+  });
+
+  it("online, device copy painted, cloud pending: unconfirmed areas are 'loading' (cached), never 'ready'/'empty'", async () => {
+    let release = () => {};
+    h.snapshot = emptySnapshot();
+    h.hold.set("accounts", new Promise<void>((r) => { release = r; })); // first batch pending
+    h.hold.set("documents", new Promise<void>(() => {}));
+    await mount(<VaultScreen />);
+    for (const area of ALL_LOAD_AREAS) expect(seen.s!.areaStatus(area), area).toEqual({ status: "loading", note: null, cached: true });
+    expect(seen.s!.confirmedAreas).toEqual([]);
+    expect(seen.s!.readFailure).toBeNull();
+    expect(screen.queryByText("No documents yet")).toBeNull(); // the empty device copy makes no absence claim
+    expect(seen.s!.name).toBe("KK"); // the device copy is still painted (startup speed)
+    await act(async () => { release(); });
+    await settleTicks();
+    expect(seen.s!.areaStatus("accounts").status).toBe("empty"); // confirmed by its cloud read
+    expect(seen.s!.areaStatus("documents")).toEqual({ status: "loading", note: null, cached: true }); // still pending
+  });
+
+  it("online, device copy painted, whole read throws: unconfirmed areas read 'failed' with Retry and readFailure is set", async () => {
+    h.snapshot = snapshot();
+    h.throwOn.add("accounts");
+    await mount(<VaultScreen />);
+    const s = seen.s!;
+    expect(s.readFailure).toMatchObject({ kind: "failed", message: "Failed to fetch" });
+    expect(typeof s.readFailure!.at).toBe("string");
+    expect(s.loadErrors).toEqual([]); // nothing per-area failed; the status still says failed
+    for (const area of ALL_LOAD_AREAS) expect(s.areaStatus(area), area).toEqual({ status: "failed", note: null, cached: true });
+    expect(s.documents.map((d) => d.title)).toEqual(["Insurance policy"]); // cached values stay in memory behind `cached`
+    expect(screen.getByRole("button", { name: /retry/i })).toBeTruthy();
+    expect(screen.queryByText("No documents yet")).toBeNull();
+    // the next successful read clears it and confirms every area
+    h.throwOn.clear(); h.rows.set("documents", [docRow]);
+    await act(async () => { await seen.s!.refresh(); });
+    await settleTicks();
+    expect(seen.s!.readFailure).toBeNull();
+    expect(seen.s!.areaStatus("documents").status).toBe("ready");
+  });
+
+  it("whole read throws after the essential batch: confirmed areas keep their status, the rest read 'failed'", async () => {
+    h.snapshot = snapshot();
+    h.throwOn.add("goals");
+    await mount(<VaultScreen />);
+    expect(seen.s!.readFailure).not.toBeNull();
+    expect(seen.s!.areaStatus("accounts").status).toBe("empty");
+    for (const area of ["goals", "valuations", "documents", "family"] as const) expect(seen.s!.areaStatus(area).status, area).toBe("failed");
+  });
+
+  it("cold start (no device copy), whole read throws: 'failed', never a 'loading' that never ends or an empty state", async () => {
+    h.throwOn.add("accounts");
+    await mount(<VaultScreen />);
+    for (const area of ALL_LOAD_AREAS) expect(seen.s!.areaStatus(area), area).toEqual({ status: "failed", note: null });
+    expect(seen.s!.syncState).toBe("error");
+    expect(screen.getByRole("button", { name: /retry/i })).toBeTruthy();
+    expect(screen.queryByText("No documents yet")).toBeNull();
+  });
+
+  it("online, only goals fails: goals is 'failed', readFailure is null and every other area is ready/empty", async () => {
+    h.snapshot = snapshot();
+    h.rows.set("documents", [docRow]);
+    h.fail.set("goals", outage);
+    await mount(<VaultScreen />);
+    const s = seen.s!;
+    expect(s.syncState).toBe("error"); // overloaded: some area failed — not a whole-read failure
+    expect(s.readFailure).toBeNull();
+    expect(s.loadErrors).toEqual(["goals"]);
+    expect(s.areaStatus("goals").status).toBe("failed");
+    expect(s.areaStatus("documents")).toEqual({ status: "ready", note: null });
+    for (const area of ALL_LOAD_AREAS.filter((a) => a !== "goals" && a !== "documents")) expect(["ready", "empty"], area).toContain(s.areaStatus(area).status);
+    expect(screen.getByText("Insurance policy")).toBeTruthy();
+  });
+
+  it("online, cloud read succeeds: every area is cloud-confirmed and ready/empty", async () => {
+    h.snapshot = snapshot();
+    h.rows.set("documents", [docRow]);
+    await mount(<VaultScreen />);
+    const s = seen.s!;
+    expect([...s.confirmedAreas].sort()).toEqual([...ALL_LOAD_AREAS].sort());
+    expect(s.readFailure).toBeNull();
+    expect(s.syncState).toBe("synced");
+    for (const area of ALL_LOAD_AREAS) expect(["ready", "empty"], area).toContain(s.areaStatus(area).status);
+    expect(s.areaStatus("documents")).toEqual({ status: "ready", note: null });
+  });
+
+  it("offline is unchanged: 'offline' with a device copy, 'unavailable' without; nothing is cloud-confirmed", async () => {
+    h.snapshot = snapshot();
+    await mount(<VaultScreen />, false);
+    for (const area of ALL_LOAD_AREAS) expect(seen.s!.areaStatus(area), area).toEqual({ status: "offline", note: null });
+    expect(seen.s!.confirmedAreas).toEqual([]);
+    expect(seen.s!.readFailure).toBeNull();
+    cleanup(); h.snapshot = undefined;
+    await mount(<VaultScreen />, false);
+    for (const area of ALL_LOAD_AREAS) expect(seen.s!.areaStatus(area), area).toEqual({ status: "unavailable", note: null });
+    expect(seen.s!.confirmedAreas).toEqual([]);
   });
 });

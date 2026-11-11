@@ -39,7 +39,7 @@ import { validateCompleteAllocations } from './trip-budget';
 import { PreferenceReview } from '@/components/PreferenceReview';
 import { checkpointUpload } from './statement-pipeline/history';
 import type { StatementUpload } from './preferences';
-import { ALL_LOAD_AREAS, areaReadState, areaStatus as statusOf, isDeniedRead, readDeniedMarker, writeDeniedMarker, type AreaReadState, type AreaStatusInfo, type LoadArea, type LoadErrorKind } from './load-state';
+import { ALL_LOAD_AREAS, areaReadState, areaStatus as statusOf, isDeniedRead, readDeniedMarker, writeDeniedMarker, type AreaReadState, type AreaStatusInfo, type LoadArea, type LoadErrorKind, type ReadFailure } from './load-state';
 
 const ALL_AREAS: LoadArea[] = [...ALL_LOAD_AREAS];
 import { assertNotLockedEvidence } from './evidence-lock';
@@ -154,8 +154,19 @@ interface Ctx {
   deleteAll: () => Promise<void>;
   budgets: Budgets;
   loading: boolean;
-  /** "syncing" while saved figures refresh from the cloud; "synced" once up to date. */
+  /**
+   * "syncing" while saved figures refresh from the cloud; "synced" once up to date. "error" is OVERLOADED: it means
+   * "some area failed, or the whole read failed" — never use it as a whole-read signal (use readFailure) nor as a
+   * per-area signal (use areaStatus / loadErrors). Kept as is for the sync indicator.
+   */
   syncState: "syncing" | "synced" | "offline" | "error";
+  /**
+   * R14b: the whole cloud read threw (not one area failing): set only by loadRun's catch path, cleared by the next read
+   * that completes. Areas not cloud-confirmed this session then read 'failed' in areaStatus. null otherwise.
+   */
+  readFailure: ReadFailure | null;
+  /** R14b: areas a cloud read confirmed in this session (device-copy-only areas are not listed). */
+  confirmedAreas: LoadArea[];
   /** Record groups whose last cloud read failed; their previous values are kept, never replaced by empty lists (P0-004/P0-017). */
   loadErrors: LoadArea[];
   /**
@@ -165,7 +176,7 @@ interface Ctx {
   deniedAreas: LoadArea[];
   /** 'denied' / 'failed' for an area whose last cloud read did not succeed, else null. */
   loadErrorKind: (area: LoadArea) => LoadErrorKind | null;
-  /** R14: loading | offline | unavailable | denied | failed | empty | ready for one area (load-state.ts areaStatus); offline carries a note when the last online read was denied; unavailable = offline and never read on this device (show no figures, no empty state). */
+  /** R14: loading | offline | unavailable | denied | failed | empty | ready for one area (load-state.ts areaStatus); offline carries a note when the last online read was denied; unavailable = offline and never read on this device (show no figures, no empty state). Online, empty/ready only once a cloud read of the area succeeded this session; a device-copy-only area is loading (or failed after a whole-read failure) with cached: true. */
   areaStatus: (area: LoadArea) => AreaStatusInfo;
   lastSyncedAt: string | null;
   refresh: () => Promise<void>;
@@ -245,6 +256,12 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   // nothing; a denial removes the area). Offline with an area missing here is 'unavailable', never cached data.
   const [loadedAreas, setLoadedAreas] = useState<LoadArea[]>([]);
   const addLoaded = (areas: readonly LoadArea[]) => setLoadedAreas((was) => areas.every((a) => was.includes(a)) ? was : [...new Set([...was, ...areas])]);
+  // R14b: areas a cloud read confirmed in this session. The device copy never adds to it, so an area painted only from the
+  // device copy cannot read 'empty'/'ready' online (load-state.ts areaStatus) until its cloud read succeeds.
+  const [confirmedAreas, setConfirmedAreas] = useState<LoadArea[]>([]);
+  const addConfirmed = (areas: readonly LoadArea[]) => setConfirmedAreas((was) => areas.every((a) => was.includes(a)) ? was : [...new Set([...was, ...areas])]);
+  // R14b: the whole cloud read threw (set only in loadRun's catch path; cleared when a read completes).
+  const [readFailure, setReadFailure] = useState<ReadFailure | null>(null);
   const [online, setOnline] = useState(() => typeof navigator === "undefined" || navigator.onLine);
   useEffect(() => {
     const up = () => setOnline(true), down = () => setOnline(false);
@@ -300,6 +317,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     for (const a of areas) clearArea[a]();
     setDeniedAreas([...areas]); setLoadErrors((was) => [...new Set([...was, ...areas])]);
     setLoadedAreas((was) => was.filter((a) => !areas.includes(a)));
+    setConfirmedAreas((was) => was.filter((a) => !areas.includes(a)));
   };
   async function loadRun(run: GateRun) {
     // R14: no signed-in session for this owner (signed out, another account, expired): every area is denied, nothing
@@ -326,6 +344,8 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
         setName(cached.name); setMembers(cached.members); setExpenses(cached.expenses); setAccounts(cached.accounts); setCommitments(cached.commitments);
         setLoans(cached.rawLoans ?? []); setGoals(cached.goals); setBudgets(cached.budgets); setPreferences(normalizePreferences(cached.preferences));
         setValuations(cached.valuations ?? []); setDocuments(cached.documents ?? []);
+        // Painted for startup speed only: settled + loaded, but NOT cloud-confirmed, so online these areas read 'loading'
+        // (cached: true) until their cloud read succeeds, and 'failed' if the whole read then throws (R14b).
         setSettledAreas(ALL_AREAS); addLoaded(ALL_AREAS);
       }
       // Areas denied at the last online check are not painted from the device copy while they stay denied.
@@ -372,7 +392,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     const denied = new Set<LoadArea>();
     type ReadResult = { error: unknown; status?: number | null };
     const refuse = (r: ReadResult, area: LoadArea) => { failed.add(area); if (isDeniedRead(r.error as Parameters<typeof isDeniedRead>[0], r.status)) denied.add(area); };
-    const mark = (r: ReadResult, area: LoadArea) => { if (r.error) refuse(r, area); else addLoaded([area]); return !r.error; };
+    const mark = (r: ReadResult, area: LoadArea) => { if (r.error) refuse(r, area); else { addLoaded([area]); addConfirmed([area]); } return !r.error; };
     const flushDenied = () => { if (denied.size) denyAreas([...denied]); };
     if ([e, a, c, l].some((x) => x.error)) toast.error("Some records couldn't load — pull to refresh or try again");
     if (mark(pref, "settings")) {
@@ -424,7 +444,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       const full = await fullP;
       if (!run.live()) return;
       if (full.error) { refuse(full, "transactions"); flushDenied(); toast.error("Some records couldn't load — pull to refresh or try again"); }
-      else { showLedger(full.data ?? []); addLoaded(["transactions"]); failed.delete("transactions"); denied.delete("transactions"); }
+      else { showLedger(full.data ?? []); addLoaded(["transactions"]); addConfirmed(["transactions"]); failed.delete("transactions"); denied.delete("transactions"); }
       liteActive.current = false;
     }
     const [m, g, v, d, db] = await restP;
@@ -448,21 +468,28 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     // Remember denials for the next start; an area that has since read successfully is forgotten.
     writeDeniedMarker(userId, [...denied, ...readDeniedMarker(userId).filter((a) => failed.has(a))]);
     setSettledAreas(ALL_AREAS);
+    // The whole read completed (some areas may still have failed: those are in loadErrors, not readFailure).
+    setReadFailure(null);
+    // "error" here means some area failed; the catch below also sets it for a whole-read failure (see Ctx.syncState).
     setSyncState(failed.size ? "error" : "synced");
     if (!failed.size) setLastSyncedAt(new Date().toISOString());
     } catch (err) {
       if (!run.live()) return;
       setLoading(false);
+      // R14b: the only place readFailure is set. Areas without a cloud confirmation this session now read 'failed'.
+      setReadFailure({ kind: navigator.onLine ? "failed" : "offline", at: new Date().toISOString(), message: err instanceof Error ? err.message : String(err) });
       setSyncState(navigator.onLine ? "error" : "offline");
       throw err;
     }
   }
 
-  useEffect(() => { void (inFlight.current ?? refresh()); }, [refresh]);
+  // A thrown first read is reported through readFailure / syncState (and areaStatus 'failed'), not as an unhandled rejection.
+  useEffect(() => { void (inFlight.current ?? refresh()).catch(() => {}); }, [refresh]);
   useEffect(() => {
-    // Never overwrite the device copy with a partial load: it is the last known good copy.
-    if (!loading && navigator.onLine && !loadErrors.length) void putSnapshot(userId, { name, members, expenses, accounts, commitments, rawLoans, goals, budgets, preferences, valuations, documents } satisfies Snapshot).catch(() => {});
-  }, [loading, loadErrors, userId, name, members, expenses, accounts, commitments, rawLoans, goals, budgets, preferences, valuations, documents]);
+    // Never overwrite the device copy with a partial load: it is the last known good copy. A whole-read failure
+    // (readFailure) leaves loadErrors empty, so it is checked too.
+    if (!loading && navigator.onLine && !loadErrors.length && !readFailure) void putSnapshot(userId, { name, members, expenses, accounts, commitments, rawLoans, goals, budgets, preferences, valuations, documents } satisfies Snapshot).catch(() => {});
+  }, [loading, loadErrors, readFailure, userId, name, members, expenses, accounts, commitments, rawLoans, goals, budgets, preferences, valuations, documents]);
 
   // Loan principal comes from the linked loan account's ledger, so EMI transfers keep it right.
   const loans = useMemo(() => rawLoans.map((l) => {
@@ -1009,7 +1036,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     settings: false, budgets: !Object.keys(budgets).length, goals: !goals.length, valuations: !valuations.length, documents: !documents.length,
     family: !members.length, profile: !name,
   };
-  const areaStatus: Ctx["areaStatus"] = (area) => statusOf({ settled: settledAreas.includes(area), online, errors: loadErrors, denied: deniedAreas, empty: areaEmpty[area], hasData: loadedAreas.includes(area) }, area);
+  const areaStatus: Ctx["areaStatus"] = (area) => statusOf({ settled: settledAreas.includes(area), online, errors: loadErrors, denied: deniedAreas, empty: areaEmpty[area], hasData: loadedAreas.includes(area), cloudConfirmed: confirmedAreas.includes(area), readFailed: !!readFailure }, area);
   const removeDocument: Ctx["removeDocument"] = async (d) => {
     // D8: a locked original is audit evidence; refuse before touching the row or the file (P17 refuses it server-side too).
     assertNotLockedEvidence(d);
@@ -1066,7 +1093,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       expenses: expenses.filter((x) => (x.txnType ?? "expense") === "expense"), transactions: expenses.filter((x) => !x.transferCounterpartOf), transferCounterparts: expenses.filter((x) => !!x.transferCounterpartOf), confirmTransfer, cancelTransfer, accounts, addAccount, setArchived, adjustBalance,
       commitments, loans, goals, valuations, documents, saveCommitment, confirmIrregular, confirmCommitment, saveLoan, recordLoanPayment, convertToEmi,
       saveGoal, updateAccount, addValuation, addDocument, updateDocument, removeDocument, history, setReimbursement, recordReimbursement, deleteAll,
-      budgets, loading, syncState, loadErrors, deniedAreas, loadErrorKind, areaStatus, lastSyncedAt, refresh, save, remove, withdraw, restoreWithdrawn, withdrawn: withdrawnEntries, payCard, setScope, reconcile, addMember, removeMember, updateMember, setBudget, signedUrl, downloadFile,
+      budgets, loading, syncState, readFailure, confirmedAreas, loadErrors, deniedAreas, loadErrorKind, areaStatus, lastSyncedAt, refresh, save, remove, withdraw, restoreWithdrawn, withdrawn: withdrawnEntries, payCard, setScope, reconcile, addMember, removeMember, updateMember, setBudget, signedUrl, downloadFile,
       setAllocations, updateReimbursement, addReimbursementReceipt, listReviews, saveReview,
     }}>
       {children}
