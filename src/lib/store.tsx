@@ -23,6 +23,7 @@ import {
 } from "./expenses";
 import { accountBalance, adjustmentToMatch, ledgerView, reversalOfRow, type Account, type AccountDetails, type AccountKind, type TxnType, type Valuation } from "./ledger";
 import { statusColumn, validateReceipt, type ReimbursementInfo } from "./reimbursements";
+import { submitReceiptCorrection, type ReceiptCorrection } from "./receipt-correction";
 import { normalizePreferences, defaultPreferences, validateActiveCategory, type FinancePreferences } from "./preferences";
 import { addMonths, emiFor, emiSplit, nextAfter, type Commitment, type CommitmentKind, type CommitmentStatus, type Frequency, type LoanType } from "./planning";
 import { lastStatementDate, nextEmiInstalment, statementShift, type LoanPayment } from "./cards";
@@ -225,6 +226,8 @@ interface Ctx {
   setAllocations: (e: Expense, lines: Allocation[]) => Promise<void>;
   updateReimbursement: (e: Expense, info: ReimbursementInfo) => Promise<void>;
   addReimbursementReceipt: (e: Expense, r: { amount: number; date: string; accountId: string | null; note?: string; operationId: string }) => Promise<void>;
+  /** Audited reduce-only correction of one receipt citation (0 removes it); P20 finance_operation 'correct_claim_receipt'. */
+  correctReimbursementReceipt: (e: Expense, c: ReceiptCorrection) => Promise<void>;
   listReviews: () => Promise<SavedReview[]>;
   saveReview: (r: Omit<SavedReview, "id" | "generatedAt">) => Promise<void>;
 }
@@ -872,6 +875,10 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     await operation("claim_receipt", { id: e.id, ...r });
     await refresh();
   };
+  const correctReimbursementReceipt: Ctx["correctReimbursementReceipt"] = async (e, c) => {
+    await submitReceiptCorrection(e, c, operation);
+    await refresh();
+  };
   const listReviews: Ctx["listReviews"] = async () => {
     const { data, error } = await supabase.from("monthly_reviews").select("*").order("generated_at", { ascending: false }).limit(60);
     check(error);
@@ -1139,7 +1146,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       commitments, loans, goals, valuations, documents, saveCommitment, confirmIrregular, confirmCommitment, saveLoan, recordLoanPayment, convertToEmi,
       saveGoal, updateAccount, addValuation, addDocument, updateDocument, removeDocument, history, setReimbursement, recordReimbursement, deleteAll,
       budgets, loading, syncState, readFailure: reportedReadFailure, online, confirmedAreas, loadErrors, deniedAreas, loadErrorKind, areaStatus, lastSyncedAt, refresh, save, remove, withdraw, restoreWithdrawn, withdrawn: withdrawnEntries, payCard, setScope, reconcile, addMember, removeMember, updateMember, setBudget, signedUrl, downloadFile,
-      setAllocations, updateReimbursement, addReimbursementReceipt, listReviews, saveReview,
+      setAllocations, updateReimbursement, addReimbursementReceipt, correctReimbursementReceipt, listReviews, saveReview,
     }}>
       {children}
       <PreferenceReview sections={reviewSections} onDecision={approved=>{const resolve=reviewDecision.current;reviewDecision.current=null;setReviewSections(null);resolve?.(approved);}} />
