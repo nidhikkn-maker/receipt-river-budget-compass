@@ -58,6 +58,19 @@
 --    (ledgerline.erasing) and the service / operator path (demo cleanup cron, auth-user cascades). App
 --    saves and backup restore UPDATE the existing row, so keep_record_archive still applies to them.
 --    TRUNCATE (which ignores RLS) is refused for signed-in roles on finance_preferences and expenses too.
+--    Payees (WS-E ws/e-records d05bdd1, 11 Nov 2026): the app keeps recipients/payees archive-only (records-archive.ts
+--    ARCHIVED_TABLES "payees"), but they are NOT a table: they are the owner-preferences list
+--    finance_preferences.data.payees (payees.ts; expenses.payee_id and accounts.details.payeeId refer to their
+--    ids, 0046). So the "delete" a signed-in user can do through the API is a preferences write that drops a
+--    payee, leaving entries' payee_id dangling (deleting or truncating the whole row is already refused above).
+--    B4 keeps every stored payee: a signed-in write (direct table UPDATE, an app save, or a backup restore,
+--    which runs as the caller: 0013/0068 restore_finance_backup is SECURITY INVOKER) that leaves out a stored
+--    payee id keeps the stored payee as it was (the same rule as dropped recordArchive entries: an older
+--    backup or copy can never remove one). Edits, archive and restore of a payee are unchanged (app rules).
+--    Refusing instead would break restoring an older backup that predates a payee. Allowed paths: confirmed
+--    erasure deletes the whole preferences row (DELETE, not UPDATE: B4 does not fire) and the service /
+--    operator path (no auth.uid() and not the authenticated/anon role). B4 reads no session setting, so no
+--    client-settable exemption exists (P0-038); P18's install check finds nothing to rewrite in it.
 --    Hosted check item for RB-P1-06: confirm whether hosted roles anon/authenticated hold TRUNCATE on
 --    public tables (the PGlite harness grants it through default privileges); revoke it there if so.
 -- ============================================================================================
@@ -366,6 +379,30 @@ BEGIN
 END $t$;
 
 -- --------------------------------------------------------------------------------------------
+-- B4. Payees (finance_preferences.data.payees) are archive-only: a stored payee is never dropped by a signed-in write
+-- --------------------------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION phase3_p9.keep_payees() RETURNS trigger
+LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
+DECLARE old_list jsonb; new_list jsonb; kept jsonb := '[]'::jsonb; e jsonb;
+BEGIN
+  IF jsonb_typeof(OLD.data->'payees') IS DISTINCT FROM 'array' OR jsonb_typeof(NEW.data) IS DISTINCT FROM 'object' THEN RETURN NEW; END IF;
+  old_list := OLD.data->'payees';
+  new_list := CASE WHEN jsonb_typeof(NEW.data->'payees') = 'array' THEN NEW.data->'payees' ELSE '[]'::jsonb END;
+  IF old_list = new_list THEN RETURN NEW; END IF;
+  -- service / operator path (demo cleanup, operator correction): unchanged
+  IF auth.uid() IS NULL AND current_user NOT IN ('authenticated', 'anon') THEN RETURN NEW; END IF;
+  FOR e IN SELECT value FROM jsonb_array_elements(old_list) LOOP
+    IF jsonb_typeof(e) IS DISTINCT FROM 'object' OR coalesce(e->>'id', '') = '' THEN CONTINUE; END IF;
+    IF EXISTS (SELECT 1 FROM jsonb_array_elements(new_list || kept) n WHERE jsonb_typeof(n.value) = 'object' AND n.value->>'id' = e->>'id') THEN CONTINUE; END IF;
+    kept := kept || jsonb_build_array(e);   -- dropped: the stored payee stays as it was
+  END LOOP;
+  IF jsonb_array_length(kept) > 0 THEN NEW.data := jsonb_set(NEW.data, '{payees}', new_list || kept); END IF;
+  RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS p9_keep_payees ON public.finance_preferences;
+CREATE TRIGGER p9_keep_payees BEFORE UPDATE ON public.finance_preferences FOR EACH ROW EXECUTE FUNCTION phase3_p9.keep_payees();
+
+-- --------------------------------------------------------------------------------------------
 -- Grants
 -- --------------------------------------------------------------------------------------------
 REVOKE ALL ON FUNCTION public.claim_statement_lines(text, uuid, text, jsonb), public.confirm_statement_lines(uuid[]),
@@ -373,5 +410,6 @@ REVOKE ALL ON FUNCTION public.claim_statement_lines(text, uuid, text, jsonb), pu
 GRANT EXECUTE ON FUNCTION public.claim_statement_lines(text, uuid, text, jsonb), public.confirm_statement_lines(uuid[]),
   public.pending_statement_lines(text), public.discard_used_pending_document(uuid) TO authenticated, service_role;
 REVOKE ALL ON FUNCTION phase3_p9.guard_line_claims(), phase3_p9.guard_archive_delete(), phase3_p9.guard_archive_truncate(),
-  phase3_p9.archive_change(jsonb, jsonb, boolean), phase3_p9.keep_record_archive(), phase3_p9.guard_preferences_delete() FROM PUBLIC, anon, authenticated;
+  phase3_p9.archive_change(jsonb, jsonb, boolean), phase3_p9.keep_record_archive(), phase3_p9.guard_preferences_delete(),
+  phase3_p9.keep_payees() FROM PUBLIC, anon, authenticated;
 COMMIT;

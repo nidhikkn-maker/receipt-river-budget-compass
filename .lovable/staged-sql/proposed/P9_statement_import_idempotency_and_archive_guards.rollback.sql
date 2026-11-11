@@ -23,6 +23,7 @@ END $pre$;
 
 DROP TRIGGER IF EXISTS p9_keep_record_archive ON public.finance_preferences;
 DROP TRIGGER IF EXISTS p9_preferences_kept ON public.finance_preferences;
+DROP TRIGGER IF EXISTS p9_keep_payees ON public.finance_preferences;
 DROP TRIGGER IF EXISTS p9_no_truncate ON public.finance_preferences;
 DROP TRIGGER IF EXISTS p9_no_truncate ON public.expenses;
 DO $t$
