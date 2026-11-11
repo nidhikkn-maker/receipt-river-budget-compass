@@ -43,7 +43,7 @@ vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { error: vi.fn(), succe
 vi.mock("@tanstack/react-router", () => ({ Link: ({ children }: { children: unknown }) => children }));
 
 import { StoreProvider, useAreaStatus, useReadState, useStore } from "./store";
-import { ALL_LOAD_AREAS, areaConfirmedEmpty, areaMayPaintValues, areaReadState, areaShowsValues, areaStatus, DENIED_OFFLINE_NOTE, isDeniedRead, type AreaStatus } from "./load-state";
+import { ALL_LOAD_AREAS, areaConfirmedEmpty, areaMayPaintValues, areaReadState, areaShowsValues, areaStatus, DENIED_OFFLINE_NOTE, isDeniedRead, offlineAbsence, type AreaStatus } from "./load-state";
 import { money } from "./expenses";
 import { defaultPreferences } from "./preferences";
 import { LOCKED_EVIDENCE_MESSAGE } from "./evidence-lock";
@@ -586,5 +586,89 @@ describe("R14b: the device copy is not cloud-confirmed; a whole-read failure is 
     await mount(<VaultScreen />, false);
     for (const area of ALL_LOAD_AREAS) expect(seen.s!.areaStatus(area), area).toEqual({ status: "unavailable", note: null });
     expect(seen.s!.confirmedAreas).toEqual([]);
+  });
+});
+
+describe("R14b reconnect truth: coming back online refreshes once and never leaves a stale offline/failed view", () => {
+  /** Each cloud load reads accounts exactly once, so this counts refreshes. */
+  const reads = () => h.calls.filter((c) => c === "from:accounts").length;
+  const holdAccounts = () => { let release = () => {}; h.hold.set("accounts", new Promise<void>((r) => { release = r; })); return () => release(); };
+
+  it("offline whole-read failure, then 'online': exactly one refresh; unconfirmed areas read 'failed' (cached) until it completes, then confirmed", async () => {
+    h.snapshot = snapshot();
+    h.rows.set("documents", [docRow]);
+    const releaseFirst = holdAccounts();
+    await mount(<VaultScreen />);
+    // the device drops offline while the first read is in flight, and that read then throws
+    setOnline(false); h.throwOn.add("accounts");
+    await act(async () => { releaseFirst(); });
+    await settleTicks();
+    expect(seen.s!.readFailure).toMatchObject({ kind: "offline" });
+    expect(seen.s!.online).toBe(false);
+    for (const area of ALL_LOAD_AREAS) expect(seen.s!.areaStatus(area), area).toEqual({ status: "offline", note: null });
+    // back online; the cloud answers, but slowly
+    h.throwOn.clear();
+    const release = holdAccounts();
+    const before = reads();
+    setOnline(true);
+    await act(async () => { window.dispatchEvent(new Event("online")); });
+    await settleTicks();
+    expect(reads()).toBe(before + 1); // one refresh, not one per trigger ('online' event + online false→true)
+    expect(seen.s!.online).toBe(true);
+    expect(seen.s!.syncState).toBe("syncing");
+    expect(seen.s!.readFailure).toMatchObject({ kind: "failed" }); // online, an uncleared failure is not "offline"
+    for (const area of ALL_LOAD_AREAS) expect(seen.s!.areaStatus(area), area).toEqual({ status: "failed", note: null, cached: true });
+    expect(screen.queryByText("No documents yet")).toBeNull();
+    expect(screen.queryByText("You're offline")).toBeNull();
+    await act(async () => { release(); });
+    await settleTicks();
+    expect(reads()).toBe(before + 1);
+    expect(seen.s!.readFailure).toBeNull();
+    expect([...seen.s!.confirmedAreas].sort()).toEqual([...ALL_LOAD_AREAS].sort());
+    expect(seen.s!.areaStatus("documents")).toEqual({ status: "ready", note: null });
+    expect(seen.s!.syncState).toBe("synced");
+  });
+
+  it("offline start (syncState 'offline'), then 'online' with no queued entries: a refresh still runs, 'syncing' then 'synced'", async () => {
+    h.snapshot = snapshot();
+    await mount(<VaultScreen />, false);
+    expect(seen.s!.syncState).toBe("offline");
+    expect(seen.s!.online).toBe(false);
+    expect(reads()).toBe(0);
+    const release = holdAccounts();
+    setOnline(true);
+    await act(async () => { window.dispatchEvent(new Event("online")); });
+    await settleTicks();
+    expect(reads()).toBe(1);
+    expect(seen.s!.syncState).toBe("syncing");
+    expect(seen.s!.areaStatus("accounts")).toEqual({ status: "loading", note: null, cached: true });
+    await act(async () => { release(); });
+    await settleTicks();
+    expect(reads()).toBe(1);
+    expect(seen.s!.syncState).toBe("synced");
+    for (const area of ALL_LOAD_AREAS) expect(["ready", "empty"], area).toContain(seen.s!.areaStatus(area).status);
+  });
+
+  it("everything already confirmed and no failure: offline then 'online' runs no extra refresh; `online` is the offline signal, not syncState", async () => {
+    h.snapshot = snapshot();
+    await mount(<VaultScreen />);
+    expect(seen.s!.syncState).toBe("synced");
+    const before = reads();
+    setOnline(false);
+    await act(async () => { window.dispatchEvent(new Event("offline")); });
+    expect(seen.s!.online).toBe(false);
+    expect(seen.s!.syncState).toBe("synced"); // syncState never says "offline" here: screens must not use it for that
+    expect(seen.s!.areaStatus("documents").status).toBe("offline");
+    setOnline(true);
+    await act(async () => { window.dispatchEvent(new Event("online")); });
+    await settleTicks();
+    expect(seen.s!.online).toBe(true);
+    expect(reads()).toBe(before);
+    expect(seen.s!.syncState).toBe("synced");
+  });
+
+  it("offlineAbsence: the owner-ruled device-copy wording for absence shown offline", () => {
+    expect(offlineAbsence("assets")).toBe("No assets in the copy saved on this device");
+    expect(offlineAbsence(" archived documents ")).toBe("No archived documents in the copy saved on this device");
   });
 });

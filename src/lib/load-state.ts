@@ -103,6 +103,13 @@ export const areaMayPaintValues = (s: AreaStatusInfo) => areaShowsValues(s) || !
 /** Only a cloud-confirmed empty read may claim absence ("No documents yet", "not found", ₹0 totals as fact). */
 export const areaConfirmedEmpty = (s: AreaStatusInfo) => s.status === 'empty';
 
+/**
+ * R14b owner ruling (DocuRepo wording): offline, an absence shown from the device copy (areaStatus 'offline' with no
+ * records) must say it is the device copy, never read as plain fact. `what` is a plural noun phrase ("assets",
+ * "archived documents"). Online absence is claimed only from areaConfirmedEmpty, never with this wording.
+ */
+export const offlineAbsence = (what: string) => `No ${what.trim()} in the copy saved on this device`;
+
 // R14: areas denied on the last online check, remembered per owner on this device so the encrypted device copy is not
 // painted for them on the next start (offline included) until a read of that area succeeds again. Only area names are
 // stored, never records; unavailable storage simply means nothing is remembered (the cloud check still runs).
