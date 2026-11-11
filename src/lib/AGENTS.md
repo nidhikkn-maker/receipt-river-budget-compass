@@ -39,6 +39,7 @@
 - Original-file downloads go through store.downloadFile → fetchPrivateFile (private-files.ts): fetch the signed bytes, refuse empty/size/checksum mismatch, save via downloadBlob; opening a cross-origin signed URL never saves a file.
 
 - INR ledger, expense allocations, statement balances, repayment history, planning/allocation, portfolio, asset schedules, tax source/liability and report sums use src/lib/money.ts decimal arithmetic with existing rounding boundaries; numeric storage stays unchanged to preserve compatibility.
+- KK decision 11 Nov 2026 (docs/workstreams/DECIMAL_PRECISION_2026-11-11.md): reimbursement, claim, statement, organisation-share and travel-report sums also use money.ts (half-up once at paise). Read bills keep source digits as evidence; receiptPrecisionFlags flags amounts finer than the currency minor unit and postingPrecisionError refuses anything finer than stored precision instead of letting numeric(14,2) round it silently.
 - Trip complete-allocation dimensions are explicit owner preferences; changes validate each promised dimension independently against the primary budget without auto-combining plans.
 - Prepared report saves use stable IDs, owner/size/path readback and same-blob retry; unknown insert outcomes retain uploaded evidence rather than deleting possibly committed files.
 - Merchant grouping compares every original name before/after, binds affected records to review and retains reversible alias history in owner preferences; reversal refuses later dependent edits and never rewrites ledger sources.

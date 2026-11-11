@@ -3,7 +3,7 @@ import { isWithdrawn, withdrawalOfRow } from "./withdrawal";
 import type { Json } from "@/integrations/supabase/types";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { ReceiptDetailsSchema, receiptBreakdownError } from "./receipt-reading";
+import { ReceiptDetailsSchema, postingPrecisionError, receiptBreakdownError } from "./receipt-reading";
 import { c11ReviewError } from "./statement-pipeline/review-gate";
 import { receiptReuseError, stampDuplicateReview } from "./duplicate-decision";
 
@@ -73,6 +73,10 @@ export const saveExpense = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const receiptError = receiptBreakdownError(data.originalAmount, data.receiptDetails, data.currency);
     if (receiptError) return { ok: false as const, error: receiptError };
+    // KK decision 11 Nov 2026: an amount finer than the stored precision (₹1234.567, ₹0.005) is refused for review
+    // instead of being rounded silently by the numeric(14,2) column; the read evidence keeps the source digits.
+    const precisionError = postingPrecisionError(data.originalAmount, data.currency);
+    if (precisionError) return { ok: false as const, error: precisionError };
     // C11: an automatically classified row is saved only with the person's own row approval.
     const reviewError = c11ReviewError(data.receiptDetails);
     if (reviewError) return { ok: false as const, error: reviewError };

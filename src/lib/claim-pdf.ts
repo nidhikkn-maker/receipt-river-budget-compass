@@ -5,9 +5,11 @@ import type { Claim } from "./expense-claim";
 import { appendAnnexures, type AnnexFile } from "./expenditure-pdf";
 import type { Statement } from "./expenditure-statement";
 import { DEFAULT_DECLARATION, maskedText } from './reimbursement-profiles';
+import { addMoney, roundMoney, sumMoney } from './money';
 
 const IN = new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const n = (v: number) => IN.format(Math.round(v * 100) / 100);
+// Display formatting only: never written back to any record.
+const n = (v: number) => IN.format(roundMoney(v));
 const ascii = uCell;
 const INK: [number, number, number] = [22, 44, 110];
 
@@ -18,7 +20,7 @@ export function claimCategoryTotals(c: Claim) {
   const m = new Map<string, { count: number; eligible: number; received: number; claimed: number; bills: string[] }>();
   for (const i of c.items) {
     const r = m.get(i.category) ?? { count: 0, eligible: 0, received: 0, claimed: 0, bills: [] };
-    r.count++; r.eligible += i.eligible; r.received += i.reimbursed; r.claimed += i.claimed; if (i.billRef && i.billRef !== "-") r.bills.push(i.billRef);
+    r.count++; r.eligible = addMoney(r.eligible, i.eligible); r.received = addMoney(r.received, i.reimbursed); r.claimed = addMoney(r.claimed, i.claimed); if (i.billRef && i.billRef !== "-") r.bills.push(i.billRef);
     m.set(i.category, r);
   }
   return [...m.entries()].sort((a, b) => b[1].claimed - a[1].claimed).map(([category, r]) => ({ category, ...r }));
@@ -51,7 +53,7 @@ export async function renderClaimPdf(c: Claim, files: Record<string, AnnexFile |
     ['Payment currency preference', k.preferredCurrency || 'INR', 'Approval status', 'Not approved — signature required'],
     ['Signature preference',k.signaturePreference||'Signature required','', ''],
   ].map((r) => r.map(ascii)) });
-  table({ startY: last() + 4, head: [["Claim summary", "INR"]], columnStyles: { 1: { halign: "right" } }, body: [['Total submitted expenditure (original full expenses)', n(c.items.reduce((s, i) => s + i.inr, 0))], ['Excluded expenditure (reference only)', n(c.excluded.reduce((s, x) => s + x.row.inr, 0))], ["Eligible personally-funded organisation share", n(c.totals.eligible)], ["Less: already reimbursed", n(c.totals.received)]], foot: c.totals.advanceApplied ? [["Outstanding amount claimed", n(c.totals.claimed)], ["Less: advance applied", n(c.totals.advanceApplied)], ["Net amount payable", n(c.totals.payable ?? c.totals.claimed)]] : [["Outstanding amount claimed", n(c.totals.claimed)]] });
+  table({ startY: last() + 4, head: [["Claim summary", "INR"]], columnStyles: { 1: { halign: "right" } }, body: [['Total submitted expenditure (original full expenses)', n(sumMoney(c.items.map((i) => i.inr)))], ['Excluded expenditure (reference only)', n(sumMoney(c.excluded.map((x) => x.row.inr)))], ["Eligible personally-funded organisation share", n(c.totals.eligible)], ["Less: already reimbursed", n(c.totals.received)]], foot: c.totals.advanceApplied ? [["Outstanding amount claimed", n(c.totals.claimed)], ["Less: advance applied", n(c.totals.advanceApplied)], ["Net amount payable", n(c.totals.payable ?? c.totals.claimed)]] : [["Outstanding amount claimed", n(c.totals.claimed)]] });
   if (format === "summary") {
     table({ startY: last() + 4, head: [["Category", "Items", "INR", "Received", "Claimed", "Bills"]], columnStyles: Object.fromEntries([1, 2, 3, 4].map((x) => [x, { halign: "right" as const }])),
       body: claimCategoryTotals(c).map((r) => [r.category, String(r.count), n(r.eligible), n(r.received), n(r.claimed), r.bills.join(", ") || "-"].map(ascii)),

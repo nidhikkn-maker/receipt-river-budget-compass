@@ -102,7 +102,7 @@ describe("receipt reading", () => {
   it("requires a fresh review acknowledgement whenever an item or amount is edited", () => {
     const items: NonNullable<ReceiptAmounts["items"]> = [{ name: "Dinner", quantity: 2, amount: 360, confidence: { name: "high", amount: "low" } }];
     const details = { subtotal: 360, tax: 32.10, tip: 40, items };
-    expect(receiptReviewCheck(432.10, details)).toEqual({ items: [0], itemTotalError: null, needed: true });
+    expect(receiptReviewCheck(432.10, details)).toEqual({ items: [0], itemTotalError: null, precision: [], needed: true });
     const before = receiptReviewSignature(432.10, details);
     expect(receiptReviewSignature(432.10, details)).toBe(before);
     expect(receiptReviewSignature(432.10, { ...details, items: [{ ...items[0]!, amount: 300 }] })).not.toBe(before);

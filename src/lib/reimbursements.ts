@@ -1,6 +1,7 @@
 // Reimbursement tracking rules: money you paid on behalf of a person, organisation or project.
 // Receipts back are reimbursement entries (never income); outstanding amounts are derived, never stored.
 import type { Expense, ReimbursementStatus } from "./expenses";
+import { addMoney, decimal, roundMoney, subtractMoney, sumMoney } from "./money";
 
 export const REIMB_STAGES = ["not_submitted", "submitted", "under_review", "partial", "received", "rejected", "written_off"] as const;
 export type ReimbStage = (typeof REIMB_STAGES)[number];
@@ -31,15 +32,16 @@ export interface ReimbursementInfo {
   reversedReceipts?: ReversedReimbReceipt[];
 }
 
-const r2 = (n: number) => Math.round(n * 100) / 100;
+// KK decision 11 Nov 2026: decimal arithmetic, rounded half-up once at the paise boundary (money.ts).
+const r2 = roundMoney;
 type E = Pick<Expense, "id" | "amount" | "date" | "reimbursementStatus" | "reimbursement" | "title">;
 
 export const isTracked = (e: E) => (e.reimbursementStatus ?? "none") !== "none" || !!e.reimbursement?.stage;
-export const reimbursableOf = (e: E) => r2(Math.min(e.amount, e.reimbursement?.reimbursable ?? e.amount));
+export const reimbursableOf = (e: E) => { const saved = e.reimbursement?.reimbursable, claim = saved != null && Number.isFinite(saved) ? saved : e.amount; return r2(decimal(claim).lt(decimal(e.amount)) ? claim : e.amount); };
 export const receivedOf = (e: E) => {
-  const r = (e.reimbursement?.receipts ?? []).reduce((s, x) => s + x.amount, 0);
+  const r = sumMoney((e.reimbursement?.receipts ?? []).map((x) => x.amount));
   // Older claims settled in one step have no receipt lines: the whole claim was received.
-  return r2(r === 0 && e.reimbursementStatus === "received" ? reimbursableOf(e) : r);
+  return r === 0 && e.reimbursementStatus === "received" ? reimbursableOf(e) : r;
 };
 export function stageOf(e: E): ReimbStage {
   const st = e.reimbursement?.stage;
@@ -50,7 +52,7 @@ export function stageOf(e: E): ReimbStage {
   return st && st !== "partial" && st !== "received" ? st : "not_submitted";
 }
 /** Rejected and written-off claims become personal cost, so nothing is outstanding. */
-export const outstandingOf = (e: E) => { const s = stageOf(e); return s === "rejected" || s === "written_off" ? 0 : r2(Math.max(0, reimbursableOf(e) - receivedOf(e))); };
+export const outstandingOf = (e: E) => { const s = stageOf(e); return s === "rejected" || s === "written_off" ? 0 : Math.max(0, subtractMoney(reimbursableOf(e), receivedOf(e))); };
 /** Database status column: pending while money is still expected. */
 export const statusColumn = (e: E): ReimbursementStatus => { const s = stageOf(e); return s === "received" ? "received" : s === "rejected" || s === "written_off" ? "none" : "pending"; };
 
@@ -70,20 +72,21 @@ export const AGE_BUCKETS = ["0–30 days", "31–60 days", "61–90 days", "Over
 export function reimbursementSummary(list: E[], today: string) {
   const tracked = list.filter(isTracked);
   const byPayer: Record<string, number> = {}, byAge: Record<string, number> = Object.fromEntries(AGE_BUCKETS.map((b) => [b, 0]));
-  let gross = 0, reimbursable = 0, received = 0, outstanding = 0, writtenOff = 0;
+  // Decimal accumulators; each figure is rounded to paise once, when it leaves this function.
+  let gross = decimal(0), reimbursable = decimal(0), received = decimal(0), outstanding = decimal(0), writtenOff = decimal(0);
   for (const e of tracked) {
     const out = outstandingOf(e), s = stageOf(e);
-    gross += e.amount; received += receivedOf(e); outstanding += out;
-    if (s === "rejected" || s === "written_off") writtenOff += r2(reimbursableOf(e) - receivedOf(e)); else reimbursable += reimbursableOf(e);
+    gross = gross.plus(decimal(e.amount)); received = received.plus(decimal(receivedOf(e))); outstanding = outstanding.plus(decimal(out));
+    if (s === "rejected" || s === "written_off") writtenOff = writtenOff.plus(decimal(subtractMoney(reimbursableOf(e), receivedOf(e)))); else reimbursable = reimbursable.plus(decimal(reimbursableOf(e)));
     if (out > 0) {
       const payer = e.reimbursement?.payer?.trim() || "Unassigned";
-      byPayer[payer] = r2((byPayer[payer] ?? 0) + out);
-      const b = ageBucket(e.reimbursement?.submittedOn || e.date, today); byAge[b] = r2((byAge[b] ?? 0) + out);
+      byPayer[payer] = addMoney(byPayer[payer] ?? 0, out);
+      const b = ageBucket(e.reimbursement?.submittedOn || e.date, today); byAge[b] = addMoney(byAge[b] ?? 0, out);
     }
   }
   return {
-    count: tracked.length, gross: r2(gross), reimbursable: r2(reimbursable), received: r2(received), outstanding: r2(outstanding), writtenOff: r2(writtenOff),
+    count: tracked.length, gross: r2(gross.toString()), reimbursable: r2(reimbursable.toString()), received: r2(received.toString()), outstanding: r2(outstanding.toString()), writtenOff: r2(writtenOff.toString()),
     /** What these payments really cost you after expected and received reimbursements. */
-    netPersonalCost: r2(gross - reimbursable), byPayer, byAge,
+    netPersonalCost: r2(gross.minus(reimbursable).toString()), byPayer, byAge,
   };
 }

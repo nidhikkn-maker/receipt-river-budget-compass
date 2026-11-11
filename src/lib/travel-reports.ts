@@ -8,8 +8,9 @@ import { workspaceParts, type WorkspaceShare } from "./workspaces";
 import type { Report } from "./reports";
 import { bookingOutstanding, type TravelTrip } from "./travel";
 import { isTracked, outstandingOf, receivedOf, reimbursableOf, stageOf, type ReimbursementInfo } from "./reimbursements";
+// KK decision 11 Nov 2026: decimal arithmetic, rounded half-up once at the paise boundary (money.ts).
+import { addMoney, proportionMoney, subtractMoney, sumMoney } from "./money";
 
-const r2 = (n: number) => Math.round(n * 100) / 100;
 const fmt = (n: number) => n.toFixed(2);
 type Row = IntelRow & {
   id: string;
@@ -47,16 +48,18 @@ function personParts(e: Row): { person: string; amount: number }[] {
   const splits = e.splits ?? [];
   if (!splits.length) return [];
   const orig = e.originalAmount || e.amount;
-  const out = splits.map((s) => ({ person: s.memberId ?? "Me", amount: r2((s.amount / orig) * e.amount) }));
-  const head = out.slice(0, -1).reduce((s, x) => s + x.amount, 0);
+  if (!orig) return [];
+  // Same rule as workspaceParts: decimal proportion of the stored INR, the last share takes the exact remainder.
+  const out = splits.map((s) => ({ person: s.memberId ?? "Me", amount: proportionMoney(e.amount, s.amount, orig) }));
+  const head = sumMoney(out.slice(0, -1).map((x) => x.amount));
   const last = out.at(-1);
-  if (last) last.amount = r2(e.amount - head);
+  if (last) last.amount = subtractMoney(e.amount, head);
   return out;
 }
 
 const group = (rows: [string, number][]) => {
   const o: Record<string, number> = {};
-  for (const [k, v] of rows) o[k] = r2((o[k] ?? 0) + v);
+  for (const [k, v] of rows) o[k] = addMoney(o[k] ?? 0, v);
   return Object.entries(o).sort((a, b) => b[1] - a[1]);
 };
 
@@ -69,18 +72,18 @@ const cutRows = (rows: [string, number][], label: string, total: number): (strin
 /** One report per cut. Amounts are INR; each cut's total equals total trip spending. */
 export function travelReport(cut: TravelCut, trips: TravelTrip[], txns: Row[], opts: TravelReportOptions): Report {
   const entries = travelEntries(trips, txns);
-  const total = r2(entries.reduce((s, e) => s + e.amount, 0));
-  const unpaid = (t: TravelTrip) => r2((t.bookings ?? []).reduce((a, b) => a + bookingOutstanding(b, txns), 0));
-  const committed = r2(trips.reduce((s, t) => s + unpaid(t), 0));
+  const total = sumMoney(entries.map((e) => e.amount));
+  const unpaid = (t: TravelTrip) => sumMoney((t.bookings ?? []).map((b) => bookingOutstanding(b, txns)));
+  const committed = sumMoney(trips.map(unpaid));
   const title = `Travel report — ${TRAVEL_CUT_LABEL[cut]}`;
 
   if (cut === "trip") {
     const rows = trips.map((t) => {
       const s = tripSummary(t, txns);
       const un = unpaid(t);
-      return [t.name, t.destination || "—", t.start, t.end, fmt(s.total), fmt(un), t.budget ? fmt(t.budget) : "", fmt(s.total + un), s.variance ? fmt(s.variance) : ""];
+      return [t.name, t.destination || "—", t.start, t.end, fmt(s.total), fmt(un), t.budget ? fmt(t.budget) : "", fmt(addMoney(s.total, un)), s.variance ? fmt(s.variance) : ""];
     });
-    return { title, headers: ["Trip", "Destination", "Start", "End", "Spent (INR)", "Booked unpaid (INR)", "Budget (INR)", "Spent + booked (INR)", "Budget variance (INR)"], rows: [...rows, ["Total (each entry once)", "", "", "", fmt(total), fmt(committed), "", fmt(total + committed), ""]] };
+    return { title, headers: ["Trip", "Destination", "Start", "End", "Spent (INR)", "Booked unpaid (INR)", "Budget (INR)", "Spent + booked (INR)", "Budget variance (INR)"], rows: [...rows, ["Total (each entry once)", "", "", "", fmt(total), fmt(committed), "", fmt(addMoney(total, committed)), ""]] };
   }
 
   if (cut === "workspace") {
@@ -131,15 +134,15 @@ export function travelReport(cut: TravelCut, trips: TravelTrip[], txns: Row[], o
     const rows = trips.map((t) => {
       const s = tripSummary(t, txns);
       const un = unpaid(t);
-      const planned = r2((t.budget ?? 0) + (t.contingency ?? 0));
-      return [t.name, planned ? fmt(planned) : "", fmt(s.total), fmt(un), fmt(s.total + un), planned ? fmt(planned - s.total - un) : "", planned ? fmt(((s.total + un) / planned) * 100) : ""];
+      const planned = addMoney(t.budget ?? 0, t.contingency ?? 0);
+      return [t.name, planned ? fmt(planned) : "", fmt(s.total), fmt(un), fmt(addMoney(s.total, un)), planned ? fmt(subtractMoney(planned, addMoney(s.total, un))) : "", planned ? fmt(proportionMoney(100, addMoney(s.total, un), planned)) : ""];
     });
-    return { title, headers: ["Trip", "Planned budget (INR)", "Actual spent (INR)", "Committed unpaid (INR)", "Forecast (INR)", "Budget left (INR)", "Used %"], rows: [...rows, ["Total", fmt(trips.reduce((s, t) => s + (t.budget ?? 0) + (t.contingency ?? 0), 0)), fmt(total), fmt(committed), fmt(total + committed), "", ""]] };
+    return { title, headers: ["Trip", "Planned budget (INR)", "Actual spent (INR)", "Committed unpaid (INR)", "Forecast (INR)", "Budget left (INR)", "Used %"], rows: [...rows, ["Total", fmt(sumMoney(trips.flatMap((t) => [t.budget ?? 0, t.contingency ?? 0]))), fmt(total), fmt(committed), fmt(addMoney(total, committed)), "", ""]] };
   }
 
   const claims = entries.map(e => ({ ...e, title: e.title ?? "Trip expense" })).filter(isTracked);
   const rows = claims.map(e => [e.date, e.merchant ?? e.title, SCOPE_LABEL[e.scope ?? "personal"], stageOf(e), fmt(reimbursableOf(e)), fmt(receivedOf(e)), fmt(outstandingOf(e))]);
-  const pending = r2(claims.reduce((s, e) => s + outstandingOf(e), 0));
-  const got = r2(claims.reduce((s, e) => s + receivedOf(e), 0));
+  const pending = sumMoney(claims.map(outstandingOf));
+  const got = sumMoney(claims.map(receivedOf));
   return { title, headers: ["Date", "Item", "Workspace", "Status", "Claim (INR)", "Received (INR)", "Outstanding (INR)"], rows: [...rows, ["", "Total pending", "", "", "", "", fmt(pending)], ["", "Total reimbursed", "", "", "", fmt(got), ""]] };
 }

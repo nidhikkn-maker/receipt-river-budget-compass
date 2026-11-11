@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { decimal } from "./money";
 
 export const ReadingConfidence = z.enum(["high", "medium", "low", "unknown"]);
 export type ReadingConfidence = z.infer<typeof ReadingConfidence>;
@@ -86,7 +87,7 @@ type Breakdown = { subtotal?: number | null | undefined; tax?: number | null | u
 
 /** Sum of printed charges (service, packing, delivery, fees) less discounts. */
 export function receiptChargesTotal(details?: Breakdown): number {
-  return Math.round((details?.charges ?? []).reduce((s, c) => s + (Number.isFinite(c.amount) ? c.amount : 0), 0) * 100) / 100;
+  return centsOfSum((details?.charges ?? []).map((c) => (Number.isFinite(c.amount) ? c.amount : 0))) / 100;
 }
 
 /**
@@ -94,10 +95,10 @@ export function receiptChargesTotal(details?: Breakdown): number {
  * is accepted only for whole-unit-rounding currencies when the total is a whole amount and the gap is under one unit.
  */
 export function receiptRoundOff(total: number, details?: Breakdown, currency?: string): { printed: number; implied: number } {
-  const printed = details?.roundOff != null && Number.isFinite(details.roundOff) ? Math.round(details.roundOff * 100) : 0;
+  const printed = details?.roundOff != null && Number.isFinite(details.roundOff) ? cents(details.roundOff) : 0;
   if (details?.subtotal == null || !Number.isFinite(total) || total <= 0) return { printed: printed / 100, implied: 0 };
-  const gap = Math.round(total * 100) - Math.round((details.subtotal + receiptChargesTotal(details) + (details.tax ?? 0) + (details.tip ?? 0)) * 100) - printed;
-  const eligible = !printed && WHOLE_UNIT_ROUNDING.has((currency ?? "INR").toUpperCase()) && Math.round(total * 100) % 100 === 0 && Math.abs(gap) < 100;
+  const gap = cents(total) - centsOfSum([details.subtotal, receiptChargesTotal(details), details.tax ?? 0, details.tip ?? 0]) - printed;
+  const eligible = !printed && WHOLE_UNIT_ROUNDING.has((currency ?? "INR").toUpperCase()) && cents(total) % 100 === 0 && Math.abs(gap) < 100;
   return { printed: printed / 100, implied: eligible ? gap / 100 : 0 };
 }
 
@@ -105,24 +106,77 @@ export function receiptBreakdownError(total: number, details?: Breakdown, curren
   const amounts = [details?.subtotal, details?.tax, details?.tip];
   if (amounts.some(value => value != null && (!Number.isFinite(value) || value < 0))) return "Subtotal, tax and tip must be zero or more.";
   if (details?.roundOff != null && (!Number.isFinite(details.roundOff) || Math.abs(details.roundOff) > 1)) return "Round-off must be between -1 and 1.";
-  const included = (details?.tax ?? 0) + (details?.tip ?? 0);
-  if (Math.round(included * 100) > Math.round(total * 100)) return "Tax and tip cannot exceed the total paid. Check the receipt amounts.";
+  const included = decimal(details?.tax ?? 0).plus(decimal(details?.tip ?? 0)).toNumber();
+  if (cents(included) > cents(total)) return "Tax and tip cannot exceed the total paid. Check the receipt amounts.";
   if ((details?.charges ?? []).some((c) => !Number.isFinite(c.amount))) return "Each charge needs an amount.";
   const parts = details?.taxParts ?? [];
-  const partSum = parts.reduce((t, p) => t + p.amount, 0);
-  if (parts.length && details?.tax != null && Math.round(partSum * 100) !== Math.round(details.tax * 100)) return `Tax parts add up to ${partSum.toFixed(2)}, but tax is ${details.tax.toFixed(2)}. Check each tax line.`;
+  const partSum = centsOfSum(parts.map((p) => p.amount)) / 100;
+  if (parts.length && details?.tax != null && cents(partSum) !== cents(details.tax)) return `Tax parts add up to ${partSum.toFixed(2)}, but tax is ${details.tax.toFixed(2)}. Check each tax line.`;
   if (details?.subtotal != null && Number.isFinite(total) && total > 0) {
     const round = receiptRoundOff(total, details, currency);
     const charges = receiptChargesTotal(details);
-    const expected = Math.round((details.subtotal + charges + included + round.printed + round.implied) * 100);
-    const actual = Math.round(total * 100);
+    const expected = centsOfSum([details.subtotal, charges, included, round.printed, round.implied]);
+    const actual = cents(total);
     if (expected !== actual) return `Receipt total mismatch: subtotal ${details.subtotal.toFixed(2)}${charges ? ` + charges ${charges.toFixed(2)}` : ""} + tax ${(details.tax ?? 0).toFixed(2)} + tip ${(details.tip ?? 0).toFixed(2)}${round.printed ? ` + round-off ${round.printed.toFixed(2)}` : ""} = ${(expected / 100).toFixed(2)}, but total is ${(actual / 100).toFixed(2)}. Check for a missing charge, discount or reading error before saving.`;
   }
   return null;
 }
 
-/** Money in whole cents, so every receipt comparison happens at currency precision. */
-const cents = (value: number) => Math.round(value * 100);
+/** Money in whole cents, so every receipt comparison happens at currency precision (decimal half-up, never binary). */
+const cents = (value: number) => (Number.isFinite(value) ? decimal(value).mul(100).toDecimalPlaces(0).toNumber() : NaN);
+const centsOfSum = (values: number[]) => (values.every(Number.isFinite) ? cents(values.reduce((sum, v) => sum.plus(decimal(v)), decimal(0)).toNumber()) : NaN);
+
+/**
+ * KK decision 11 Nov 2026: ISO 4217 minor units. INR posts at exact paise; other currencies use their own minor unit.
+ * Anything not listed has two decimals.
+ */
+const ZERO_DECIMAL = new Set(["BIF", "CLP", "DJF", "GNF", "ISK", "JPY", "KMF", "KRW", "PYG", "RWF", "UGX", "UYI", "VND", "VUV", "XAF", "XOF", "XPF"]);
+const THREE_DECIMAL = new Set(["BHD", "IQD", "JOD", "KWD", "LYD", "OMR", "TND"]);
+export function currencyMinorUnits(currency?: string | null): number {
+  const c = (currency || "INR").toUpperCase();
+  return ZERO_DECIMAL.has(c) ? 0 : THREE_DECIMAL.has(c) ? 3 : 2;
+}
+/** Decimals a saved amount column holds today (numeric(14,2)): finer amounts would be rounded by the database. */
+export const STORED_DECIMALS = 2;
+/** The amount exactly as read, with every visible decimal (binary noise past eight places is not a source digit). */
+const sourceDigits = (value: number) => decimal(value).toDecimalPlaces(8);
+export interface ReceiptPrecisionFlag { field: string; read: string; places: number; allowed: number; currency: string; message: string }
+const FIELD_NAME: Record<string, string> = { total: "Total", subtotal: "Subtotal", tax: "Tax", tip: "Tip", roundOff: "Round-off" };
+
+/**
+ * Read amounts carrying more decimals than the currency's minor unit (₹1234.567, ₹0.005). They are kept exactly as
+ * read and shown for review; nothing here rounds, truncates or replaces a digit.
+ */
+export function receiptPrecisionFlags(total: number | null | undefined, details?: ReceiptAmounts & { taxParts?: readonly { amount: number }[] | undefined }, currency?: string | null): ReceiptPrecisionFlag[] {
+  const cur = (currency || "INR").toUpperCase(), allowed = currencyMinorUnits(cur);
+  const flags: ReceiptPrecisionFlag[] = [];
+  const check = (field: string, label: string, value: number | null | undefined) => {
+    if (value == null || !Number.isFinite(value)) return;
+    const digits = sourceDigits(value), places = digits.decimalPlaces();
+    if (places <= allowed) return;
+    const read = digits.toString();
+    flags.push({ field, read, places, allowed, currency: cur, message: `${label} reads ${cur} ${read}, but ${cur} has ${allowed} decimal place${allowed === 1 ? "" : "s"}. It is kept exactly as read; check the bill and enter the amount to record.` });
+  };
+  check("total", "Total", total);
+  for (const f of ["subtotal", "tax", "tip", "roundOff"] as const) check(f, FIELD_NAME[f]!, details?.[f]);
+  (details?.charges ?? []).forEach((c, i) => check(`charges.${i}`, `Charge ${i + 1}`, c.amount));
+  (details?.taxParts ?? []).forEach((t, i) => check(`taxParts.${i}`, `Tax line ${i + 1}`, t.amount));
+  (details?.items ?? []).forEach((it, i) => check(`items.${i}`, `Item ${i + 1}${it.name?.trim() ? ` (${it.name.trim()})` : ""}`, it.amount));
+  return flags;
+}
+
+/**
+ * The posting boundary: an amount is saved only at a precision the record can hold, so the database never rounds it
+ * silently. Finer source amounts stay in the reading evidence and the owner enters the amount to record.
+ */
+export function postingPrecisionError(amount: number, currency?: string | null): string | null {
+  if (!Number.isFinite(amount)) return null;
+  const digits = sourceDigits(amount);
+  if (digits.decimalPlaces() <= STORED_DECIMALS) return null;
+  const cur = (currency || "INR").toUpperCase();
+  const why = currencyMinorUnits(cur) > STORED_DECIMALS ? `${cur} amounts with ${currencyMinorUnits(cur)} decimals can't be recorded yet` : `${cur} records ${Math.min(currencyMinorUnits(cur), STORED_DECIMALS)} decimal places`;
+  return `The amount ${cur} ${digits.toString()} has more decimals than can be recorded (${why}). Review the bill and enter the amount to record; it is never rounded silently.`;
+}
 
 export interface ReceiptAmounts {
   subtotal?: number | null | undefined;
@@ -153,7 +207,7 @@ export function receiptItemTotalError(total: number, details?: ReceiptAmounts, c
   const items = details?.items ?? [];
   if (!items.length || !Number.isFinite(total) || total <= 0) return null;
   if (items.some((item) => !Number.isFinite(item.amount) || item.amount < 0)) return "Receipt item amounts must be zero or more.";
-  const itemSum = cents(items.reduce((sum, item) => sum + item.amount, 0));
+  const itemSum = centsOfSum(items.map((item) => item.amount));
   const subtotal = details?.subtotal;
   const hasSubtotal = subtotal != null && Number.isFinite(subtotal);
   const base = hasSubtotal ? cents(subtotal as number) : cents(total - (details?.tax ?? 0) - (details?.tip ?? 0) - receiptChargesTotal(details));
@@ -164,13 +218,14 @@ export function receiptItemTotalError(total: number, details?: ReceiptAmounts, c
   return `Receipt items add up to ${(itemSum / 100).toFixed(2)}, but ${against} is ${(base / 100).toFixed(2)}. Check for a missing or misread line before saving.`;
 }
 
-export interface ReceiptReviewCheck { items: number[]; itemTotalError: string | null; needed: boolean }
+export interface ReceiptReviewCheck { items: number[]; itemTotalError: string | null; precision: ReceiptPrecisionFlag[]; needed: boolean }
 
-/** Everything that must be reviewed before this receipt can be saved: unclear items and item totals. */
-export function receiptReviewCheck(total: number, details?: ReceiptAmounts, currency?: string): ReceiptReviewCheck {
+/** Everything that must be reviewed before this receipt can be saved: unclear items, item totals and sub-minor-unit amounts. */
+export function receiptReviewCheck(total: number, details?: ReceiptAmounts & { taxParts?: readonly { amount: number }[] | undefined }, currency?: string): ReceiptReviewCheck {
   const items = receiptItemsToReview(details?.items);
   const itemTotalError = receiptItemTotalError(total, details, currency);
-  return { items, itemTotalError, needed: items.length > 0 || itemTotalError != null };
+  const precision = receiptPrecisionFlags(total, details, currency);
+  return { items, itemTotalError, precision, needed: items.length > 0 || itemTotalError != null || precision.length > 0 };
 }
 
 /**
@@ -200,7 +255,7 @@ export function unconfirmedFields(confidence: Partial<ReceiptConfidence> | undef
 /** Round-off for a saved expense: the saved value wins, otherwise worked out (display only) for older records. */
 export function receiptRoundOffFor(e: { originalAmount: number; currency: string; receiptDetails?: Breakdown | null | undefined }): { amount: number; source: "saved" | "printed" | "implied" | null } {
   const d = e.receiptDetails ?? undefined;
-  if (d?.roundOff != null && Number.isFinite(d.roundOff) && d.roundOff !== 0) return { amount: Math.round(d.roundOff * 100) / 100, source: "saved" };
+  if (d?.roundOff != null && Number.isFinite(d.roundOff) && d.roundOff !== 0) return { amount: cents(d.roundOff) / 100, source: "saved" };
   const r = receiptRoundOff(e.originalAmount, d, e.currency);
   return r.implied ? { amount: r.implied, source: "implied" } : { amount: 0, source: null };
 }

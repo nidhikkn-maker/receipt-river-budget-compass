@@ -32,7 +32,7 @@ import { tagValue } from "@/lib/preferences";
 import { duplicateBills } from "@/lib/bill-duplicates";
 import { suggestForEntry } from "@/lib/statement-pipeline/single-entry";
 import { buildReceiptAudit, receiptFingerprint, receiptFingerprintMatches, type ReceiptReadValues } from "@/lib/receipt-audit";
-import { receiptConfidence, receiptBreakdownError, receiptRoundOff, receiptItemConfidence, receiptItemReviewReasons, receiptReviewCheck, receiptReviewSignature, unconfirmedFields, correctedFields, learnedShopName, type ReceiptField, type ReadingConfidence } from "@/lib/receipt-reading";
+import { receiptConfidence, receiptBreakdownError, postingPrecisionError, receiptRoundOff, receiptItemConfidence, receiptItemReviewReasons, receiptReviewCheck, receiptReviewSignature, unconfirmedFields, correctedFields, learnedShopName, type ReceiptField, type ReadingConfidence } from "@/lib/receipt-reading";
 import { ReceiptZoomViewer } from "@/components/ReceiptZoomViewer";
 import { quickEntrySearch, type QuickEntrySearch } from "@/lib/quick-entry";
 import { useStore } from "@/lib/store";
@@ -574,7 +574,7 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
   const reviewTotal = Number(!confirmed && scan ? scan.amount : amount);
   const review = useMemo(() => receiptReviewCheck(reviewTotal, receiptDetails, currency), [reviewTotal, receiptDetails, currency]);
   const reviewSig = useMemo(() => receiptReviewSignature(reviewTotal, receiptDetails), [reviewTotal, receiptDetails]);
-  const reviewMessages = [receiptBreakdownError(reviewTotal, receiptDetails, currency), review.itemTotalError].filter((m): m is string => !!m);
+  const reviewMessages = [receiptBreakdownError(reviewTotal, receiptDetails, currency), review.itemTotalError, ...review.precision.map((p) => p.message)].filter((m): m is string => !!m);
   // The details fold opens when something needs checking and stays open while the owner fixes it.
   const fieldsRef = useRef<HTMLDetailsElement>(null);
   useEffect(() => { if (reviewMessages.length > 0 && fieldsRef.current) fieldsRef.current.open = true; }, [reviewMessages.length]);
@@ -603,6 +603,8 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
     if (!isDate(scan.date)) { toast.error("Enter the date"); return; }
     const breakdownError = receiptBreakdownError(Number(scan.amount), receiptDetails, currency);
     if (breakdownError) { toast.error(breakdownError); return; }
+    const precisionError = postingPrecisionError(Number(scan.amount), scan.currency);
+    if (precisionError) { toast.error(precisionError); return; }
     if (fieldsToConfirm.length) { toast.error(`Confirm the ${fieldsToConfirm.map((f) => FIELD_LABEL[f]).join(", ")} — it was hard to read`); return; }
     if (!reviewApproved && review.needed && reviewApproval !== reviewSig) { setReviewDialog(true); return; }
     if (!preferences.categories.some(c => !c.archived && c.name === scanCategory)) { toast.error("Choose a category to confirm"); return; }
@@ -696,6 +698,8 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
     if (accountBlocked) { toast.error("Choose or confirm the account that paid before saving"); return; }
     const breakdownError = receiptBreakdownError(Number(amount), receiptDetails, currency);
     if (breakdownError) { toast.error(breakdownError); return; }
+    const precisionError = postingPrecisionError(Number(amount), currency);
+    if (precisionError) { toast.error(precisionError); return; }
     if (saving) return;
     setSaving(true); setSaveError("");
     try {
@@ -994,6 +998,7 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
             <div className="space-y-2 text-sm">
               {review.items.map((i) => { const item = receiptDetails.items?.[i]; if (!item) return null; return <p key={i}><b>Item {i + 1}</b> · {item.name || "unnamed"} · {item.amount.toFixed(2)} <span className="text-muted-foreground">— the {receiptItemReviewReasons(item).join(" and ")} was hard to read</span></p>; })}
               {review.itemTotalError && <p>{review.itemTotalError}</p>}
+              {review.precision.map((p) => <p key={p.field}>{p.message}</p>)}
               <p className="text-xs text-muted-foreground">Nothing is saved until you confirm these details.</p>
             </div>
             <div className="flex justify-end gap-2">
