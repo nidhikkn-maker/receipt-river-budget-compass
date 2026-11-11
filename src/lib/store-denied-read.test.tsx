@@ -41,10 +41,11 @@ vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { error: vi.fn(), succe
 vi.mock("@tanstack/react-router", () => ({ Link: ({ children }: { children: unknown }) => children }));
 
 import { StoreProvider, useAreaStatus, useReadState, useStore } from "./store";
-import { areaReadState, areaStatus, DENIED_OFFLINE_NOTE, isDeniedRead } from "./load-state";
+import { ALL_LOAD_AREAS, areaReadState, areaShowsValues, areaStatus, DENIED_OFFLINE_NOTE, isDeniedRead, type AreaStatus } from "./load-state";
+import { money } from "./expenses";
 import { defaultPreferences } from "./preferences";
 import { LOCKED_EVIDENCE_MESSAGE } from "./evidence-lock";
-import { EmptyState, ErrorState, LoadingState, OfflineState, UnauthorizedState } from "@/components/shell/States";
+import { EmptyState, ErrorState, LoadingState, OfflineState, OfflineUnavailableState, UnauthorizedState } from "@/components/shell/States";
 import type { VaultDoc } from "./documents";
 
 type Seen = ReturnType<typeof useStore>;
@@ -67,11 +68,37 @@ function VaultScreen() {
   switch (status) {
     case "loading": return <LoadingState label="Loading documents" />;
     case "offline": return note ? <><OfflineState /><p role="note">{note}</p></> : <><OfflineState />{list}</>;
+    case "unavailable": return <OfflineUnavailableState what="your documents" />;
     case "denied": return <UnauthorizedState what="these documents" />;
     case "failed": return <ErrorState what="your documents" onRetry={refresh} />;
     case "empty": return <EmptyState title="No documents yet" />;
     case "ready": return list;
+    default: return assertNever(status);
   }
+}
+function assertNever(x: never): never { throw new Error(`unhandled area status ${String(x)}`); }
+
+/** A figures screen (balances / budget): offline-with-nothing-saved must show no ₹ figure, no "Not linked", no empty state. */
+function MoneyScreen() {
+  const accounts = useAreaStatus("accounts");
+  const budgets = useAreaStatus("budgets");
+  const s = useStore();
+  const total = s.accounts.reduce((n, a) => n + a.openingBalance, 0);
+  const view = (st: AreaStatus, body: () => import("react").ReactElement, empty: () => import("react").ReactElement) => {
+    switch (st) {
+      case "loading": return <LoadingState />;
+      case "unavailable": return <OfflineUnavailableState what="these figures" />;
+      case "denied": return <UnauthorizedState />;
+      case "failed": return <ErrorState what="these figures" />;
+      case "empty": return empty();
+      case "offline": case "ready": return body();
+      default: return assertNever(st);
+    }
+  };
+  return <>
+    <section aria-label="balance">{view(accounts.status, () => <p>{s.accounts.length ? money(total) : "Not linked"}</p>, () => <p>Not linked</p>)}</section>
+    <section aria-label="budget">{view(budgets.status, () => <p>{money(Object.values(s.budgets).reduce<number>((n, v) => n + (v ?? 0), 0))}</p>, () => <EmptyState title="No budget yet" />)}</section>
+  </>;
 }
 
 afterEach(() => { cleanup(); h.fail.clear(); h.calls.length = 0; h.rows.clear(); h.hold.clear(); h.snapshot = undefined; h.session = USER; h.sessionError = false; seen.s = null; localStorage.clear(); });
@@ -163,7 +190,7 @@ const snapshot = () => ({ name: "KK", members: [], expenses: [], accounts: [], c
 
 describe("R14: one status per area: loading, offline, failed, denied, empty (and ready)", () => {
   it("pure priority: offline > denied > failed > loading > empty/ready; offline after a denial carries a note", () => {
-    const base = { settled: true, online: true, errors: [] as never[], denied: [] as never[], empty: false };
+    const base = { settled: true, online: true, errors: [] as never[], denied: [] as never[], empty: false, hasData: true };
     expect(areaStatus({ ...base, settled: false }, "documents").status).toBe("loading");
     expect(areaStatus({ ...base, empty: true }, "documents").status).toBe("empty");
     expect(areaStatus(base, "documents").status).toBe("ready");
@@ -342,5 +369,96 @@ describe("R14 (owner decisions): a denial clears the area at once and the device
     await mount(<VaultScreen />, false);
     expect(seen.s!.areaStatus("documents")).toEqual({ status: "offline", note: null });
     expect(screen.getByText("Insurance policy")).toBeTruthy();
+  });
+});
+
+describe("R14: offline with nothing loaded is 'unavailable', never cached, empty or ready data", () => {
+  it("pure: every combination of online, settled, errors, denied, empty and hasData follows the documented priority", () => {
+    const bools = [false, true];
+    let n = 0;
+    for (const online of bools) for (const settled of bools) for (const failed of bools) for (const denied of bools) for (const empty of bools) for (const hasData of bools) {
+      const got = areaStatus({ online, settled, empty, hasData, errors: failed || denied ? ["documents"] : [], denied: denied ? ["documents"] : [] }, "documents");
+      const want: AreaStatus = !online ? (denied || hasData ? "offline" : "unavailable") : denied ? "denied" : failed ? "failed" : !settled ? "loading" : empty ? "empty" : "ready";
+      expect(got, JSON.stringify({ online, settled, failed, denied, empty, hasData })).toEqual({ status: want, note: !online && denied ? DENIED_OFFLINE_NOTE : null });
+      // other areas' errors / denials never change this area's status
+      expect(areaStatus({ online, settled, empty, hasData, errors: ["goals"], denied: ["goals"] }, "documents").status)
+        .toBe(!online ? (hasData ? "offline" : "unavailable") : !settled ? "loading" : empty ? "empty" : "ready");
+      n++;
+    }
+    expect(n).toBe(64);
+    // only states whose values may be shown say so; unavailable and denied-offline never do
+    expect(areaShowsValues({ status: "unavailable", note: null })).toBe(false);
+    expect(areaShowsValues({ status: "offline", note: DENIED_OFFLINE_NOTE })).toBe(false);
+    expect(areaShowsValues({ status: "offline", note: null })).toBe(true);
+    for (const st of ["loading", "denied", "failed"] as const) expect(areaShowsValues({ status: st, note: null })).toBe(false);
+    for (const st of ["empty", "ready"] as const) expect(areaShowsValues({ status: st, note: null })).toBe(true);
+  });
+
+  it("store: a first start offline with no device copy gives 'unavailable' for every area, and the screen shows no records or empty state", async () => {
+    await mount(<VaultScreen />, false);
+    expect(seen.s!.syncState).toBe("offline");
+    for (const area of ALL_LOAD_AREAS) expect(seen.s!.areaStatus(area), area).toEqual({ status: "unavailable", note: null });
+    expect(screen.getByText(/No copy of your documents is saved on this device/)).toBeTruthy();
+    expect(screen.queryByText("No documents yet")).toBeNull();
+    expect(screen.queryByRole("list")).toBeNull();
+    expect(h.calls.filter((c) => c.startsWith("from:"))).toEqual([]);
+  });
+
+  it("store: offline with a device copy is still 'offline' for every area, with the cached values", async () => {
+    h.snapshot = snapshot();
+    await mount(<VaultScreen />, false);
+    for (const area of ALL_LOAD_AREAS) expect(seen.s!.areaStatus(area), area).toEqual({ status: "offline", note: null });
+    expect(seen.s!.documents.map((d) => d.title)).toEqual(["Insurance policy"]);
+    expect(screen.getByText("Insurance policy")).toBeTruthy();
+  });
+
+  it("store: a device copy with a remembered denial keeps the denied-offline note for that area and 'offline' for the rest", async () => {
+    h.snapshot = snapshot();
+    localStorage.setItem(`ledgerline.deniedAreas.${USER}`, JSON.stringify(["documents"]));
+    await mount(<VaultScreen />, false);
+    expect(seen.s!.areaStatus("documents")).toEqual({ status: "offline", note: DENIED_OFFLINE_NOTE });
+    expect(seen.s!.areaStatus("accounts")).toEqual({ status: "offline", note: null });
+    expect(screen.queryByText("Insurance policy")).toBeNull();
+  });
+
+  it("store: going offline after only some reads arrived: arrived areas are 'offline', the rest 'unavailable'", async () => {
+    let release = () => {};
+    h.hold.set("documents", new Promise<void>((r) => { release = r; }));
+    await mount(<VaultScreen />);
+    expect(seen.s!.areaStatus("documents").status).toBe("loading");
+    setOnline(false);
+    await act(async () => { window.dispatchEvent(new Event("offline")); });
+    expect(seen.s!.areaStatus("documents")).toEqual({ status: "unavailable", note: null });
+    expect(seen.s!.areaStatus("accounts")).toEqual({ status: "offline", note: null });
+    expect(screen.queryByText("No documents yet")).toBeNull();
+    await act(async () => { release(); });
+    await settleTicks();
+    expect(seen.s!.areaStatus("documents")).toEqual({ status: "offline", note: null }); // the read did arrive
+  });
+
+  it("store: a failed read adds no data: offline afterwards is 'unavailable', not cached empties", async () => {
+    h.fail.set("documents", { error: { code: "PGRST000", message: "Could not connect to the database" }, status: 503 });
+    await mount(<VaultScreen />);
+    expect(seen.s!.areaStatus("documents").status).toBe("failed");
+    setOnline(false);
+    await act(async () => { window.dispatchEvent(new Event("offline")); });
+    expect(seen.s!.areaStatus("documents")).toEqual({ status: "unavailable", note: null });
+    expect(seen.s!.areaStatus("goals")).toEqual({ status: "offline", note: null });
+  });
+
+  it("screen: balance and budget figures offline with nothing saved show no ₹ figure, no 'Not linked' and no empty state", async () => {
+    await mount(<MoneyScreen />, false);
+    expect(document.body.textContent).not.toMatch(/₹/);
+    expect(screen.queryByText("Not linked")).toBeNull();
+    expect(screen.queryByText("No budget yet")).toBeNull();
+    expect(screen.getAllByText(/No copy of these figures is saved on this device/)).toHaveLength(2);
+  });
+
+  it("screen: the same screen offline with a device copy shows the cached figures under 'offline'", async () => {
+    h.snapshot = { ...snapshot(), accounts: [{ id: "a1", name: "Savings", kind: "bank", openingBalance: 1500, archived: false, details: {} }], budgets: { Food: 4000 } };
+    await mount(<MoneyScreen />, false);
+    expect(screen.getByText(money(1500))).toBeTruthy();
+    expect(screen.getByText(money(4000))).toBeTruthy();
+    expect(screen.queryByText(/No copy of these figures/)).toBeNull();
   });
 });

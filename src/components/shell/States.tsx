@@ -51,6 +51,22 @@ export function OfflineState({ waiting = 0, className }: { waiting?: number; cla
   );
 }
 
+/**
+ * Offline and this area was never read on this device (R14 'unavailable'): there is no saved copy, so nothing is shown —
+ * no figures, no empty state, no "Not linked". Never pair it with records or an EmptyState.
+ */
+export function OfflineUnavailableState({ what = "this", className }: { what?: string; className?: string }) {
+  return (
+    <div role="status" className={cn("sf-state sf-state-note", className)}>
+      <WifiOff aria-hidden className="sf-state-icon" />
+      <div className="min-w-0">
+        <p className="sf-state-title">You're offline</p>
+        <p className="sf-state-hint">No copy of {what} is saved on this device yet, so nothing is shown here. Reconnect to load it.</p>
+      </div>
+    </div>
+  );
+}
+
 /** Permission denied: explains, never reveals what the record holds. */
 export function UnauthorizedState({ what = "this page", className }: { what?: string; className?: string }) {
   return (
