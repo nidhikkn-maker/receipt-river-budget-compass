@@ -43,9 +43,11 @@ def judge(out):
             if n.startswith("run-"):
                 try:
                     r = json.load(open(f"{d}/vitest.json"))
+                    files = r.get("testResults") or []
+                    files_failed = sum(1 for f in files if f.get("status") != "passed")
                     s.update(tests_total=r.get("numTotalTests"), tests_passed=r.get("numPassedTests"), tests_failed=r.get("numFailedTests"),
-                             files_total=r.get("numTotalTestSuites"), files_failed=r.get("numFailedTestSuites"), success=r.get("success"))
-                    if not (r.get("success") is True and r.get("numFailedTests") == 0 and (r.get("numTotalTests") or 0) > 0 and r.get("numFailedTestSuites", 0) == 0):
+                             files_total=len(files), files_failed=files_failed, success=r.get("success"))
+                    if not (r.get("success") is True and r.get("numFailedTests") == 0 and (r.get("numTotalTests") or 0) > 0 and files and files_failed == 0):
                         s["status"] = "FAILED"
                 except (OSError, ValueError):
                     s["status"] = "NO_RESULT"

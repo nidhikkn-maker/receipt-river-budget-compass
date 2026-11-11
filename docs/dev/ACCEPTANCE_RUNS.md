@@ -62,6 +62,6 @@ The overall verdict:
   | Exit 1 | NOT_ACCEPTED | FAILED |
   | Killed run | INTERRUPTED | INTERRUPTED |
 
-- **End to end:** see the evidence note added when the first real run completed.
+- **End to end:** one real run through the runner on 881002b gave ACCEPTED: typecheck 02:09:12–02:09:50Z, build 02:09:51–02:10:19Z, run-1 02:10:19–02:17:39Z, 3,349/3,349 tests in 435 files, tree 9c854c25… unchanged. The file count now comes from vitest's per-file results; vitest's numTotalTestSuites counts describe blocks and was misleading.
 
 Evidence directories are kept outside the working tree, so running the sequence never changes the tree it verifies.
