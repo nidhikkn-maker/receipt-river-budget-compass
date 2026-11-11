@@ -1,6 +1,8 @@
 // @vitest-environment node
 // Initialise DOM before React's event feature detection; retain Node Blob for PGlite.
-vi.hoisted(async () => {
+// Awaited: react-dom reads `window`/`document` once at module load (canUseDOM, input-event support). Un-awaited, a slow
+// jsdom import let react-dom load first, so text-input fireEvent.change never reached onChange (intermittent lost edits).
+await vi.hoisted(async () => {
  const { JSDOM } = await import("jsdom");
  const dom = new JSDOM("<!doctype html><html><body></body></html>", { url: "http://localhost" });
  Object.defineProperty(dom.window.File.prototype, "arrayBuffer", { value: function(this: File) { return new Promise<ArrayBuffer>((resolve, reject) => { const r = new dom.window.FileReader(); r.onload = () => resolve(r.result as ArrayBuffer); r.onerror = reject; r.readAsArrayBuffer(this); }); } });
@@ -132,6 +134,12 @@ describe("grouped actual file-to-review, installed SQL and read-back acceptance"
    expect(recordProvenance(lease.id, saved.books.docLinks, [{ ...original, title: "Lease source", docType: "lease_agreement" } as unknown as VaultDoc])[0]?.fields).toEqual(expect.arrayContaining([expect.objectContaining({ label: "Payment terms", value: "Bank transfer", where: "page 2" })]));
   } finally { await h.db.close(); }
  }, 30000);
+ it("React loaded after the DOM, so text-input changes reach onChange (guards the hoisted DOM set-up)", () => {
+  const onChange = vi.fn();
+  const view = render(<input aria-label="probe" value="" onChange={onChange} />);
+  fireEvent.change(view.getByLabelText("probe"), { target: { value: "8" } });
+  expect(onChange).toHaveBeenCalledTimes(1);
+ });
  it("direct lease-source correction updates approved records while first printed values remain accessible", async () => {
   const h = await harness(leaseRead());
   try {

@@ -4,7 +4,9 @@
 import { PGlite } from '@electric-sql/pglite';
 import { readFileSync } from 'node:fs';
 import { expect,it,vi } from 'vitest';
-vi.hoisted(async()=>{
+// Awaited: react-dom reads `window`/`document` once at module load (canUseDOM, input-event support). Un-awaited, a slow
+// jsdom import let react-dom load first, so text-input fireEvent.change never reached onChange (intermittent lost edits).
+await vi.hoisted(async()=>{
  const {JSDOM}=await import('jsdom');const dom=new JSDOM('<html><body></body></html>',{url:'http://localhost'});
  for(const key of ['window','document','HTMLElement'] as const)Object.defineProperty(globalThis,key,{configurable:true,writable:true,value:key==='window'?dom.window:key==='document'?dom.window.document:dom.window[key]});
 });
