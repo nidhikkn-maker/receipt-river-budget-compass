@@ -163,8 +163,17 @@ interface Ctx {
   /**
    * R14b: the whole cloud read threw (not one area failing): set only by loadRun's catch path, cleared by the next read
    * that completes. Areas not cloud-confirmed this session then read 'failed' in areaStatus. null otherwise.
+   * kind 'offline' is reported only while the store is offline: once back online a failure that has not yet been
+   * cleared by a completed read reads kind 'failed' (it is an unconfirmed read, not an offline one), so screens that
+   * check kind 'failed' never claim absence from data the cloud did not confirm. Reconnecting refreshes once.
    */
   readFailure: ReadFailure | null;
+  /**
+   * R14b: the single truthful connectivity signal (browser online/offline events, and the outcome of the store's own
+   * reads). Offline = `!online`. Decide "you're offline" from this or areaStatus 'offline'/'unavailable', never from
+   * syncState (which can stay "offline"/"error" until the reconnect refresh finishes).
+   */
+  online: boolean;
   /** R14b: areas a cloud read confirmed in this session (device-copy-only areas are not listed). */
   confirmedAreas: LoadArea[];
   /** Record groups whose last cloud read failed; their previous values are kept, never replaced by empty lists (P0-004/P0-017). */
@@ -268,9 +277,18 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     window.addEventListener("online", up); window.addEventListener("offline", down);
     return () => { window.removeEventListener("online", up); window.removeEventListener("offline", down); };
   }, []);
+  // R14b reconnect truth (see reconnectRef below): whether the in-memory view still needs a cloud read once online.
+  const reconnectNeed = useRef(false);
+  const reconnecting = useRef<Promise<void> | null>(null);
+  const reconnectRef = useRef<() => Promise<void>>(async () => {});
+  // The store's own online state going false→true (e.g. a read succeeded after the device was offline) reconnects too;
+  // the 'online' event already started the same run, so it is shared, never doubled.
+  const wasOnline = useRef(online);
+  useEffect(() => { const was = wasOnline.current; wasOnline.current = online; if (!was && online) void reconnectRef.current(); }, [online]);
   const [pendingCount, setPendingCount] = useState(0);
   const [pendingItems, setPendingItems] = useState<PendingItem[]>([]);
-  const syncRef = useRef<(only?: string, skipRefresh?: boolean) => Promise<void>>(async () => {});
+  /** Flushes the offline queue; resolves to how many entries were saved. */
+  const syncRef = useRef<(only?: string, skipRefresh?: boolean) => Promise<number>>(async () => 0);
   const syncing = useRef(false);
   const deleting = useRef(false);
   const [preferences, setPreferences] = useState<FinancePreferences>(defaultPreferences);
@@ -303,9 +321,11 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     return queued.current;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
+  // Counts completed cloud loads, so a reconnect can tell whether a read already ran while it flushed the queue.
+  const loadSeq = useRef(0);
   async function load() {
     const run = gate.begin();
-    try { await loadRun(run); } finally { run.end(); }
+    try { await loadRun(run); } finally { run.end(); loadSeq.current++; }
   }
   // R14: a denied area's records leave memory at once (a failed read keeps them; a denied one must not show them).
   const clearArea: Record<LoadArea, () => void> = {
@@ -479,6 +499,8 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       // R14b: the only place readFailure is set. Areas without a cloud confirmation this session now read 'failed'.
       setReadFailure({ kind: navigator.onLine ? "failed" : "offline", at: new Date().toISOString(), message: err instanceof Error ? err.message : String(err) });
       setSyncState(navigator.onLine ? "error" : "offline");
+      // Keep the store's online signal truthful (the 'offline' event may not have fired yet); 'online' then reconnects.
+      if (!navigator.onLine) setOnline(false);
       throw err;
     }
   }
@@ -545,14 +567,14 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
 
   useEffect(() => {
     let active = true;
-    const sync = async (only?: string, skipRefresh?: boolean) => {
+    const sync = async (only?: string, skipRefresh?: boolean): Promise<number> => {
       // Locked: the offline queue waits for the authorised unlock.
-      if (gate.paused()) { gate.defer(); return; }
+      if (gate.paused()) { gate.defer(); return 0; }
       const entries = await pendingEntries(userId).catch(() => [] as Awaited<ReturnType<typeof pendingEntries>>);
-      if (!active) return;
+      if (!active) return 0;
       setPendingCount(entries.length);
       setPendingItems((prev) => mergePending(prev, entries));
-      if (!navigator.onLine || syncing.current || deleting.current || !entries.length) return;
+      if (!navigator.onLine || syncing.current || deleting.current || !entries.length) return 0;
       syncing.current = true;
       let failed = 0, saved = 0;
       try {
@@ -575,11 +597,31 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
         if (saved) { toast.success(`${saved} offline ${saved === 1 ? "entry" : "entries"} synced`); if (!skipRefresh) void refresh(); }
         if (failed) toast.error(`${failed} offline ${failed === 1 ? "entry" : "entries"} couldn't sync — open Waiting to sync to retry`);
       } finally { syncing.current = false; }
+      return saved;
     };
     syncRef.current = sync;
     // Authorised unlock: flush waiting offline entries without their own refresh, then refresh exactly once.
     resumeRef.current = async () => { await sync(undefined, true); await refresh(); };
-    const onOnline = () => void sync();
+    // R14b reconnect: flush the queue (without its own refresh), then refresh exactly once when the store's view is not
+    // cloud-truthful (syncState 'offline', a readFailure, or a settled area the cloud has not confirmed this session) or
+    // queued entries were saved. Concurrent triggers (the 'online' event and online false→true) share one run; a read
+    // already in flight is joined, and a read that completed while the queue flushed counts as the refresh.
+    reconnectRef.current = () => {
+      if (reconnecting.current) return reconnecting.current;
+      const run = (async () => {
+        const need = reconnectNeed.current, seq = loadSeq.current;
+        if (need && !gate.paused()) setSyncState("syncing");
+        const saved = await sync(undefined, true);
+        if (!active || !navigator.onLine) return;
+        if (inFlight.current) { await inFlight.current.catch(() => {}); if (!saved) return; }
+        else if (!saved && (!need || loadSeq.current !== seq)) return;
+        // A whole-read failure is reported through readFailure / syncState / areaStatus, not as an unhandled rejection.
+        await refresh().catch(() => {});
+      })().finally(() => { reconnecting.current = null; });
+      reconnecting.current = run;
+      return run;
+    };
+    const onOnline = () => void reconnectRef.current();
     void sync(); window.addEventListener("online", onOnline);
     return () => { active = false; window.removeEventListener("online", onOnline); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1036,6 +1078,9 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     settings: false, budgets: !Object.keys(budgets).length, goals: !goals.length, valuations: !valuations.length, documents: !documents.length,
     family: !members.length, profile: !name,
   };
+  reconnectNeed.current = syncState === "offline" || !!readFailure || settledAreas.some((a) => !confirmedAreas.includes(a));
+  // R14b: online, a failure that is not yet cleared is an unconfirmed read, never "offline" (see Ctx.readFailure).
+  const reportedReadFailure = useMemo(() => online && readFailure?.kind === "offline" ? { ...readFailure, kind: "failed" as const } : readFailure, [online, readFailure]);
   const areaStatus: Ctx["areaStatus"] = (area) => statusOf({ settled: settledAreas.includes(area), online, errors: loadErrors, denied: deniedAreas, empty: areaEmpty[area], hasData: loadedAreas.includes(area), cloudConfirmed: confirmedAreas.includes(area), readFailed: !!readFailure }, area);
   const removeDocument: Ctx["removeDocument"] = async (d) => {
     // D8: a locked original is audit evidence; refuse before touching the row or the file (P17 refuses it server-side too).
@@ -1089,11 +1134,11 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       departmentBudgets, departmentBudgetError,
       saveStatementUpload,
       accountingAvailable,postAccounting,accountantData,setAccountantGrant,reviewAccounting,
-      pendingCount, pendingItems, retrySync: (id?: string) => syncRef.current(id), discardPending: async (id: string) => { await removePending(id); setPendingItems((prev) => prev.filter((p) => p.id !== id)); setPendingCount((await pendingEntries(userId)).length); }, setTags, manageTripExpenses, applyReviewMapping, applyReviewMetadata, undoReviewMetadata, reviewMetadataHistory, saveRecurringReview, preferences, preferencesRevision: preferencesRevision.current, savePreferences, commitDocumentRecords, postOpening, undoOpening, openingPostings, ensureCategory, moveCategory, bulkSetCategory, categoryHistory, undoCategoryBatch, correctFinancialEntries, undoFinancialCorrection, financialCorrectionHistory, userId, name, updateName, members, memberName,
+      pendingCount, pendingItems, retrySync: async (id?: string) => { await syncRef.current(id); }, discardPending: async (id: string) => { await removePending(id); setPendingItems((prev) => prev.filter((p) => p.id !== id)); setPendingCount((await pendingEntries(userId)).length); }, setTags, manageTripExpenses, applyReviewMapping, applyReviewMetadata, undoReviewMetadata, reviewMetadataHistory, saveRecurringReview, preferences, preferencesRevision: preferencesRevision.current, savePreferences, commitDocumentRecords, postOpening, undoOpening, openingPostings, ensureCategory, moveCategory, bulkSetCategory, categoryHistory, undoCategoryBatch, correctFinancialEntries, undoFinancialCorrection, financialCorrectionHistory, userId, name, updateName, members, memberName,
       expenses: expenses.filter((x) => (x.txnType ?? "expense") === "expense"), transactions: expenses.filter((x) => !x.transferCounterpartOf), transferCounterparts: expenses.filter((x) => !!x.transferCounterpartOf), confirmTransfer, cancelTransfer, accounts, addAccount, setArchived, adjustBalance,
       commitments, loans, goals, valuations, documents, saveCommitment, confirmIrregular, confirmCommitment, saveLoan, recordLoanPayment, convertToEmi,
       saveGoal, updateAccount, addValuation, addDocument, updateDocument, removeDocument, history, setReimbursement, recordReimbursement, deleteAll,
-      budgets, loading, syncState, readFailure, confirmedAreas, loadErrors, deniedAreas, loadErrorKind, areaStatus, lastSyncedAt, refresh, save, remove, withdraw, restoreWithdrawn, withdrawn: withdrawnEntries, payCard, setScope, reconcile, addMember, removeMember, updateMember, setBudget, signedUrl, downloadFile,
+      budgets, loading, syncState, readFailure: reportedReadFailure, online, confirmedAreas, loadErrors, deniedAreas, loadErrorKind, areaStatus, lastSyncedAt, refresh, save, remove, withdraw, restoreWithdrawn, withdrawn: withdrawnEntries, payCard, setScope, reconcile, addMember, removeMember, updateMember, setBudget, signedUrl, downloadFile,
       setAllocations, updateReimbursement, addReimbursementReceipt, listReviews, saveReview,
     }}>
       {children}
