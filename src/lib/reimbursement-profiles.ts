@@ -2,6 +2,7 @@ import type { Claimant } from './expense-claim';
 import type { Expense, Scope } from './expenses';
 import type { Account } from './ledger';
 import type { Statement } from './expenditure-statement';
+import { decimal, proportionMoney, roundMoney, subtractMoney, sumMoney } from './money';
 
 export const DEFAULT_DECLARATION = 'I certify that these expenses were incurred for the stated official purpose, paid personally, and have not been claimed or reimbursed elsewhere. Supporting documents are attached where available.';
 export interface ApprovalRoute { id: string; label: string; reportingAuthority: string; approver: string; finance: string; additionalApprover: string; designation: string }
@@ -50,13 +51,13 @@ export function resolveReimbursementProfile(settings: ReimbursementSettings, inp
 export function responsibilityShares(e: Expense, settings: ReimbursementSettings, fallback = '') {
   const saved = settings.responsibilities.find(r => r.entryId === e.id);
   if (saved) {
-    const total = saved.shares.reduce((s, p) => s + p.amount, 0);
-    if (Math.abs(total - e.amount) > .009 || saved.shares.some(p => !p.organisation || !Number.isFinite(p.amount) || p.amount <= 0) || new Set(saved.shares.map(p => p.organisation)).size !== saved.shares.length) return [];
+    const total = sumMoney(saved.shares.map(p => Number.isFinite(p.amount) ? p.amount : 0));
+    if (!decimal(total).eq(decimal(e.amount)) || saved.shares.some(p => !p.organisation || !Number.isFinite(p.amount) || p.amount <= 0) || new Set(saved.shares.map(p => p.organisation)).size !== saved.shares.length) return [];
     return saved.shares;
   }
-  if (e.allocations?.length && e.allocations.every(a => (a.tags ?? []).filter(t => t.startsWith('Organisation: ')).length === 1) && Math.abs(e.allocations.reduce((s, a) => s + a.amount, 0) - e.amount) < .009) {
+  if (e.allocations?.length && e.allocations.every(a => (a.tags ?? []).filter(t => t.startsWith('Organisation: ')).length === 1) && decimal(sumMoney(e.allocations.map(a => a.amount))).eq(decimal(e.amount))) {
     const totals = new Map<string, number>();
-    for (const a of e.allocations) { const org = a.tags?.find(t => t.startsWith('Organisation: '))?.slice(14).trim(); if (org) totals.set(org, (totals.get(org) ?? 0) + a.amount); }
+    for (const a of e.allocations) { const org = a.tags?.find(t => t.startsWith('Organisation: '))?.slice(14).trim(); if (org) totals.set(org, sumMoney([totals.get(org) ?? 0, a.amount])); }
     return [...totals].map(([organisation, amount]) => ({ organisation, amount }));
   }
   const tags = [...new Set((e.tags ?? []).filter(t => t.startsWith('Organisation: ')).map(t => t.slice(14).trim()).filter(Boolean))];
@@ -66,7 +67,7 @@ export function responsibilityShares(e: Expense, settings: ReimbursementSettings
   return organisation ? [{ organisation, amount: e.amount }] : [];
 }
 export function validateResponsibility(shares: Responsibility['shares'], amount: number) {
-  if (!shares.length || shares.some(p => !p.organisation || !Number.isFinite(p.amount) || p.amount <= 0 || Math.round(p.amount * 100) / 100 !== p.amount) || new Set(shares.map(p => p.organisation)).size !== shares.length || Math.abs(shares.reduce((s, p) => s + p.amount, 0) - amount) > .009) throw Error('Organisation shares must be positive and total the original stored INR amount.');
+  if (!shares.length || shares.some(p => !p.organisation || !Number.isFinite(p.amount) || p.amount <= 0 || roundMoney(p.amount) !== p.amount) || new Set(shares.map(p => p.organisation)).size !== shares.length || !decimal(sumMoney(shares.map(p => p.amount))).eq(decimal(roundMoney(amount)))) throw Error('Organisation shares must be positive and total the original stored INR amount.');
 }
 /** Report-only proportional attribution. Original records and exchange rates remain untouched. */
 export function organisationStatement(statement: Statement, entries: Expense[], settings: ReimbursementSettings, organisation: string, fallback = ''): Statement {
@@ -74,16 +75,15 @@ export function organisationStatement(statement: Statement, entries: Expense[], 
     const entry = entries.find(e => e.id === row.id);
     const parts = entry ? responsibilityShares(entry, settings, fallback) : [];
     const share = parts.find(p => p.organisation === organisation);
-    const ratio = entry && share && entry.amount > 0 ? share.amount / entry.amount : 0;
-    const round = (n: number) => Math.round(n * 100) / 100;
-    // Round with a stable remainder so separate organisation claims reconcile exactly.
+    // Decimal proportions, each share rounded half-up once; the last organisation takes the exact remainder
+    // so separate organisation claims reconcile to the entry.
     const apportioned = (n: number) => {
       if (!share || !entry || entry.amount <= 0) return 0;
-      const before = parts.slice(0, -1).reduce((s, p) => s + round(n * p.amount / entry.amount), 0);
-      return parts.at(-1)?.organisation === organisation ? round(n - before) : round(n * ratio);
+      const before = sumMoney(parts.slice(0, -1).map(p => proportionMoney(n, p.amount, entry.amount)));
+      return parts.at(-1)?.organisation === organisation ? subtractMoney(n, before) : proportionMoney(n, share.amount, entry.amount);
     };
     const eligible = apportioned(row.eligible), reimbursed = apportioned(row.reimbursed);
-    const outstanding = row.outstanding > 0 ? round(Math.max(0, eligible - reimbursed)) : 0;
+    const outstanding = row.outstanding > 0 ? Math.max(0, subtractMoney(eligible, reimbursed)) : 0;
     const unknown = !parts.length;
     return { ...row, allocated: apportioned(row.inr), eligible, reimbursed, outstanding, rejected: apportioned(row.rejected), status: unknown ? 'Organisation requires review' : !share ? 'Other organisation' : row.status };
   });

@@ -2,6 +2,7 @@
 // Separate from the expenditure statements and from the existing Reimbursements export;
 // it only reads records and never creates claims or changes claim status.
 import type { Statement, Annexure, RegisterRow } from "./expenditure-statement";
+import { decimal, roundMoney, subtractMoney, sumMoney } from "./money";
 
 export interface Claimant { name: string; employeeId: string; department: string; designation: string; approver: string; bankDetails: string; email: string; declaration?: string; reportingAuthority?: string; finance?: string; additionalApprover?: string; approvalDesignation?: string; organisationCode?: string; costCentre?: string; preferredCurrency?: string; legalEntity?:string;approvalReference?:string;signaturePreference?:string;reportHeader?:string }
 export interface ClaimItem extends RegisterRow { claimNo: number; claimed: number }
@@ -9,7 +10,8 @@ export interface Claim {
   reference: string; organisation: string; purpose: string; subjectName: string; start: string; end: string; prepared: string; claimant: Claimant;
   items: ClaimItem[]; annexures: Annexure[]; totals: { eligible: number; received: number; claimed: number; advanceApplied?: number; payable?: number }; excluded: { row: RegisterRow; reason: string }[];
 }
-const r2 = (n: number) => Math.round(n * 100) / 100;
+// KK decision 11 Nov 2026: decimal arithmetic, rounded half-up once at the paise boundary (money.ts).
+const r2 = roundMoney;
 
 /** Claims only personally-funded, eligible, not-rejected amounts still outstanding. Company-paid and unclaimed items are listed as excluded with a reason. */
 export function buildClaim(s: Statement, claimant: Claimant): Claim {
@@ -23,7 +25,7 @@ export function buildClaim(s: Statement, claimant: Claimant): Claim {
   for (const it of items) for (const a of s.annexures.filter((x) => x.row === it.sno)) annexures.push({ ...a, no: `C-${String(annexures.length + 1).padStart(2, "0")}`, row: it.claimNo });
   const billRef = (n: number) => annexures.filter((a) => a.row === n).map((a) => a.no).join(", ") || "Bill Not Attached";
   for (const it of items) it.billRef = billRef(it.claimNo);
-  const sum = (f: (i: ClaimItem) => number) => r2(items.reduce((a, i) => a + f(i), 0));
+  const sum = (f: (i: ClaimItem) => number) => sumMoney(items.map(f));
   return {
     reference: s.reference.replace("LL-DES-", "LL-CLM-"), organisation: s.organisation, purpose: s.purpose, subjectName: s.subjectName, start: s.start, end: s.end, prepared: s.prepared, claimant: { ...claimant },
     items, annexures, excluded, totals: { eligible: sum((i) => i.eligible), received: sum((i) => i.reimbursed), claimed: sum((i) => i.claimed) },
@@ -32,9 +34,10 @@ export function buildClaim(s: Statement, claimant: Claimant): Claim {
 
 /** Applies a user-chosen part of an advance to this claim. Never automatic: the amount is entered by the user each time. */
 export function applyAdvance(c: Claim, amount: number, available: number): Claim {
+  if (!Number.isFinite(amount) || amount < 0) throw Error("Enter the advance amount to apply, or 0.");
   const a = r2(amount);
-  if (!Number.isFinite(a) || a < 0) throw Error("Enter the advance amount to apply, or 0.");
-  if (a > r2(available) + 0.004) throw Error("You cannot apply more than the advance still unapplied.");
-  if (a > c.totals.claimed + 0.004) throw Error("The advance applied cannot exceed the amount claimed.");
-  return { ...c, totals: { ...c.totals, advanceApplied: a, payable: r2(c.totals.claimed - a) } };
+  // Exact paise comparisons: no binary-float tolerance is needed once both sides are decimal-rounded.
+  if (decimal(a).gt(decimal(Number.isFinite(available) ? r2(available) : 0))) throw Error("You cannot apply more than the advance still unapplied.");
+  if (decimal(a).gt(decimal(r2(c.totals.claimed)))) throw Error("The advance applied cannot exceed the amount claimed.");
+  return { ...c, totals: { ...c.totals, advanceApplied: a, payable: subtractMoney(c.totals.claimed, a) } };
 }

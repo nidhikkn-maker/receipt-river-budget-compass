@@ -51,9 +51,11 @@ describe("buildReceiptAudit", () => {
     expect(audit.corrected).toEqual({});
     expect(receiptCorrectionLines(audit)).toEqual([]);
   });
-  it("ignores merchant whitespace and currency case, rounds amounts to paise", () => {
-    const audit = buildReceiptAudit(read, { merchant: " Cafe A ", date: read.date, amount: 450.001, currency: "inr" }, "t");
+  it("ignores merchant whitespace, currency case and binary noise, but never rounds a real amount change away", () => {
+    const audit = buildReceiptAudit({ ...read, amount: 0.3 }, { merchant: " Cafe A ", date: read.date, amount: 0.1 + 0.2, currency: "inr" }, "t");
     expect(audit.corrected).toEqual({});
+    // KK decision 11 Nov 2026: a sub-paise difference is a correction the audit must show.
+    expect(buildReceiptAudit(read, { ...read, amount: 450.001 }, "t").corrected).toEqual({ amount: 450.001 });
   });
   it("records merchant, date and currency corrections", () => {
     const audit = buildReceiptAudit(read, { merchant: "Cafe B", date: "2026-10-02", amount: 450, currency: "USD" }, "t");

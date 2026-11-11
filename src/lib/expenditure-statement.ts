@@ -10,13 +10,15 @@ import { instrumentLabel, type PaymentInstrument } from "./payment-instruments";
 import { outstandingOf, receivedOf, reimbursableOf, isTracked, stageOf } from "./reimbursements";
 import type { TravelTrip } from "./travel";
 import { maskedText } from './reimbursement-profiles';
+import { addMoney, decimal, roundMoney, subtractMoney, sumMoney } from './money';
 
 export type Subject = { kind: "trip"; id: string } | { kind: "tag"; tag: string } | { kind: "entries"; ids: string[] };
 export type PayerKind = "personal" | "organisation" | "other";
 export const PAYER_LABEL: Record<PayerKind, string> = { personal: "Paid personally", organisation: "Paid by business / organisation", other: "Paid by another party" };
 export const NOT_RECORDED = "Not Recorded";
 
-const r2 = (n: number) => Math.round(n * 100) / 100;
+// KK decision 11 Nov 2026: decimal arithmetic, rounded half-up once at the paise boundary (money.ts).
+const r2 = roundMoney;
 const kindOf = (e: Expense) => e.txnType ?? "expense";
 /** Event / project / purpose tags that can define an expenditure group. */
 export const GROUP_TAG = /^(Event|Project|Purpose|Organisation|Client|Trip): /;
@@ -75,7 +77,7 @@ export function buildStatement(input: {
     const sign = kindOf(e) === "refund" ? -1 : 1;
     const p = paymentInfo(e, input.accounts, input.instruments, input.memberName);
     const parts = workspaceParts(e);
-    const biz = r2(parts.filter((x) => x.workspace === "business" || x.workspace === "official").reduce((s, x) => s + x.amount, 0));
+    const biz = sumMoney(parts.filter((x) => x.workspace === "business" || x.workspace === "official").map((x) => x.amount));
     const inr = r2(sign * e.amount);
     const tracked = sign > 0 && isTracked(e);
     const stage = tracked ? stageOf(e) : null;
@@ -89,23 +91,26 @@ export function buildStatement(input: {
     const items = e.receiptDetails?.items ?? [];
     const roundOff = receiptRoundOffFor(e).amount;
     const charges = e.receiptDetails?.charges ?? [];
-    const itemsTotal = r2(items.reduce((s, x) => s + x.amount, 0) + charges.reduce((s, c) => s + c.amount, 0) + (e.receiptDetails?.tax ?? 0) + (e.receiptDetails?.tip ?? 0) + roundOff);
+    const tax = e.receiptDetails?.tax ?? 0;
+    const itemsTotal = sumMoney([...items.map((x) => x.amount), ...charges.map((c) => c.amount), tax, e.receiptDetails?.tip ?? 0, roundOff]);
+    // Items reconcile only to the exact paise of the bill (with or without tax); any gap is shown, never absorbed.
+    const billTotal = decimal(e.originalAmount);
     return {
       sno: i + 1, id: e.id, date: e.date, particulars: e.title || e.description || NOT_RECORDED, category: e.category || NOT_RECORDED, merchant: e.merchant || NOT_RECORDED,
       method: p.method, source: p.source, payer: p.payer, payerKind: p.payerKind, currency: e.currency, original: r2(sign * e.originalAmount), inr,
-      allocated: inr, businessShare: r2(sign * biz), personalShare: r2(inr - sign * biz), workspaces: parts.map((x) => `${SCOPE_LABEL[x.workspace as Scope]} ${x.amount.toFixed(2)}`).join(" + "),
+      allocated: inr, businessShare: r2(sign * biz), personalShare: subtractMoney(inr, sign * biz), workspaces: parts.map((x) => `${SCOPE_LABEL[x.workspace as Scope]} ${x.amount.toFixed(2)}`).join(" + "),
       eligible, reimbursed, outstanding, rejected, status: stage ? stage.replace(/_/g, " ") : sign < 0 ? "Refund" : "Not claimed",
       billRef: refs.length ? refs.join(", ") : "Bill Not Attached", refund: sign < 0,
-      items, charges, roundOff, itemsReconcile: items.length > 0 && (Math.abs(itemsTotal - e.originalAmount) < 0.5 || Math.abs(r2(itemsTotal - (e.receiptDetails?.tax ?? 0)) - e.originalAmount) < 0.5),
+      items, charges, roundOff, itemsReconcile: items.length > 0 && (decimal(itemsTotal).eq(billTotal) || decimal(subtractMoney(itemsTotal, tax)).eq(billTotal)),
     };
   });
-  const sumBy = (f: (r: RegisterRow) => number) => r2(rows.reduce((s, r) => s + f(r), 0));
+  const sumBy = (f: (r: RegisterRow) => number) => sumMoney(rows.map(f));
   const summary = {
     total: sumBy((r) => r.inr), personal: sumBy((r) => (r.payerKind === "personal" ? r.inr : 0)), organisation: sumBy((r) => (r.payerKind === "organisation" ? r.inr : 0)), other: sumBy((r) => (r.payerKind === "other" ? r.inr : 0)),
     business: sumBy((r) => r.businessShare), personalFamily: sumBy((r) => r.personalShare), eligible: sumBy((r) => r.eligible), reimbursed: sumBy((r) => r.reimbursed), outstanding: sumBy((r) => r.outstanding), rejected: sumBy((r) => r.rejected),
   };
-  const src: Record<string, number> = {}; for (const r of rows) src[r.source] = r2((src[r.source] ?? 0) + r.inr);
-  const ws: Record<string, number> = {}; for (const e of entries) for (const p of workspaceParts(e)) ws[SCOPE_LABEL[p.workspace as Scope]] = r2((ws[SCOPE_LABEL[p.workspace as Scope]] ?? 0) + (kindOf(e) === "refund" ? -p.amount : p.amount));
+  const src: Record<string, number> = {}; for (const r of rows) src[r.source] = addMoney(src[r.source] ?? 0, r.inr);
+  const ws: Record<string, number> = {}; for (const e of entries) for (const p of workspaceParts(e)) ws[SCOPE_LABEL[p.workspace as Scope]] = addMoney(ws[SCOPE_LABEL[p.workspace as Scope]] ?? 0, kindOf(e) === "refund" ? -p.amount : p.amount);
   const trip = input.subject.kind === "trip" ? input.trips.find((t) => t.id === (input.subject as { id: string }).id) : undefined;
   const dates = entries.map((e) => e.date).sort();
   const disclosures: string[] = [];
