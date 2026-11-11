@@ -22,6 +22,8 @@ import { commitIntake, type Confirmed } from "@/lib/books/commit";
 import { emptyBooks, LEASE_TERMS, LEASE_TERM_LABEL, leaseUnknowns, requiresApproval, type Lease } from "@/lib/books/types";
 import { HEAD_LABEL } from "@/lib/books/fy";
 import { ASSET_KINDS, type AssetKind } from "@/lib/assets";
+import { closedAssetRefusalMessage } from "@/lib/books/closed-period-refusal";
+import type { FinancePreferences } from "@/lib/preferences";
 import { toObligations } from "@/lib/contracts";
 import { closeRun, documentIdForRun, startRun, updateRun, type RunData } from "@/lib/books/runs";
 
@@ -232,6 +234,7 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId, onS
     catch (error) { setCleanupError(error instanceof Error ? error.message : 'Saved records are confirmed; original cleanup needs retry.'); }
   };
 
+  const closedRefusal = (e: unknown, assets: FinancePreferences["assets"]) => closedAssetRefusalMessage(e, books.closedPeriods, preferences.assets, assets);
   const save = async () => {
     const pendingAttempt = runData.current.intakeAttempt;
     if (pendingAttempt) {
@@ -240,7 +243,7 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId, onS
         await store.commitDocumentRecords(pendingAttempt.documentId, pendingAttempt.data, pendingAttempt.lock, pendingAttempt);
         await finishCleanup();
         setDone(pendingAttempt.route); setFailed(null); toast.success('Saved document records confirmed');
-      } catch (e) { setFailed({ step: 'Save', note: (e as Error).message }); }
+      } catch (e) { setFailed({ step: 'Save', note: closedRefusal(e, pendingAttempt.data.assets) ?? (e as Error).message }); }
       finally { setSaving(false); }
       return;
     }
@@ -278,6 +281,9 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId, onS
       toast.success(dup ? "Linked to the copy already in DocuRepo" : "Saved to DocuRepo");
     } catch (e) {
       const msg = (e as Error).message;
+      // 0069 refused a register date in a closed period: say which, not the raw database text (Retry would refuse again).
+      const closed = closedRefusal(e, runData.current.intakeAttempt?.data.assets);
+      if (closed) { setFailed({ step: at, note: `${closed} The file is in DocuRepo; use “Refresh and review again” to change the date.` }); await updateRun(runId, { stage: at, status: "failed", error: closed }).catch(() => undefined); return; }
       // Nothing is rolled back silently: the run keeps the stored document id so Retry continues from here.
       setFailed({ step: at, note: `${msg}. ${at === "Save" ? "The file may already be in DocuRepo — Retry will reuse it, not copy it again." : "The file is in DocuRepo; Retry will finish linking the records."}` });
       await updateRun(runId, { stage: at, status: "failed", error: msg }).catch(() => undefined);

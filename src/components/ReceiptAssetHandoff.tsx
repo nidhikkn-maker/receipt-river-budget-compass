@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { useStore } from '@/lib/store';
 import { receiptAsset } from '@/lib/receipt-handoff';
 import { ASSET_KINDS, type AssetKind } from '@/lib/assets';
+import { closedAssetRefusalMessage } from '@/lib/books/closed-period-refusal';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 
@@ -25,13 +26,18 @@ export function ReceiptAssetHandoff({ entryId }: { entryId: string }) {
       <label className="block text-sm">Put to use<Input type="date" value={date} onChange={e => setDate(e.target.value)} /></label>
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       <Button disabled={!name.trim() || !/^\d{4}-\d{2}-\d{2}$/.test(date)} onClick={async () => {
+        let assets: typeof preferences.assets;
         try {
           setError('');
           const asset = receiptAsset(entry, preferences.assets ?? [], documents, id, kind);
           const next = { ...asset, name: name.trim(), inUse: date };
-          await savePreferences({ ...preferences, assets: [...(preferences.assets ?? []).filter(a => a.id !== asset.id), next] });
+          assets = [...(preferences.assets ?? []).filter(a => a.id !== asset.id), next];
+          await savePreferences({ ...preferences, assets });
           setSaved(true);
-        } catch (e) { setError(e instanceof Error ? e.message : 'Could not link the asset. Your details are kept.'); }
+        } catch (e) {
+          // 0069 refuses an asset dated in a closed period: name the period instead of the database text.
+          setError(closedAssetRefusalMessage(e, preferences.books?.closedPeriods, preferences.assets, assets) ?? (e instanceof Error ? e.message : 'Could not link the asset. Your details are kept.'));
+        }
       }}>Link saved purchase to asset</Button>
     </>}
   </section>;
