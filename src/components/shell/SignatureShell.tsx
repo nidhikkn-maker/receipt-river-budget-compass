@@ -115,6 +115,7 @@ export function SignatureShell({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  const legacyPage = !focused && !ownsHeader(pathname);
   const ctx = useMemo(() => ({ from, openSearch: () => setSearchOpen(true), openSmartAdd: () => setSmartOpen(true) }), [from]);
   const item = (d: (typeof RAIL)[number], cls: string) => {
     const Icon = ICON[d.id];
@@ -151,8 +152,14 @@ export function SignatureShell({ children }: { children: ReactNode }) {
             {!locked && <OfflineBanner />}
             {!locked && <StoreLoadNotice />}
             {!focused && !locked && <DraftsReminder />}
-            {!focused && !locked && !ownsHeader(pathname) && <div className="sf-page sf-legacy-crumbs"><Breadcrumbs /><RecordsSubnav /></div>}
-            {loading ? <PageSkeleton /> : <DeviceLock>{children}<StepUpHost /></DeviceLock>}
+            {/* SH-6: every page that does not draw its own Signature header renders inside one shared container (.sf-page),
+                so the crumbs, the Records row and the route body share a single left edge. Route bodies should not add
+                their own centring/max-width/padding wrapper inside it. The wrapper is always present (display: contents
+                where unused) so the page and DeviceLock are never remounted when moving between page kinds. */}
+            <div className={legacyPage ? "sf-page sf-route-page" : "sf-route-plain"} data-sf-page={legacyPage ? "" : undefined}>
+              {legacyPage && !locked && <div className="sf-legacy-crumbs"><Breadcrumbs /><RecordsSubnav /></div>}
+              {loading ? <PageSkeleton /> : <DeviceLock>{children}<StepUpHost /></DeviceLock>}
+            </div>
           </main>
         </div>
 

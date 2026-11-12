@@ -1,6 +1,7 @@
 // Signature Flow shell and hub pages rendered with an isolated store stand-in (fixture figures, no Cloud).
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { useState } from "react";
 import { defaultPreferences } from "@/lib/preferences";
 import type { Account } from "@/lib/ledger";
 
@@ -20,7 +21,7 @@ vi.mock("@tanstack/react-router", async () => {
   };
 });
 vi.mock("@/components/books/useBooks", () => ({ useNetWorth: () => ({ net: 2565536.4, recordsAsOf: "2026-11-09", pricesAsOf: null, quality: [] }) }));
-vi.mock("@/components/DeviceLock", () => ({ DeviceLock: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
+vi.mock("@/components/DeviceLock", () => ({ DeviceLock: ({ children }: { children: React.ReactNode }) => <div data-testid="device-lock">{children}</div> }));
 vi.mock("@/components/StepUpHost", () => ({ StepUpHost: () => null }));
 vi.mock("@/components/OfflineBanner", () => ({ OfflineBanner: () => null }));
 vi.mock("@/components/NavProgress", () => ({ NavProgress: () => null }));
@@ -31,6 +32,7 @@ vi.mock("@/components/smart-add/IntelligentCanvas", () => ({ IntelligentCanvas: 
 vi.mock("./SyncStatus", () => ({ SyncStatus: () => null }));
 
 import { avatarLetters, SignatureShell } from "./SignatureShell";
+import { subnavScrollFor } from "./PageHeader";
 import { setAppLocked } from "@/lib/app-lock-state";
 import { SignatureHome } from "./pages/HomePage";
 import { SignatureRecords } from "./pages/RecordsPage";
@@ -226,5 +228,123 @@ describe("Signature Flow shell while locked", () => {
     render(<SignatureShell><p>page</p></SignatureShell>);
     expect(screen.queryByRole("banner")).toBeNull();
     expect(screen.queryByRole("navigation", { name: "Tab bar" })).toBeNull();
+  });
+});
+
+// Density audit SH-1/SH-2/SH-6 (lead gate 12 Nov 2026): one compact Back/Find row, the Records row only on Records
+// index pages, and one shared page container for pages that do not draw their own Signature header.
+describe("Signature Flow shell density (SH-1, SH-2, SH-6)", () => {
+  const subnav = () => screen.queryByRole("navigation", { name: "Records sections" });
+  it("shows the Records row on Records index pages with the current module marked", () => {
+    for (const [path, current] of [["/trips", "Travel"], ["/travel-inbox", "Travel"], ["/vault", "Documents"], ["/assets", "Assets"], ["/claim-submission", "Reimbursements"]] as const) {
+      local.path = path;
+      const view = render(<SignatureShell><p>body</p></SignatureShell>);
+      const row = subnav();
+      expect(row, path).not.toBeNull();
+      expect(within(row!).getByRole("link", { name: current })).toHaveAttribute("aria-current", "page");
+      view.unmount();
+    }
+  });
+  it("hides the Records row on detail and sub-pages, where the labelled Back is enough", () => {
+    // /assets/<id> and /assets/<sub> are not routes in this base; they stand for future Asset detail pages.
+    for (const path of ["/trips/trip-1", "/trips/trip-1?section=budget", "/assets/future-detail", "/vault/doc-1"]) {
+      local.path = path;
+      const view = render(<SignatureShell><p>detail</p></SignatureShell>);
+      expect(subnav(), path).toBeNull();
+      expect(within(screen.getByRole("navigation", { name: "Breadcrumb" })).getByRole("button", { name: /^Back to / })).toBeInTheDocument();
+      view.unmount();
+    }
+  });
+  it("keeps Find in the Back row with its full accessible name; the label can be visually hidden on iPhone", () => {
+    local.path = "/trips";
+    render(<SignatureShell><p>body</p></SignatureShell>);
+    const row = screen.getByRole("navigation", { name: "Breadcrumb" }).parentElement!;
+    expect(row).toHaveClass("sf-crumbs");
+    const find = within(row).getByRole("button", { name: "Find anything" });
+    expect(find).toHaveClass("sf-find");
+    expect(find.querySelector(".sf-find-label")).toHaveTextContent("Find anything");
+  });
+  it("renders the crumbs, the Records row and the route body inside one shared .sf-page container", () => {
+    local.path = "/trips";
+    const view = render(<SignatureShell><p>route body</p></SignatureShell>);
+    const page = view.container.querySelector(".sf-page[data-sf-page]");
+    expect(page).not.toBeNull();
+    expect(page).toHaveTextContent("route body");
+    expect(page!.querySelector(".sf-crumbs")).not.toBeNull();
+    expect(page!.contains(subnav())).toBe(true);
+  });
+  it("pages that draw their own Signature header keep their layout (no extra container)", () => {
+    local.path = "/home";
+    const view = render(<SignatureShell><p>hub body</p></SignatureShell>);
+    expect(view.container.querySelector(".sf-page[data-sf-page]")).toBeNull();
+    expect(view.container.querySelector(".sf-route-plain")).toHaveTextContent("hub body");
+  });
+  it("moving between a hub page and a legacy page keeps the same route container and DeviceLock (no remount)", () => {
+    let mounts = 0;
+    function Page({ label }: { label: string }) {
+      const [id] = useState(() => ++mounts);
+      return <p data-mount={id}>{label}</p>;
+    }
+    const view = render(<SignatureShell><Page label="hub body" /></SignatureShell>);
+    const lock = screen.getByTestId("device-lock");
+    const container = lock.parentElement!;
+    expect(container).toHaveClass("sf-route-plain");
+    local.path = "/trips";
+    view.rerender(<SignatureShell><Page label="trips body" /></SignatureShell>);
+    expect(screen.getByTestId("device-lock")).toBe(lock);
+    expect(lock.parentElement).toBe(container);
+    expect(container).toHaveClass("sf-page", "sf-route-page");
+    expect(container.querySelector(".sf-legacy-crumbs")).not.toBeNull();
+    expect(screen.getByText("trips body")).toHaveAttribute("data-mount", "1");
+    local.path = "/money";
+    view.rerender(<SignatureShell><Page label="money body" /></SignatureShell>);
+    expect(screen.getByTestId("device-lock")).toBe(lock);
+    expect(container).toHaveClass("sf-route-plain");
+    expect(mounts).toBe(1);
+  });
+  it("Records row: the current tab is scrolled clear of the 40 px fade, and the fade marks follow size changes", () => {
+    const observers: { cb: () => void; targets: Element[]; disconnected: boolean }[] = [];
+    vi.stubGlobal("ResizeObserver", class { o: { cb: () => void; targets: Element[]; disconnected: boolean }; constructor(cb: () => void) { this.o = { cb, targets: [], disconnected: false }; observers.push(this.o); } observe(t: Element) { this.o.targets.push(t); } unobserve() {} disconnect() { this.o.disconnected = true; } });
+    const dims = { client: 320, scroll: 520 };
+    const proto = HTMLElement.prototype;
+    const saved = ["clientWidth", "scrollWidth", "offsetLeft", "offsetWidth"].map((k) => [k, Object.getOwnPropertyDescriptor(proto, k)] as const);
+    Object.defineProperty(proto, "clientWidth", { configurable: true, get(this: HTMLElement) { return this.classList.contains("sf-subnav") ? dims.client : 0; } });
+    Object.defineProperty(proto, "scrollWidth", { configurable: true, get(this: HTMLElement) { return this.classList.contains("sf-subnav") ? dims.scroll : 0; } });
+    // Tabs are 100 px wide side by side: Overview 0, Documents 100, Travel 200, Assets 300, Reimbursements 400.
+    Object.defineProperty(proto, "offsetLeft", { configurable: true, get(this: HTMLElement) { return [...(this.parentElement?.children ?? [])].indexOf(this) * 100; } });
+    Object.defineProperty(proto, "offsetWidth", { configurable: true, get() { return 100; } });
+    try {
+      local.path = "/claim-submission";
+      const view = render(<SignatureShell><p>body</p></SignatureShell>);
+      const row = screen.getByRole("navigation", { name: "Records sections" });
+      // Reimbursements spans 400-500; the row is 320 wide with 200 px of scroll: it sits at the end of the range.
+      expect(row.scrollLeft).toBe(200);
+      expect(row).toHaveAttribute("data-fade-start");
+      expect(row).not.toHaveAttribute("data-fade-end");
+      const ro = observers.at(-1)!;
+      expect(ro.targets).toContain(row);
+      // The row grows (rotation / wider screen) until every tab fits: both fades go without a scroll event.
+      dims.client = 520; row.scrollLeft = 0;
+      act(() => ro.cb());
+      expect(row).not.toHaveAttribute("data-fade-start");
+      expect(row).not.toHaveAttribute("data-fade-end");
+      view.unmount();
+      expect(ro.disconnected).toBe(true);
+    } finally {
+      for (const [k, d] of saved) { if (d) Object.defineProperty(proto, k, d); else delete (proto as unknown as Record<string, unknown>)[k]; }
+      vi.unstubAllGlobals();
+    }
+  });
+});
+
+describe("Records row scroll target", () => {
+  it("leaves the current tab clear of the fade on both sides, within the scroll range", () => {
+    // row 320 wide, content 800; tab 100 wide.
+    expect(subnavScrollFor(400, 100, 0, 320, 800)).toBe(220); // right edge 500 + 40 fade - 320
+    expect(subnavScrollFor(300, 100, 400, 320, 800)).toBe(260); // left edge 300 - 40 fade
+    expect(subnavScrollFor(150, 100, 0, 320, 800)).toBeNull(); // 150-250 is already clear of 0+40 … 320-40
+    expect(subnavScrollFor(0, 100, 50, 320, 800)).toBe(0); // first tab: no start fade at 0
+    expect(subnavScrollFor(700, 100, 0, 320, 800)).toBe(480); // last tab: clamped to the end, no end fade there
+    expect(subnavScrollFor(230, 100, 0, 320, 800)).toBe(50); // 330 + 40 - 320: clear of the end fade, not just visible
   });
 });

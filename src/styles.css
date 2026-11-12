@@ -2192,3 +2192,85 @@ html[data-theme="signature-flow"] body:has(.sf-canvas-layer:not([hidden])) [data
   html[data-theme="signature-flow"] .sf-tab-add .sf-nav-icon svg { width: 18px; height: 18px; stroke-width: 2; }
 }
 
+
+/* ===========================================================================
+ * Density audit, shared shell SH-1 … SH-9 (lead gate 12 Nov 2026, docs/evidence/lead-gate/2026-11-12-density/MATRIX.md).
+ * Signature Flow only: every rule is scoped to html[data-theme="signature-flow"]; Classic and the other themes are untouched.
+ * Nothing is hidden or shrunk: primary text keeps its size, support text grows to the 12-13 px floor, targets grow to 44 px.
+ * ------------------------------------------------------------------------- */
+
+/* SH-6: one shared page container. Pages without their own Signature header render inside .sf-page (see
+ * SignatureShell); hub pages keep their own layout through a wrapper that takes no box. */
+html[data-theme="signature-flow"] .sf-route-plain { display: contents; }
+html[data-theme="signature-flow"] .sf-route-page { width: 100%; }
+
+/* SH-5: breadcrumb links are at least 44 px wide as well as tall. */
+html[data-theme="signature-flow"] .sf-crumbs li a { min-width: 44px; justify-content: center; padding-inline: 4px; }
+
+/* SH-2: Records sub-navigation at 13 px, with a fade on the edge that has more tabs and room after the last tab. */
+html[data-theme="signature-flow"] .sf-subnav { position: relative; padding-inline-end: 16px; scroll-padding-inline: 24px; }
+html[data-theme="signature-flow"] .sf-subnav a { font-size: 13px; }
+html[data-theme="signature-flow"] .sf-subnav[data-fade-end] { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); }
+html[data-theme="signature-flow"] .sf-subnav[data-fade-start] { -webkit-mask-image: linear-gradient(to right, transparent, #000 40px); mask-image: linear-gradient(to right, transparent, #000 40px); }
+html[data-theme="signature-flow"] .sf-subnav[data-fade-start][data-fade-end] { -webkit-mask-image: linear-gradient(to right, transparent, #000 40px, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to right, transparent, #000 40px, #000 calc(100% - 40px), transparent); }
+
+/* SH-7 (revised for UIX master §4 iPad "list/detail split, persistent selection"): on iPad portrait (768-1023 px)
+ * the split stays, so a chosen row's detail opens beside the list and stays there; the list gets the wider column
+ * (3:2) and the empty detail pane is narrower and says how many rows there are. The columns are the same before
+ * and after a choice, so choosing a row never reflows the list. From 1024 px the split is as before. */
+@media (min-width: 768px) and (max-width: 1023px) {
+  html[data-theme="signature-flow"] .sf-split { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); column-gap: 24px; }
+  html[data-theme="signature-flow"] .sf-split .sf-split-detail { padding-left: 24px; }
+}
+
+/* SH-8: key-value money rows (Money.tsx Row) are capped to a readable width, so a label and its amount are never
+ * 1,200 px apart on a computer. Narrower containers are unaffected. */
+html[data-theme="signature-flow"] .money-row { max-width: 720px; }
+
+@media (max-width: 767px) {
+  /* SH-1: Back and Find share one compact row with no rule; Find is a 44 x 44 icon (its name stays "Find anything"). */
+  html[data-theme="signature-flow"] .sf-crumbs { gap: 8px; margin-bottom: 4px; padding-bottom: 0; border-bottom: 0; }
+  html[data-theme="signature-flow"] .sf-find { width: 44px; min-width: 44px; padding: 0; justify-content: center; --sf-pill-h: 40px; --sf-pill-r: 12px; }
+  html[data-theme="signature-flow"] .sf-find svg { width: 16px; height: 16px; }
+  html[data-theme="signature-flow"] .sf-find-label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+  html[data-theme="signature-flow"] .sf-subnav { margin: 0 0 12px; }
+  /* SH-3: bottom-bar labels at 12 px; the tabs stay 52 px tall. */
+  html[data-theme="signature-flow"] .sf-tab { font-size: 12px; }
+  /* SH-4: Calendar and Notifications are 44 x 44; the width comes from the workspace label's padding. */
+  html[data-theme="signature-flow"] .sf-header .sf-icon-btn { width: 44px; height: 44px; }
+  html[data-theme="signature-flow"] .sf-workspace { padding-inline: 2px; }
+}
+
+/* Review L6: on narrow iPhones (320-375 px) a long workspace name gives way before the header icons do: the label
+ * truncates with an ellipsis (the button's accessible name and title keep the full name); font sizes are unchanged. */
+html[data-theme="signature-flow"] .sf-header-brand { flex-shrink: 0; }
+html[data-theme="signature-flow"] .sf-header-tools > * { flex-shrink: 0; }
+html[data-theme="signature-flow"] .sf-header-tools > .sf-workspace { flex-shrink: 1; min-width: 0; }
+html[data-theme="signature-flow"] .sf-workspace-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html[data-theme="signature-flow"] .sf-workspace > svg { flex-shrink: 0; }
+
+/* UIX master §3.3 page insets on the 4-point grid, measured from the content pane's edge (the shared .sf-page
+ * container and the hub pages both sit inside .sf-main, so one variable sets every page): iPhone 20 px (16-20),
+ * iPad 28 px (24-32), 1180-1279 px 32 px (iPad landscape and narrow computer windows: inside both ranges),
+ * computer from 1280 px 40 px (32-40). Safe-area insets win where larger. The header lines up with the content. */
+html[data-theme="signature-flow"] .sf-shell { --sf-inset: 20px; }
+@media (min-width: 768px) { html[data-theme="signature-flow"] .sf-shell { --sf-inset: 28px; } }
+@media (min-width: 1180px) { html[data-theme="signature-flow"] .sf-shell { --sf-inset: 32px; } }
+@media (min-width: 1280px) { html[data-theme="signature-flow"] .sf-shell { --sf-inset: 40px; } }
+html[data-theme="signature-flow"] .sf-main { padding-left: max(var(--sf-inset), env(safe-area-inset-left)); padding-right: max(var(--sf-inset), env(safe-area-inset-right)); }
+@media (min-width: 768px) {
+  html[data-theme="signature-flow"] .sf-header { padding-inline: max(var(--sf-inset), env(safe-area-inset-left)) max(var(--sf-inset), env(safe-area-inset-right)); }
+  /* Rail spacing on the 4-point grid (was 13 px / 5 px). */
+  html[data-theme="signature-flow"] .sf-rail-nav { gap: 12px; }
+  html[data-theme="signature-flow"] .sf-rail-item { gap: 4px; }
+}
+
+/* UIX master §3.3 text roles: shell support text at least 12 px (support 12-14) and overline-style labels at least
+ * 10 px (overline 10-12). Raised from the calibrated 9-11.5 px values; nothing is made smaller. */
+html[data-theme="signature-flow"] :is(.sf-back, .sf-crumbs ol, .sf-find, .sf-link, .sf-note, .sf-footnote) { font-size: 12px; }
+html[data-theme="signature-flow"] :is(.sf-list-row, .sf-date-row, .sf-task-row, .sf-palette-row, .sf-module-row, .sf-split-row) small { font-size: 12px; }
+@media (max-width: 767px) {
+  html[data-theme="signature-flow"] .sf-worth .sf-overline { font-size: 10px; }
+  html[data-theme="signature-flow"] .sf-worth-metrics dt { font-size: 10px; }
+  html[data-theme="signature-flow"] .sf-worth-metrics dd.sf-worth-sub { font-size: 10px; }
+}

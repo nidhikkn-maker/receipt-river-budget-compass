@@ -31,7 +31,7 @@ export function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger className={compact ? "sf-workspace sf-workspace-compact" : "sf-workspace"} aria-label={`Workspace: ${workspaceLabel(scope)}. Change workspace`}>
-        <span>{workspaceLabel(scope)}</span><ChevronDown aria-hidden />
+        <span className="sf-workspace-label" title={workspaceLabel(scope)}>{workspaceLabel(scope)}</span><ChevronDown aria-hidden />
       </PopoverTrigger>
       <PopoverContent align="end" className="sf-popover">
         <p className="sf-overline">Workspace</p>
