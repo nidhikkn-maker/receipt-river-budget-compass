@@ -2,6 +2,7 @@
 // 'online' event. Fire-and-forget callers (the header sync pill, the device unlock, About's "Check again") must not
 // leave an unhandled rejection; the failure is shown the way the UI already shows it (syncState / readFailure), with
 // no extra toast. Mocked store only; no Cloud.
+import type React from "react";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -68,7 +69,7 @@ describe("a refresh that rejects is handled where it is fired and forgotten", ()
   });
 
   it("About 'Check again': no unhandled rejection or toast; a whole-read failure shows on the records row", async () => {
-    const About = (AboutRoute as unknown as { options: { component: () => JSX.Element } }).options.component;
+    const About = (AboutRoute as unknown as { options: { component: () => React.ReactElement } }).options.component;
     h.store = { ...h.store, readFailure: { kind: "failed", at: "2026-11-12T00:00:00Z", message: "Failed to fetch" } };
     render(<About />);
     await flush();
