@@ -23,7 +23,9 @@ export function SyncStatus({ compact = false }: { compact?: boolean } = {}) {
     mins == null || mins < 1 ? "Up to date" : `Updated ${mins} min ago`;
   const Icon = syncState === "syncing" ? RefreshCw : syncState === "offline" ? CloudOff : syncState === "error" ? TriangleAlert : Check;
   const attention = syncState === "error" || syncState === "offline" || pendingCount > 0;
-  const go = () => (pendingCount > 0 ? void navigate({ to: "/sync-queue" }) : void refresh());
+  // A failed read is shown by this pill (syncState "error" / "offline") and the store's readFailure, so the rejection
+  // is settled here without a second message.
+  const go = () => (pendingCount > 0 ? void navigate({ to: "/sync-queue" }) : void refresh().catch(() => {}));
   if (compact) {
     return (
       <button type="button" onClick={go} title={label} data-sync-state={syncState} data-attention={attention || undefined} className="sf-sync-btn">
