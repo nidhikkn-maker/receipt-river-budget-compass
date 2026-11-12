@@ -1,0 +1,50 @@
+
+ RUN  v4.1.12 /home/user/thapal-wser
+
+stderr | src/components/books/market-workflow-persistence.test.tsx > actual price refresh → installed reviewed-save RPC → net-worth/Home → reload preserves costs and creates no ledger records
+An update to NetWorthCard inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+stderr | src/components/books/market-workflow-persistence.test.tsx > unusual-value threshold enabled=true compares owned cost, not full acquisition cost
+An update to MarketPanel inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ ✓ src/lib/security-phase1-sql.test.ts (72 tests) 52341ms
+     ✓ legacy_company_editor: effective rights identical at 0088, P1, P1+P2 and P1+P2+P4, and equal to the stored role  386ms
+     ✓ a short-lived grant expires on its own; another person's grant never helps  1215ms
+     ✓ each __unguarded original is not executable by clients; wrappers keep name, signature, return type, SECURITY and grants  2672ms
+     ✓ the assistant-refusing writer set equals every client-callable VOLATILE non-trigger function of 0088+P1+P2 not already step-up guarded  2487ms
+     ✓ every wrapped RPC refuses an assistant session before doing anything; the same call as the user is not refused for being an assistant  490ms
+     ✓ P4b (optional hook): blocks non-GET assistant requests and revoked clients; humans unaffected; rollback removes only the hook  480ms
+     ✓ same-account restore: refused without step-up, succeeds with it and keeps one copy of each record  2584ms
+     ✓ cross-account restore with step-up remaps ids and leaves the source account untouched; an assistant cannot restore  2892ms
+     ✓ erasure with step-up leaves no owner-linked row outside the documented kept tables; other owners keep theirs  2893ms
+     ✓ no pre-existing row changes through P1, P2 and P4; each rollback restores the previous catalog exactly  4531ms
+stderr | src/components/books/market-workflow-persistence.test.tsx > foreign broker cash linked=false saves currency through the real form, persists FX and produces an INR snapshot without double counting
+An update to NetWorthCard inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+

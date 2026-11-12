@@ -1,0 +1,47 @@
+{
+ "commit": "9429db585659fd77f8d7f1d358aa7d4eb3178f6d",
+ "tree": "d5c5000dbc4e3c5cde60196a021e09c021b4d2ef",
+ "runs_required": 3,
+ "verdict": "RUNNING",
+ "consistent_test_counts": true,
+ "steps": [
+  {
+   "name": "typecheck",
+   "commit": "9429db585659fd77f8d7f1d358aa7d4eb3178f6d",
+   "started": "2026-11-12T11:16:38Z",
+   "ended": "2026-11-12T11:17:31Z",
+   "exit_code": "0",
+   "tree_before": "d5c5000dbc4e3c5cde60196a021e09c021b4d2ef",
+   "tree_after": "d5c5000dbc4e3c5cde60196a021e09c021b4d2ef",
+   "status": "PASSED"
+  },
+  {
+   "name": "build",
+   "commit": "9429db585659fd77f8d7f1d358aa7d4eb3178f6d",
+   "started": "2026-11-12T11:17:32Z",
+   "ended": "2026-11-12T11:17:58Z",
+   "exit_code": "0",
+   "tree_before": "d5c5000dbc4e3c5cde60196a021e09c021b4d2ef",
+   "tree_after": "d5c5000dbc4e3c5cde60196a021e09c021b4d2ef",
+   "status": "PASSED"
+  },
+  {
+   "name": "run-1",
+   "commit": "9429db585659fd77f8d7f1d358aa7d4eb3178f6d",
+   "started": "2026-11-12T11:17:58Z",
+   "ended": null,
+   "exit_code": null,
+   "tree_before": "d5c5000dbc4e3c5cde60196a021e09c021b4d2ef",
+   "tree_after": null,
+   "status": "RUNNING"
+  },
+  {
+   "name": "run-2",
+   "status": "PENDING"
+  },
+  {
+   "name": "run-3",
+   "status": "PENDING"
+  }
+ ]
+}
