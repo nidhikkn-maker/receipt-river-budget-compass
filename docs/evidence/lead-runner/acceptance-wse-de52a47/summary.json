@@ -1,0 +1,77 @@
+{
+ "commit": "de52a470318df4192748f01e81ef4a54e68bf0a3",
+ "tree": "12245f085eba385cd2dfec4a30997c993e1063d3",
+ "runs_required": 3,
+ "verdict": "ACCEPTED",
+ "consistent_test_counts": true,
+ "steps": [
+  {
+   "name": "typecheck",
+   "commit": "de52a470318df4192748f01e81ef4a54e68bf0a3",
+   "started": "2026-11-12T01:42:26Z",
+   "ended": "2026-11-12T01:43:12Z",
+   "exit_code": "0",
+   "tree_before": "12245f085eba385cd2dfec4a30997c993e1063d3",
+   "tree_after": "12245f085eba385cd2dfec4a30997c993e1063d3",
+   "status": "PASSED"
+  },
+  {
+   "name": "build",
+   "commit": "de52a470318df4192748f01e81ef4a54e68bf0a3",
+   "started": "2026-11-12T01:43:12Z",
+   "ended": "2026-11-12T01:43:35Z",
+   "exit_code": "0",
+   "tree_before": "12245f085eba385cd2dfec4a30997c993e1063d3",
+   "tree_after": "12245f085eba385cd2dfec4a30997c993e1063d3",
+   "status": "PASSED"
+  },
+  {
+   "name": "run-1",
+   "commit": "de52a470318df4192748f01e81ef4a54e68bf0a3",
+   "started": "2026-11-12T01:43:35Z",
+   "ended": "2026-11-12T01:51:00Z",
+   "exit_code": "0",
+   "tree_before": "12245f085eba385cd2dfec4a30997c993e1063d3",
+   "tree_after": "12245f085eba385cd2dfec4a30997c993e1063d3",
+   "status": "PASSED",
+   "tests_total": 4091,
+   "tests_passed": 4090,
+   "tests_failed": 0,
+   "files_total": 478,
+   "files_failed": 0,
+   "success": true
+  },
+  {
+   "name": "run-2",
+   "commit": "de52a470318df4192748f01e81ef4a54e68bf0a3",
+   "started": "2026-11-12T01:51:00Z",
+   "ended": "2026-11-12T01:58:18Z",
+   "exit_code": "0",
+   "tree_before": "12245f085eba385cd2dfec4a30997c993e1063d3",
+   "tree_after": "12245f085eba385cd2dfec4a30997c993e1063d3",
+   "status": "PASSED",
+   "tests_total": 4091,
+   "tests_passed": 4090,
+   "tests_failed": 0,
+   "files_total": 478,
+   "files_failed": 0,
+   "success": true
+  },
+  {
+   "name": "run-3",
+   "commit": "de52a470318df4192748f01e81ef4a54e68bf0a3",
+   "started": "2026-11-12T01:58:18Z",
+   "ended": "2026-11-12T02:05:39Z",
+   "exit_code": "0",
+   "tree_before": "12245f085eba385cd2dfec4a30997c993e1063d3",
+   "tree_after": "12245f085eba385cd2dfec4a30997c993e1063d3",
+   "status": "PASSED",
+   "tests_total": 4091,
+   "tests_passed": 4090,
+   "tests_failed": 0,
+   "files_total": 478,
+   "files_failed": 0,
+   "success": true
+  }
+ ]
+}
