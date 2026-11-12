@@ -66,7 +66,7 @@ function About() {
         <p className="mt-2 text-xs text-muted-foreground">No keys, tokens or other secrets are shown here.</p>
       </section>
       <section aria-labelledby="about-health" className="rounded-2xl border bg-card p-4">
-        <div className="mb-2 flex flex-wrap items-center justify-between gap-2"><h2 id="about-health" className="font-semibold">Service health</h2><Button size="sm" variant="outline" onClick={() => { jobs.retry(); void refresh().catch(() => {}); /* shown on the records row (readFailure) */ }}>Check again</Button></div>
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2"><h2 id="about-health" className="font-semibold">Service health</h2><Button size="sm" variant="outline" onClick={() => { jobs.retry(); void Promise.resolve(refresh()).catch(() => {}); /* shown on the records row (readFailure) */ }}>Check again</Button></div>
         <ul className="divide-y text-sm">{health.map((h) => { const s = ICON[h.state]; const Icon = s.icon; return (
           <li key={h.key} className="flex items-start gap-3 py-2"><Icon className={`mt-0.5 h-4 w-4 shrink-0 ${s.tone}`} aria-hidden /><span className="min-w-0 flex-1"><span className="block font-medium">{h.label} <span className={`text-xs font-normal ${s.tone}`}>· {s.label}</span></span><span className="block text-xs text-muted-foreground [overflow-wrap:anywhere]">{h.detail}</span></span></li>
         ); })}</ul>

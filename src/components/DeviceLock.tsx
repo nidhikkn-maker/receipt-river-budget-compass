@@ -51,7 +51,7 @@ export function DeviceLock({ children }: { children: ReactNode }) {
   const locked = useAppLocked();
   useEffect(() => (locked ? router.history.block({ blockerFn: () => true, enableBeforeUnload: false }) : undefined), [locked, router]);
   // A failed refetch is reported by the store (syncState / readFailure / areaStatus 'failed'); settled here, no toast.
-  const onUnlock = useCallback(() => { void refresh().catch(() => {}); void router.invalidate(); }, [refresh, router]);
+  const onUnlock = useCallback(() => { void Promise.resolve(refresh()).catch(() => {}); void router.invalidate(); }, [refresh, router]);
   return <OwnerLock ownerId={userId} onUnlock={onUnlock}>{children}</OwnerLock>;
 }
 
