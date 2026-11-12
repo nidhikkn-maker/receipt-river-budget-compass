@@ -746,4 +746,63 @@ describe("P20 retained record ignores session settings; rollback locks the trail
       expect(await num(db, "SELECT count(*) FROM pg_namespace WHERE nspname = 'phase3_p20_retained'")).toBe(0);
     } finally { await db.close(); }
   }, 600_000);
+
+  // The install's later DROP/CREATE TRIGGER take the same lock, so "held at commit" alone proves nothing: a probe placed
+  // immediately before the adoption count/md5 compare must already see this backend holding SHARE ROW EXCLUSIVE.
+  it("the re-install holds SHARE ROW EXCLUSIVE on the trail at the adoption count/md5 compare (probe), not only from later DDL", async () => {
+    const inst = readSql(P20), rb = readSql(P20_RB);
+    const lock = "LOCK TABLE public.claim_receipt_corrections IN SHARE ROW EXCLUSIVE MODE;";
+    const compare = "IF (SELECT count(*) FROM public.claim_receipt_corrections) IS DISTINCT FROM r.rows";
+    expect(inst.split(compare).length).toBe(2);
+    expect(inst.split(lock).length).toBe(2);
+    const probe = `IF NOT EXISTS (SELECT 1 FROM pg_locks WHERE relation = 'public.claim_receipt_corrections'::regclass AND mode = 'ShareRowExclusiveLock'
+        AND granted AND pid = pg_backend_pid()) THEN RAISE EXCEPTION 'probe: trail not locked at the adoption compare'; END IF;
+    `;
+    const probed = inst.replace(compare, probe + compare);
+    const preOnly = (s: string) => { const i = s.indexOf("END $pre$;"); expect(i).toBeGreaterThan(0); return s.slice(0, i + "END $pre$;".length); };
+    vi.stubGlobal("navigator", { onLine: true });
+    const db = await setup([P19]);
+    try {
+      await db.exec(readSql(P20));
+      await corrected(db, O, ACC_O, "pr-o");
+      await actAs(db, null);
+      await db.exec(rb);
+      // control: without the explicit LOCK the probe fires (nothing earlier in the install locks the trail)
+      await expect(db.exec(preOnly(probed.replace(lock, "")))).rejects.toThrow(/probe: trail not locked at the adoption compare/);
+      await db.exec("ROLLBACK");
+      // as staged: the lock is already held at the compare, and the probed install completes and adopts the trail
+      const kept = await allAudits(db);
+      await db.exec(probed);
+      expect(await allAudits(db)).toEqual(kept);
+      expect(await num(db, "SELECT count(*) FROM pg_namespace WHERE nspname = 'phase3_p20_retained'")).toBe(0);
+    } finally { await db.close(); }
+  }, 600_000);
+
+  it("the rollback refuses a guard disabled after its precheck but before its lock (re-checked under the lock)", async () => {
+    const rb = readSql(P20_RB);
+    const lockAt = rb.indexOf("LOCK TABLE public.claim_receipt_corrections IN SHARE ROW EXCLUSIVE MODE;");
+    const preEnd = rb.indexOf("END $pre$;") + "END $pre$;".length;
+    expect(preEnd).toBeGreaterThan(10);
+    expect(lockAt).toBeGreaterThan(preEnd);
+    vi.stubGlobal("navigator", { onLine: true });
+    const db = await setup([P19]);
+    try {
+      await db.exec(readSql(P20));
+      await corrected(db, O, ACC_O, "gd-o");
+      await actAs(db, null);
+      const before = await catalog(db);
+      for (const trigger of ["claim_receipt_corrections_guard", "claim_receipt_corrections_no_truncate"]) {
+        await db.exec(rb.slice(0, preEnd)); // BEGIN + precheck passes (guards enabled)
+        await db.exec(`ALTER TABLE public.claim_receipt_corrections DISABLE TRIGGER ${trigger}`);
+        await expect(db.exec(rb.slice(preEnd))).rejects.toThrow(/guards were disabled or changed after the precheck/);
+        await db.exec("ROLLBACK");
+        expect(await catalog(db)).toEqual(before);
+        expect(await num(db, "SELECT count(*) FROM pg_namespace WHERE nspname = 'phase3_p20_retained'")).toBe(0);
+      }
+      // guards untouched: the split rollback completes
+      await db.exec(rb.slice(0, preEnd));
+      await db.exec(rb.slice(preEnd));
+      expect((await record(db)).m).not.toMatch(/^stale/);
+    } finally { await db.close(); }
+  }, 600_000);
 });
