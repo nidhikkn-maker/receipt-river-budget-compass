@@ -6,6 +6,10 @@ import { demoCleanupDecision, demoGuestRecordsGone, removeDemoGuestRecords } fro
 const PAGE = 1000;
 const SCAN_MAX = 5000; // expired rows looked at per run
 const WORK_MAX = 200; // guests acted on per run (the applied expired_demo_owners() limit)
+// Skipped rows don't count toward WORK_MAX, so identity lookups have their own cap; with the auth API down a run stops
+// after a short streak of lookup errors instead of trying every scanned row. Rows not reached stay for the next run.
+const LOOKUP_MAX = 400; // getUserById calls per run
+const LOOKUP_ERROR_STREAK_MAX = 10; // consecutive lookup errors that stop the run (reported, 500)
 
 // Removes visitor demo copies older than 24 hours (records, then the guest identity).
 export const Route = createFileRoute("/api/public/jobs/cleanup-demos")({
@@ -28,13 +32,24 @@ export const Route = createFileRoute("/api/public/jobs/cleanup-demos")({
           owners.push(...rows.map((r) => r.owner_id));
           if (rows.length < PAGE) break;
         }
-        let removed = 0, worked = 0;
+        let removed = 0, worked = 0, lookups = 0, lookupErrorStreak = 0;
         const failed: { table: string; error: string }[] = [];
         for (const id of owners.slice(0, SCAN_MAX)) {
-          if (worked >= WORK_MAX) break;
+          if (worked >= WORK_MAX || lookups >= LOOKUP_MAX) break;
+          lookups++;
           const { data: u, error: lookupError } = await supabaseAdmin.auth.admin.getUserById(id);
           const decision = demoCleanupDecision({ user: u?.user ?? null, error: lookupError });
-          if (decision === "skip-unconfirmed") continue; // lookup failed: never delete records on doubt
+          if (decision === "skip-unconfirmed") {
+            // lookup failed: never delete records on doubt
+            if (++lookupErrorStreak >= LOOKUP_ERROR_STREAK_MAX) {
+              const last = lookupError ? ((lookupError as { message?: string }).message ?? String(lookupError)) : "no identity returned";
+              failed.push({ table: "auth.users", error: `cleanup stopped after ${lookupErrorStreak} consecutive identity lookup errors (last: ${last})` });
+              console.error("demo cleanup stopped: identity lookups keep failing", last);
+              break;
+            }
+            continue;
+          }
+          lookupErrorStreak = 0;
           if (decision === "identity-missing") {
             // An earlier run deleted the identity but not the demo_sessions row. Finish only when every guest record is
             // confirmed gone by an exact count; otherwise keep everything (records are never deleted here).

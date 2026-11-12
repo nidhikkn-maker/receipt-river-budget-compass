@@ -165,4 +165,35 @@ describe("demo cleanup: a guest whose identity is confirmed gone", () => {
     expect(lookups[0]).toBe("lookup:kept-000");
     expect(lookups.at(-1)).toBe("lookup:fresh-guest");
   });
+
+  it("auth API down: lookups stop after 10 consecutive errors, the stop is reported (500), nothing is deleted", async () => {
+    for (let i = 0; i < 1200; i++) { const id = `g-${String(i).padStart(4, "0")}`; seedGuest(id, old(2000 - i)); h.lookupError[id] = { message: "auth down", status: 503 }; }
+    const res = await post();
+    expect(res.status).toBe(500);
+    expect(res.body.removed).toBe(0);
+    expect(res.body.failed).toEqual([{ table: "auth.users", error: "cleanup stopped after 10 consecutive identity lookup errors (last: auth down)" }]);
+    expect(h.calls.filter((c) => c.startsWith("lookup:")).length).toBe(10);
+    expect(h.calls.filter((c) => c.startsWith("delete:") || c.startsWith("deleteUser:") || c.startsWith("count:"))).toEqual([]);
+    expect(h.sessions.size).toBe(1200);
+  });
+
+  it("lookups per run are capped at 400 even when every looked-up row must stay; a success resets the error streak", async () => {
+    // identity missing with records left: never acted on, never an error, so only the lookup cap bounds the run
+    for (let i = 0; i < 1200; i++) { const id = `k-${String(i).padStart(4, "0")}`; seedGuest(id, old(2000 - i), { identity: false, records: false }); (h.records["expenses"] ??= new Map()).set(id, 1); }
+    // interleave lookup errors below the streak limit
+    for (let i = 0; i < 1200; i += 10) for (let j = 0; j < 9; j++) h.lookupError[`k-${String(i + j).padStart(4, "0")}`] = { message: "flaky", status: 503 };
+    const res = await post();
+    expect(res).toEqual({ status: 200, body: { removed: 0, failed: [] } });
+    expect(h.calls.filter((c) => c.startsWith("lookup:")).length).toBe(400);
+    expect(h.calls.filter((c) => c.startsWith("delete:") || c.startsWith("deleteUser:"))).toEqual([]);
+    expect(h.sessions.size).toBe(1200);
+  });
+
+  it("a normal run is unaffected: a few lookup errors are skipped and the remaining guests are removed", async () => {
+    for (let i = 0; i < 5; i++) { seedGuest(`down-${i}`, old(100 - i)); h.lookupError[`down-${i}`] = { message: "auth down", status: 503 }; }
+    for (let i = 0; i < 3; i++) seedGuest(`ok-${i}`, old(10 - i));
+    expect(await post()).toEqual({ status: 200, body: { removed: 3, failed: [] } });
+    for (let i = 0; i < 5; i++) { expect(h.sessions.has(`down-${i}`)).toBe(true); expect(deletes(`down-${i}`)).toEqual([]); }
+    for (let i = 0; i < 3; i++) expect(h.sessions.has(`ok-${i}`)).toBe(false);
+  });
 });

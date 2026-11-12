@@ -21,7 +21,7 @@
 --      phase3_p20_retained.rollback (table oid, table owner, row count, content md5); permitted E1/E2 deletes keep that
 --      record current (phase3_p20_audit.track_retained, which refreshes it only from a verified pre-delete state and
 --      otherwise marks it stale for good); the guards must be enabled in the ordinary mode ('O', the only mode
---      track_retained accepts) before the rollback runs; the rollback locks the trail (SHARE ROW EXCLUSIVE) before hashing
+--      track_retained accepts) before the rollback runs and again under its lock before commit; the rollback locks the trail (SHARE ROW EXCLUSIVE) before hashing
 --      and every hash pins TimeZone UTC, DateStyle 'ISO, MDY', IntervalStyle postgres and extra_float_digits 1; a later P20 install adopts the table only if it is that same
 --      table with that owner, its rows still match the recorded count and md5, and it has exactly the P20 shape.
 -- Re-installing P20 (P20_claim_receipt_correction.sql) keeps every retained row, removes phase3_p20_retained,
@@ -88,6 +88,15 @@ DO $post$
 DECLARE was record; now_n bigint; now_h text;
 BEGIN
   SELECT * INTO was FROM p20_rollback_rows;
+  -- Re-checked under the lock: a guard disabled (or replaced) after the precheck but before the lock is refused, so the
+  -- record is never written while track_retained would not run in the ordinary mode.
+  IF (SELECT count(*) FROM pg_trigger g WHERE g.tgrelid = 'public.claim_receipt_corrections'::regclass AND NOT g.tgisinternal AND g.tgenabled = 'O'
+       AND g.tgname IN ('claim_receipt_corrections_guard', 'claim_receipt_corrections_no_truncate') AND g.tgfoid = to_regprocedure('phase3_p20_audit.guard()')) <> 2
+     OR NOT EXISTS (SELECT 1 FROM pg_trigger g WHERE g.tgrelid = 'public.claim_receipt_corrections'::regclass AND g.tgname = 'claim_receipt_corrections_retained_record'
+       AND g.tgenabled = 'O' AND g.tgfoid = to_regprocedure('phase3_p20_audit.track_retained()'))
+     OR NOT EXISTS (SELECT 1 FROM pg_trigger g WHERE g.tgrelid = 'public.expenses'::regclass AND g.tgname = 'p20_claim_corrections_follow_erasure' AND g.tgenabled = 'O') THEN
+    RAISE EXCEPTION 'P20 rollback: the audit trail guards were disabled or changed after the precheck; review before rolling back';
+  END IF;
   SELECT count(*), md5(coalesce(string_agg(c::text, E'\n' ORDER BY c.id), '')) INTO now_n, now_h FROM public.claim_receipt_corrections c;
   IF now_n IS DISTINCT FROM was.n OR now_h IS DISTINCT FROM was.h THEN
     RAISE EXCEPTION 'P20 rollback: audit rows changed (% rows md5 % before, % rows md5 % after)', was.n, was.h, now_n, now_h;
