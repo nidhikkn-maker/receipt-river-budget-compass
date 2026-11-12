@@ -18,16 +18,18 @@ export function demoCleanupDecision(lookup: { user?: { is_anonymous?: boolean | 
 
 /**
  * Owner-scoped record removal for one confirmed anonymous demo guest, in order. A required step that fails stops the
- * cleanup (the guest identity is then kept and retried next hour). claim_receipt_corrections (proposed P20) is audit
- * history that deliberately survives its claim row, so the guest's corrections are removed explicitly here; the P20
- * guard allows this delete only for the service role and only for an anonymous demo guest. Before P20 is installed the
- * table does not exist: only that "relation does not exist" answer (Postgres 42P01 / PostgREST PGRST205) is skipped.
- * Any other error on that step stops the cleanup before the identity is deleted, so corrections are never orphaned.
+ * cleanup (the guest identity is then kept and retried next hour). claim_receipt_corrections (proposed P20) and
+ * asset_disposal_requests (proposed P14) are audit history that deliberately survives the rows it describes, so the
+ * guest's rows are removed explicitly here; the P20 / P14 guards allow this delete only for the service role and only
+ * for an anonymous demo guest. Before P20 / P14 is installed the table does not exist: only that "relation does not
+ * exist" answer (Postgres 42P01 / PostgREST PGRST205) is skipped. Any other error on such a step stops the cleanup
+ * before the identity is deleted, so audit rows are never orphaned.
  */
 export const DEMO_GUEST_STEPS = [
   { table: "expenses", column: "employee_id", required: true },
   { table: "accounts", column: "owner_id", required: true },
   { table: "claim_receipt_corrections", column: "owner_id", required: "unless-missing" },
+  { table: "asset_disposal_requests", column: "owner_id", required: "unless-missing" },
   { table: "finance_preferences", column: "owner_id", required: false },
 ] as const;
 
@@ -56,8 +58,8 @@ export async function removeDemoGuestRecords(from: (table: string) => DeleteBuil
 
 type CountBuilder = { select: (column: string, opts: { count: "exact"; head: true }) => { eq: (column: string, value: string) => PromiseLike<{ count: number | null; error: unknown }> } };
 /**
- * True only when an exact count of every DEMO_GUEST_STEPS table reads 0 rows for the owner (a missing corrections
- * table, 42P01/PGRST205 before P20, counts as none). Any error, or a count that is not exactly 0, is doubt: false.
+ * True only when an exact count of every DEMO_GUEST_STEPS table reads 0 rows for the owner (a missing audit table,
+ * 42P01/PGRST205 before P20 / P14, counts as none). Any error, or a count that is not exactly 0, is doubt: false.
  */
 export async function demoGuestRecordsGone(from: (table: string) => CountBuilder, owner: string): Promise<boolean> {
   for (const step of DEMO_GUEST_STEPS) {

@@ -15,8 +15,8 @@
 --     account's entity; any other disposal-tagged entry stays the P8 exception 'asset_disposal_workflow'. Apply P14
 --     after P8 and roll it back before P8's rollback;
 --   * P11 installed: a checked backup restore (P11's transaction-bound ticket) may carry disposals recorded in the backup.
--- Rollback: P14_asset_disposal_approval.rollback.sql (exact pre-P14 catalog; refuses while requests exist unless
--- approved). No existing row or value is changed.
+-- Rollback: P14_asset_disposal_approval.rollback.sql (pre-P14 catalog except the RETAINED read-only audit trail
+-- public.asset_disposal_requests, see D). No existing row or value is changed.
 --
 -- A. asset_disposal_requests: asset (owner-local id), method, disposal date, proceeds (+ optional link to the bank
 --    receipt entry), source evidence (>= 1 of the owner's documents), reason, the book value / gain-or-loss and the
@@ -32,7 +32,30 @@
 --    P14_CHANGED).
 -- C. Guards: soldOn / saleValue / disposal of an asset change ONLY through B (P14_DISPOSAL_APPROVAL_REQUIRED), and a
 --    disposal-tagged entry is inserted ONLY by B. Archiving (archived / archive status / recordArchive) never touches
---    these fields, so archiving can never dispose. Erasure and the service path are exempt.
+--    these fields, so archiving can never dispose. Erasure and the service path are exempt from these two guards.
+-- D. The request table is audit history (brief G9/G10, 12 Nov 2026; lead ruling by consistency with P20: "rollback must
+--    preserve financial audit trails even if the feature is reverted"; retained rows are removable only by the owner's
+--    own confirmed erasure and by demo-guest cleanup). phase3_p14_audit.guard() (a schema the rollback keeps) refuses
+--    every UPDATE except decide/cancel's own transaction (phase3_p14.writing) and P11's checked restore, every TRUNCATE,
+--    and every DELETE except:
+--      E1 confirmed erasure of the caller's own data: row owner = auth.uid() AND the erasure is authorised (P18
+--         erasure authority; ledgerline.erasing before P18, rewritten exactly as P20 K8 E1 does, in either install order).
+--         delete_my_finance_data does not know this table, so phase3_p14_audit.follow_erasure() (AFTER DELETE ... FOR
+--         EACH STATEMENT on public.expenses; every erasure body deletes the caller's expenses) removes ALL of the
+--         caller's requests in that statement under the same condition; outside E1 it does nothing.
+--      E2 the service / operator path (no auth.uid(), not anon/authenticated) for an anonymous demo guest
+--         (public.demo_sessions row AND auth.users.is_anonymous): the hourly demo cleanup (src/lib/demo-cleanup.ts
+--         DEMO_GUEST_STEPS) deletes the guest's requests by owner_id. service_role holds SELECT and DELETE only (RLS:
+--         guest rows only); any other owner's row is refused, also for the operator.
+--    Inserts stay as before (clients hold no INSERT; request_asset_disposal writes as the table owner).
+--    These are DML guards: the table owner / a superuser can still bypass them with DDL or session_replication_role.
+--    Rollback RETAINS the table read-only with phase3_p14_audit and a phase3_p14_retained record (table oid, owner,
+--    row count, content md5; kept current by permitted E1/E2 deletes through phase3_p14_audit.track_retained, which
+--    marks it stale for good if the rows changed around the guards). Re-installing P14 adopts the retained table only if
+--    it is that same table with that owner, its rows match the record and it has exactly the P14 shape, triggers,
+--    policies and grants; its rows are kept (a request still pending at rollback can be decided again) and new requests
+--    append. Every content md5 pins TimeZone UTC, DateStyle 'ISO, MDY', IntervalStyle postgres, extra_float_digits 1.
+--    Backup: classified in src/lib/backup.ts BACKUP_PROPOSED_EXCLUDED_TABLES (audit history, like transaction_audit).
 -- P14-a (fixed 10 Nov 2026, WS-E batch 6-8 check): the database no longer trusts the caller's book value. It works the
 --   book value out itself from the stored register (phase3_p14.book_value: the app's uniform monthly working at full
 --   precision, KK decision 4) and refuses a request or approval whose figure differs by more than 0.50 + 0.005 per month
@@ -56,8 +79,34 @@
 BEGIN;
 
 DO $pre$
+DECLARE t oid := to_regclass('public.asset_disposal_requests'); r record;
 BEGIN
   IF to_regnamespace('phase3_p14') IS NOT NULL THEN RAISE EXCEPTION 'P14 is already installed'; END IF;
+  -- D: an existing request table (or audit guard schema) is accepted only as the trail a P14 rollback retained AND
+  -- recorded: the same table (oid) with the same owner, and the guard schemas owned by that owner (shape checked below).
+  IF t IS NOT NULL OR to_regnamespace('phase3_p14_audit') IS NOT NULL THEN
+    IF to_regclass('phase3_p14_retained.rollback') IS NULL THEN
+      RAISE EXCEPTION 'P14: public.asset_disposal_requests exists but is not an audit trail retained by a P14 rollback';
+    END IF;
+    SELECT * INTO r FROM phase3_p14_retained.rollback;
+    IF (SELECT count(*) FROM phase3_p14_retained.rollback) <> 1 OR t IS DISTINCT FROM r.table_oid
+       OR (SELECT c.relowner FROM pg_class c WHERE c.oid = t) IS DISTINCT FROM r.table_owner
+       OR (SELECT n.nspowner FROM pg_namespace n WHERE n.nspname = 'phase3_p14_audit') IS DISTINCT FROM r.table_owner
+       OR (SELECT n.nspowner FROM pg_namespace n WHERE n.nspname = 'phase3_p14_retained') IS DISTINCT FROM r.table_owner THEN
+      RAISE EXCEPTION 'P14: public.asset_disposal_requests is not the audit trail the P14 rollback retained (table or owner changed)';
+    END IF;
+    -- The retained rows must be exactly the rows the rollback recorded (kept current by permitted E1/E2 deletes).
+    -- Locked until commit so no delete lands between this check and the adoption; hashed with pinned settings.
+    LOCK TABLE public.asset_disposal_requests IN SHARE ROW EXCLUSIVE MODE;
+    SET LOCAL TimeZone = 'UTC';
+    SET LOCAL DateStyle = 'ISO, MDY';
+    SET LOCAL IntervalStyle = 'postgres';
+    SET LOCAL extra_float_digits = 1;
+    IF (SELECT count(*) FROM public.asset_disposal_requests) IS DISTINCT FROM r.rows
+       OR (SELECT md5(coalesce(string_agg(c::text, E'\n' ORDER BY c.id), '')) FROM public.asset_disposal_requests c) IS DISTINCT FROM r.content_md5 THEN
+      RAISE EXCEPTION 'P14: the retained disposal requests changed since the P14 rollback (recorded % rows, md5 %); review before re-installing', r.rows, r.content_md5;
+    END IF;
+  END IF;
 END $pre$;
 
 CREATE SCHEMA phase3_p14;
@@ -151,7 +200,10 @@ END $$;
 -- --------------------------------------------------------------------------------------------
 -- A. Requests
 -- --------------------------------------------------------------------------------------------
-CREATE TABLE public.asset_disposal_requests (
+-- D: kept, with its rows, when re-installing after a rollback. The same definition builds phase3_p14.shape_reference,
+-- the exact shape (columns, constraints, indexes) a retained table must still have.
+DO $ddl$
+DECLARE ddl constant text := $t$CREATE TABLE IF NOT EXISTS %s (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   owner_id uuid NOT NULL,
   asset_id text NOT NULL CHECK (length(asset_id) BETWEEN 1 AND 64),
@@ -176,12 +228,67 @@ CREATE TABLE public.asset_disposal_requests (
   CHECK ((status = 'pending') = (decided_at IS NULL)),
   CHECK (method <> 'sale' OR proceeds > 0),
   CHECK (gain = proceeds - book_value)
-);
-CREATE UNIQUE INDEX asset_disposal_requests_one_open ON public.asset_disposal_requests (owner_id, asset_id) WHERE status IN ('pending', 'approved');
+)$t$;
+  fresh constant boolean := to_regclass('public.asset_disposal_requests') IS NULL;
+BEGIN
+  EXECUTE format(ddl, 'public.asset_disposal_requests');
+  EXECUTE format(ddl, 'phase3_p14.shape_reference');
+  -- a retained table must still have its index (checked below with the shape), never silently re-created
+  IF fresh THEN
+    CREATE UNIQUE INDEX asset_disposal_requests_one_open ON public.asset_disposal_requests (owner_id, asset_id) WHERE status IN ('pending', 'approved');
+  END IF;
+  CREATE UNIQUE INDEX shape_reference_one_open ON phase3_p14.shape_reference (owner_id, asset_id) WHERE status IN ('pending', 'approved');
+END $ddl$;
+-- Columns (type with typmod, NOT NULL, default), every constraint and index definition (names aside; a foreign key would
+-- show here and be refused), plain permanent table, no inheritance, no rules.
+CREATE FUNCTION phase3_p14.shape(_t regclass) RETURNS text LANGUAGE sql STABLE SET search_path = public, pg_temp AS $$
+  SELECT concat_ws(E'\n',
+    (SELECT string_agg(a.attname || ' ' || format_type(a.atttypid, a.atttypmod) || CASE WHEN a.attnotnull THEN ' NOT NULL' ELSE '' END
+        || coalesce(' DEFAULT ' || pg_get_expr(d.adbin, d.adrelid), ''), ', ' ORDER BY a.attnum)
+       FROM pg_attribute a LEFT JOIN pg_attrdef d ON d.adrelid = a.attrelid AND d.adnum = a.attnum
+      WHERE a.attrelid = _t AND a.attnum > 0 AND NOT a.attisdropped),
+    (SELECT string_agg(x.def, '; ' ORDER BY x.def) FROM (SELECT c.contype::text || ' ' || pg_get_constraintdef(c.oid) def FROM pg_constraint c WHERE c.conrelid = _t) x),
+    (SELECT string_agg(x.def, '; ' ORDER BY x.def) FROM (SELECT regexp_replace(pg_get_indexdef(i.indexrelid), '^CREATE (UNIQUE )?INDEX \S+ ON \S+ ', 'CREATE \1INDEX ON t ') def
+       FROM pg_index i WHERE i.indrelid = _t) x),
+    (SELECT c.relkind::text || c.relpersistence::text || c.relispartition::text FROM pg_class c WHERE c.oid = _t),
+    (SELECT 'inherits ' || count(*) FROM pg_inherits i WHERE i.inhrelid = _t OR i.inhparent = _t),
+    (SELECT 'rules ' || count(*) FROM pg_rewrite w WHERE w.ev_class = _t))
+$$;
+DO $shape$
+DECLARE t constant regclass := 'public.asset_disposal_requests'::regclass;
+BEGIN
+  IF phase3_p14.shape(t) IS DISTINCT FROM phase3_p14.shape('phase3_p14.shape_reference'::regclass) THEN
+    RAISE EXCEPTION 'P14: public.asset_disposal_requests does not have the P14 audit shape';
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_trigger g WHERE g.tgrelid = t AND NOT g.tgisinternal
+              AND NOT ((g.tgname IN ('asset_disposal_requests_guard', 'asset_disposal_requests_no_truncate')
+                        AND g.tgfoid = to_regprocedure('phase3_p14_audit.guard()'))
+                    OR (g.tgname = 'asset_disposal_requests_retained_record' AND g.tgfoid = to_regprocedure('phase3_p14_audit.track_retained()'))))
+     OR EXISTS (SELECT 1 FROM pg_policy p WHERE p.polrelid = t AND p.polname NOT IN ('Disposal requests: owner reads retained history',
+              'P14 requests recorded only by the disposal workflow', 'P14 requests cannot be changed', 'P14 requests cannot be deleted',
+              'P14 service reads disposal requests', 'P14 demo cleanup removes guest requests')) THEN
+    RAISE EXCEPTION 'P14: public.asset_disposal_requests has triggers or policies P14 did not create';
+  END IF;
+  IF obj_description(t, 'pg_class') IS NOT NULL THEN
+    EXECUTE format('COMMENT ON TABLE public.asset_disposal_requests IS %L', obj_description(t, 'pg_class')
+      || format('; P14 re-installed %s: earlier requests kept, new requests append', to_char(clock_timestamp() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')));
+  END IF;
+END $shape$;
+DROP FUNCTION phase3_p14.shape(regclass);
+DROP TABLE phase3_p14.shape_reference;
+-- The retained trail is adopted: its rollback record goes (the table, its rows and phase3_p14_audit stay).
+DO $adopt$
+BEGIN
+  IF to_regnamespace('phase3_p14_retained') IS NOT NULL THEN
+    DROP TABLE phase3_p14_retained.rollback;
+    DROP SCHEMA phase3_p14_retained RESTRICT;
+  END IF;
+END $adopt$;
 ALTER TABLE public.asset_disposal_requests ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON public.asset_disposal_requests FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.asset_disposal_requests FROM PUBLIC, anon, authenticated, service_role;
 GRANT SELECT ON public.asset_disposal_requests TO authenticated;
-GRANT ALL ON public.asset_disposal_requests TO service_role;
+GRANT SELECT, DELETE ON public.asset_disposal_requests TO service_role; -- DELETE: E2 demo cleanup only (RLS + guard)
+DROP POLICY IF EXISTS "Disposal requests: owner reads retained history" ON public.asset_disposal_requests;
 CREATE POLICY "Disposal requests: owner and approvers read" ON public.asset_disposal_requests FOR SELECT TO authenticated
   USING (owner_id = auth.uid() OR phase3_p14.may_approve(owner_id, entity_id));
 
@@ -397,13 +504,125 @@ BEGIN
 END $$;
 CREATE TRIGGER p14_disposal_entry BEFORE INSERT OR UPDATE ON public.expenses FOR EACH ROW EXECUTE FUNCTION phase3_p14.guard_disposal_entry();
 
-CREATE FUNCTION phase3_p14.guard_requests() RETURNS trigger
+-- D. The request table is audit history (header D). The guards live in phase3_p14_audit, which the rollback keeps, so a
+-- retained trail stays guarded.
+CREATE SCHEMA IF NOT EXISTS phase3_p14_audit;
+REVOKE ALL ON SCHEMA phase3_p14_audit FROM PUBLIC, anon, authenticated, service_role;
+GRANT USAGE ON SCHEMA phase3_p14_audit TO anon, authenticated, service_role; -- the invoker guards call removal_allowed()
+-- E2: an anonymous demo guest (demo_sessions row and still-anonymous identity), as the demo cleanup decides.
+CREATE OR REPLACE FUNCTION phase3_p14_audit.demo_guest(_owner uuid) RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+  SELECT EXISTS (SELECT 1 FROM public.demo_sessions d WHERE d.owner_id = _owner)
+     AND EXISTS (SELECT 1 FROM auth.users u WHERE u.id = _owner AND u.is_anonymous IS TRUE)
+$$;
+-- May this transaction remove _owner's requests? E1 (confirmed erasure of the caller's own data) or E2. SECURITY
+-- INVOKER on purpose: the role check reads the caller's current_user, as the P20 guard does.
+CREATE OR REPLACE FUNCTION phase3_p14_audit.removal_allowed(_owner uuid) RETURNS boolean
+LANGUAGE plpgsql STABLE SET search_path = public, pg_temp AS $$
+DECLARE erasing boolean;
+BEGIN
+  IF auth.uid() IS NOT NULL THEN
+    IF _owner IS DISTINCT FROM auth.uid() THEN RETURN false; END IF;
+    erasing := current_setting('ledgerline.erasing', true) = 'on'; -- before P18, as P20; rewritten below / by P18
+    RETURN coalesce(erasing, false);
+  END IF;
+  IF current_user IN ('authenticated', 'anon') THEN RETURN false; END IF;
+  RETURN phase3_p14_audit.demo_guest(_owner);
+END $$;
+CREATE OR REPLACE FUNCTION phase3_p14_audit.guard() RETURNS trigger
 LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
 BEGIN
-  IF phase3_p14.exempt() THEN RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END; END IF;
+  IF TG_OP = 'DELETE' AND phase3_p14_audit.removal_allowed(OLD.owner_id) THEN RETURN OLD; END IF;
+  IF to_regnamespace('phase3_p14_retained') IS NOT NULL THEN
+    RAISE EXCEPTION 'Asset disposal requests are retained audit history (P14 rolled back); they cannot be changed' USING ERRCODE = '42501';
+  END IF;
+  IF to_regnamespace('phase3_p14') IS NOT NULL THEN
+    -- installed: requests are written by request_asset_disposal (clients hold no INSERT), decisions only inside
+    -- decide/cancel's own transaction (phase3_p14.writing) or P11's checked restore.
+    IF TG_OP = 'INSERT' THEN RETURN NEW; END IF;
+    IF TG_OP = 'UPDATE' THEN  -- nested: the helpers are evaluated only for an UPDATE
+      IF phase3_p14.writing_now() OR phase3_p14.p11_restoring() THEN RETURN NEW; END IF;
+    END IF;
+  END IF;
   RAISE EXCEPTION 'P14_AUDIT_KEPT: disposal requests and decisions are audit history' USING ERRCODE = '42501';
 END $$;
-CREATE TRIGGER p14_requests_kept BEFORE UPDATE OR DELETE ON public.asset_disposal_requests FOR EACH ROW EXECUTE FUNCTION phase3_p14.guard_requests();
+-- P18 already installed (install or re-install after P18): apply P18's rewrite to removal_allowed() exactly as P18's
+-- install does for every guard (same patterns), saving the original so P18's rollback restores the setting read.
+DO $p18$
+DECLARE sig constant text := 'phase3_p14_audit.removal_allowed(uuid)'; def text; nd text;
+BEGIN
+  IF to_regclass('phase3_p18.saved_functions') IS NULL THEN RETURN; END IF;
+  def := pg_get_functiondef(to_regprocedure(sig));
+  nd := regexp_replace(def, 'coalesce\(current_setting\(''ledgerline\.erasing'',\s*true\),\s*''''\)\s*<>\s*''on''', 'NOT phase3_p18.erasure_authorised()', 'gi');
+  nd := regexp_replace(nd, 'current_setting\(''ledgerline\.erasing'',\s*true\)\s*IS\s+DISTINCT\s+FROM\s*''on''', 'NOT phase3_p18.erasure_authorised()', 'gi');
+  nd := regexp_replace(nd, 'coalesce\(current_setting\(''ledgerline\.erasing'',\s*true\),\s*''''\)\s*=\s*''on''', 'phase3_p18.erasure_authorised()', 'gi');
+  nd := regexp_replace(nd, 'current_setting\(''ledgerline\.erasing'',\s*true\)\s*=\s*''on''', 'phase3_p18.erasure_authorised()', 'gi');
+  IF nd LIKE '%current_setting(''ledgerline.erasing''%' OR nd IS NOT DISTINCT FROM def THEN
+    RAISE EXCEPTION 'P14: % could not be moved to the P18 erasure authority', sig;
+  END IF;
+  INSERT INTO phase3_p18.saved_functions(signature, definition) VALUES (sig, def)
+    ON CONFLICT (signature) DO UPDATE SET definition = EXCLUDED.definition;
+  EXECUTE nd;
+END $p18$;
+-- Record upkeep while retained: refresh only from a verified pre-delete state (remaining + deleted rows match the record
+-- and both guards are enabled 'O'), else mark the record stale for good. Row text is rendered with pinned settings.
+CREATE OR REPLACE FUNCTION phase3_p14_audit.track_retained() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp
+  SET TimeZone = 'UTC' SET DateStyle = 'ISO, MDY' SET IntervalStyle = 'postgres' SET extra_float_digits = 1 AS $$
+DECLARE r record; before_n bigint; before_h text;
+BEGIN
+  IF to_regclass('phase3_p14_retained.rollback') IS NULL THEN RETURN NULL; END IF;
+  SELECT * INTO r FROM phase3_p14_retained.rollback FOR UPDATE; -- serialises record upkeep
+  IF r.content_md5 LIKE 'stale%' THEN RETURN NULL; END IF;  -- never refreshed again
+  SELECT count(*), md5(coalesce(string_agg(x::text, E'\n' ORDER BY x.id), '')) INTO before_n, before_h
+    FROM (SELECT * FROM public.asset_disposal_requests UNION ALL SELECT * FROM p14_removed) x;
+  IF before_n IS DISTINCT FROM r.rows OR before_h IS DISTINCT FROM r.content_md5
+     OR (SELECT count(*) FROM pg_trigger g WHERE g.tgrelid = 'public.asset_disposal_requests'::regclass AND g.tgenabled = 'O'
+          AND g.tgname IN ('asset_disposal_requests_guard', 'asset_disposal_requests_no_truncate')
+          AND g.tgfoid = 'phase3_p14_audit.guard()'::regprocedure) <> 2 THEN
+    UPDATE phase3_p14_retained.rollback SET content_md5 = format('stale since %s: rows changed outside the guards (record %s rows md5 %s; before delete %s rows md5 %s)',
+      to_char(clock_timestamp() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'), r.rows, r.content_md5, before_n, before_h);
+    RETURN NULL;
+  END IF;
+  UPDATE phase3_p14_retained.rollback SET rows = (SELECT count(*) FROM public.asset_disposal_requests),
+    content_md5 = (SELECT md5(coalesce(string_agg(c::text, E'\n' ORDER BY c.id), '')) FROM public.asset_disposal_requests c);
+  RETURN NULL;
+END $$;
+-- E1 follow-up: every erasure body deletes the caller's expenses; in that statement the caller's requests go too.
+CREATE OR REPLACE FUNCTION phase3_p14_audit.follow_erasure() RETURNS trigger
+LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
+BEGIN
+  IF auth.uid() IS NOT NULL AND phase3_p14_audit.removal_allowed(auth.uid()) THEN
+    DELETE FROM public.asset_disposal_requests q WHERE q.owner_id = auth.uid();
+  END IF;
+  RETURN NULL;
+END $$;
+REVOKE ALL ON FUNCTION phase3_p14_audit.demo_guest(uuid), phase3_p14_audit.removal_allowed(uuid), phase3_p14_audit.guard(), phase3_p14_audit.follow_erasure(),
+  phase3_p14_audit.track_retained() FROM PUBLIC, anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION phase3_p14_audit.removal_allowed(uuid) TO anon, authenticated, service_role; -- read-only answer for the caller
+GRANT EXECUTE ON FUNCTION phase3_p14_audit.demo_guest(uuid) TO service_role;
+DROP TRIGGER IF EXISTS asset_disposal_requests_guard ON public.asset_disposal_requests;
+CREATE TRIGGER asset_disposal_requests_guard BEFORE INSERT OR UPDATE OR DELETE ON public.asset_disposal_requests
+  FOR EACH ROW EXECUTE FUNCTION phase3_p14_audit.guard();
+DROP TRIGGER IF EXISTS asset_disposal_requests_no_truncate ON public.asset_disposal_requests;
+CREATE TRIGGER asset_disposal_requests_no_truncate BEFORE TRUNCATE ON public.asset_disposal_requests
+  FOR EACH STATEMENT EXECUTE FUNCTION phase3_p14_audit.guard();
+DROP TRIGGER IF EXISTS asset_disposal_requests_retained_record ON public.asset_disposal_requests;
+CREATE TRIGGER asset_disposal_requests_retained_record AFTER DELETE ON public.asset_disposal_requests
+  REFERENCING OLD TABLE AS p14_removed FOR EACH STATEMENT EXECUTE FUNCTION phase3_p14_audit.track_retained();
+DROP TRIGGER IF EXISTS p14_disposal_requests_follow_erasure ON public.expenses;
+CREATE TRIGGER p14_disposal_requests_follow_erasure AFTER DELETE ON public.expenses
+  FOR EACH STATEMENT EXECUTE FUNCTION phase3_p14_audit.follow_erasure();
+DROP POLICY IF EXISTS "P14 requests recorded only by the disposal workflow" ON public.asset_disposal_requests;
+CREATE POLICY "P14 requests recorded only by the disposal workflow" ON public.asset_disposal_requests AS RESTRICTIVE FOR INSERT TO anon, authenticated WITH CHECK (false);
+DROP POLICY IF EXISTS "P14 requests cannot be changed" ON public.asset_disposal_requests;
+CREATE POLICY "P14 requests cannot be changed" ON public.asset_disposal_requests AS RESTRICTIVE FOR UPDATE TO anon, authenticated USING (false) WITH CHECK (false);
+DROP POLICY IF EXISTS "P14 requests cannot be deleted" ON public.asset_disposal_requests;
+CREATE POLICY "P14 requests cannot be deleted" ON public.asset_disposal_requests AS RESTRICTIVE FOR DELETE TO anon, authenticated USING (false);
+DROP POLICY IF EXISTS "P14 service reads disposal requests" ON public.asset_disposal_requests;
+CREATE POLICY "P14 service reads disposal requests" ON public.asset_disposal_requests FOR SELECT TO service_role USING (true);
+DROP POLICY IF EXISTS "P14 demo cleanup removes guest requests" ON public.asset_disposal_requests;
+CREATE POLICY "P14 demo cleanup removes guest requests" ON public.asset_disposal_requests FOR DELETE TO service_role USING (phase3_p14_audit.demo_guest(owner_id));
 
 -- --------------------------------------------------------------------------------------------
 -- P7/P8 posting of an approved disposal (wrap P8's classify hook when present)
@@ -450,7 +669,21 @@ GRANT EXECUTE ON FUNCTION public.preview_asset_disposal(text, date, numeric) TO 
 REVOKE ALL ON FUNCTION phase3_p14.num(jsonb), phase3_p14.book_value(jsonb, date) FROM PUBLIC, anon, authenticated;
 GRANT USAGE ON SCHEMA phase3_p14 TO authenticated; -- the SELECT policy and the guards call the helpers below
 REVOKE ALL ON FUNCTION phase3_p14.asset_of(uuid, text), phase3_p14.guard_asset_disposal_fields(), phase3_p14.guard_disposal_entry() FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION phase3_p14.may_approve(uuid, text), phase3_p14.step_up_ok(), phase3_p14.exempt(), phase3_p14.p11_restoring(), phase3_p14.guard_requests() FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION phase3_p14.may_approve(uuid, text), phase3_p14.exempt(), phase3_p14.p11_restoring(), phase3_p14.guard_requests() TO authenticated;
+REVOKE ALL ON FUNCTION phase3_p14.may_approve(uuid, text), phase3_p14.step_up_ok(), phase3_p14.exempt(), phase3_p14.p11_restoring() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION phase3_p14.may_approve(uuid, text), phase3_p14.exempt(), phase3_p14.p11_restoring() TO authenticated;
 REVOKE ALL ON phase3_p14.saved_functions FROM PUBLIC, anon, authenticated;
+
+DO $post$
+BEGIN
+  -- D: only the table owner, authenticated (SELECT) and service_role (SELECT, DELETE) hold any privilege on the trail
+  -- (also on an adopted retained table: a stray grant made while it was retained is refused, not carried forward).
+  IF EXISTS (SELECT 1 FROM pg_class c, aclexplode(c.relacl) x WHERE c.oid = 'public.asset_disposal_requests'::regclass AND x.grantee <> c.relowner
+              AND NOT ((x.grantee = 'authenticated'::regrole AND x.privilege_type = 'SELECT')
+                    OR (x.grantee = 'service_role'::regrole AND x.privilege_type IN ('SELECT', 'DELETE')))) THEN
+    RAISE EXCEPTION 'P14: unexpected privilege on public.asset_disposal_requests';
+  END IF;
+  IF (SELECT count(*) FROM pg_constraint c WHERE c.conrelid = 'public.asset_disposal_requests'::regclass AND c.contype = 'f') <> 0 THEN
+    RAISE EXCEPTION 'P14: the disposal audit trail must not depend on other rows';
+  END IF;
+END $post$;
 COMMIT;

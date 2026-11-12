@@ -4,9 +4,9 @@
 // cross-account restores, repeat restores and the owner-scoped table inventory. Never touches Cloud.
 import { describe, expect, it } from "vitest";
 import type { PGlite } from "@electric-sql/pglite";
-import { fullSchemaDb, actAs, addUsers } from "../test/full-schema-pglite";
+import { fullSchemaDb, actAs, addUsers, readSql } from "../test/full-schema-pglite";
 import { strToU8 } from "fflate";
-import { BACKUP_EXCLUDED_TABLES, BACKUP_NOT_OWNER_TABLES, BACKUP_TABLES, createBackupZip, investmentTablesToWrite, planRestore, readBackup, type Backup, type BackupRow } from "./backup";
+import { BACKUP_EXCLUDED_TABLES, BACKUP_NOT_OWNER_TABLES, BACKUP_PROPOSED_EXCLUDED_TABLES, BACKUP_TABLES, createBackupZip, investmentTablesToWrite, planRestore, readBackup, type Backup, type BackupRow } from "./backup";
 import { COLUMN_JSON_REFS, COLUMN_NOT_REMAPPED, COLUMN_REFS, JSON_COLUMNS_NO_REFS, VERBATIM_TABLES } from "./backup-remap";
 import { depreciationEntryKey, ownerPostingId, postingIdFor, resolvePostingIds, stableUuid } from "./books/assets-ledger";
 import { ID, OWNER_A, OWNER_B, buildBackupFixture, fixtureFiles } from "../test/backup-fixture";
@@ -76,6 +76,8 @@ describe("owner-scoped table inventory", () => {
     expect(decided.length).toBe(new Set(decided).size);
     expect(Object.keys(BACKUP_NOT_OWNER_TABLES).filter((t) => owned.includes(t))).toEqual([]);
     for (const t of ["demat_accounts", "security_holdings"]) expect(BACKUP_TABLES as readonly string[]).toContain(t);
+    // Staged-table decisions move into BACKUP_EXCLUDED_TABLES once their patch is applied (never both, never stale).
+    expect(Object.keys(BACKUP_PROPOSED_EXCLUDED_TABLES).filter((t) => all.has(t) || decided.includes(t))).toEqual([]);
     await db.close();
   }, 120000);
 
@@ -90,6 +92,32 @@ describe("owner-scoped table inventory", () => {
     }).map(({ t, c }) => `${t}.${c}`);
     expect(problems).toEqual([]);
     await db.close();
+  }, 120000);
+});
+
+// Brief G11 (12 Nov 2026): the audit tables of proposed P14 (asset_disposal_requests) and P20 (claim_receipt_corrections)
+// have a backup decision before they are applied: audit history, excluded like transaction_audit (never restored as
+// authoritative evidence). Installs the staged SQL in isolated PGlite only.
+describe("backup decisions for the proposed P14 / P20 audit tables", () => {
+  it("every owner-scoped table P14 and P20 add is classified as excluded audit history; nothing else is unclassified", async () => {
+    const D = ".lovable/staged-sql/proposed/";
+    const owned = async (db: PGlite) => (await db.query<{ t: string }>(`SELECT DISTINCT c.table_name t FROM information_schema.columns c JOIN information_schema.tables x ON x.table_schema = c.table_schema AND x.table_name = c.table_name AND x.table_type = 'BASE TABLE'
+      WHERE c.table_schema = 'public' AND c.column_name IN ('owner_id', 'employee_id') ORDER BY 1`)).rows.map((r) => r.t);
+    const db = await fullSchemaDb([`${D}P19_finance_operation_authority.sql`]);
+    try {
+      const added: Record<string, string[]> = {};
+      for (const [patch, file] of [["P14", "P14_asset_disposal_approval"], ["P20", "P20_claim_receipt_correction"]] as const) {
+        const before = new Set(await owned(db));
+        await db.exec(readSql(`${D}${file}.sql`));
+        added[patch] = (await owned(db)).filter((t) => !before.has(t));
+      }
+      expect(added).toEqual({ P14: ["asset_disposal_requests"], P20: ["claim_receipt_corrections"] });
+      for (const [patch, tables] of Object.entries(added)) for (const t of tables) {
+        expect(BACKUP_PROPOSED_EXCLUDED_TABLES[t], t).toMatchObject({ patch, reason: expect.stringMatching(/audit history.*like transaction_audit/) });
+        expect(BACKUP_TABLES as readonly string[]).not.toContain(t);
+      }
+      expect(Object.keys(BACKUP_PROPOSED_EXCLUDED_TABLES).sort()).toEqual(Object.values(added).flat().sort());
+    } finally { await db.close(); }
   }, 120000);
 });
 

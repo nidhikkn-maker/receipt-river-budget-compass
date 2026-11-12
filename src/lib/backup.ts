@@ -54,6 +54,24 @@ export const BACKUP_EXCLUDED_TABLES: Readonly<Record<string, string>> = {
   period_operation_authority: "Transient in-transaction marker used by change_accounting_period",
 };
 /**
+ * Owner-scoped tables added by PROPOSED (staged, not yet applied) SQL, with their backup decision. The applied-schema
+ * inventory (BACKUP_TABLES / BACKUP_EXCLUDED_TABLES) requires every listed table to exist in the applied schema, so
+ * staged tables are decided here and move into BACKUP_EXCLUDED_TABLES when their patch is applied (the inventory test
+ * fails while a table here also exists in the applied schema). Audit history follows transaction_audit /
+ * preference_approvals: it stays with the source account and is never restored as authoritative evidence (as closure
+ * history is never restored as authoritative close evidence); the facts it records travel with the backed-up rows.
+ */
+export const BACKUP_PROPOSED_EXCLUDED_TABLES: Readonly<Record<string, { patch: string; reason: string }>> = {
+  asset_disposal_requests: {
+    patch: "P14",
+    reason: "Asset disposal approval audit history (request, evidence ids, decision, approver); stays with the source account like transaction_audit. The disposed asset's disposal record and its disposal entry are backed up; a restore never recreates approvals",
+  },
+  claim_receipt_corrections: {
+    patch: "P20",
+    reason: "Claim receipt correction audit history (before/after, reason, actor); stays with the source account like transaction_audit. The corrected claims are backed up; a restore never recreates corrections",
+  },
+};
+/**
  * Tables with no owner column. Together with BACKUP_TABLES and BACKUP_EXCLUDED_TABLES this covers every table of the
  * applied schema (inventory test), so a new table cannot appear without a backup decision.
  */

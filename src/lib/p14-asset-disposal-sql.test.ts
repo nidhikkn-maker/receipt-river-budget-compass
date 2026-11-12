@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { PGlite } from "@electric-sql/pglite";
 import { actAs, addUsers, fullSchemaDb, readSql } from "@/test/full-schema-pglite";
 import { disposalPlan } from "./asset-disposal";
+import { DEMO_GUEST_STEPS, removeDemoGuestRecords } from "./demo-cleanup";
 import type { Asset } from "./assets";
 
 const O = "00000000-0000-4000-8000-000000000001";
@@ -18,26 +19,6 @@ const CATALOG = `
   UNION ALL SELECT 'p', tablename || '.' || policyname, cmd || coalesce(qual, '') FROM pg_policies WHERE schemaname = 'public'
   UNION ALL SELECT 'n', nspname, '' FROM pg_namespace WHERE nspname NOT LIKE 'pg_%' AND nspname <> 'information_schema' ORDER BY 1, 2`;
 const catalog = async (db: PGlite) => { await actAs(db, null); return (await db.query<{ k: string; n: string; v: string }>(CATALOG)).rows.map((r) => `${r.k}|${r.n}|${r.v}`); };
-
-describe("P14 asset disposal approval (SQL, isolated PGlite)", () => {
-  for (const [name, extra] of [["applied schema", [] as string[]], ["whole proposed stack P1..P13 (P8 hook wrapped and restored)", STACK]] as const) {
-    it(`${name}: installs; rollback refuses while requests exist, then restores the exact catalog`, async () => {
-      const db = await fullSchemaDb([...extra]);
-      await addUsers(db, { [O]: "o@x.in" });
-      await db.query("INSERT INTO public.finance_preferences(owner_id, data) VALUES ($1, '{}') ON CONFLICT (owner_id) DO NOTHING", [O]);
-      const before = await catalog(db);
-      await db.exec(readSql(P14));
-      await expect(db.exec(readSql(P14))).rejects.toThrow(/already installed/);
-      await db.exec("ROLLBACK");
-      await db.query("INSERT INTO public.asset_disposal_requests(owner_id, asset_id, asset_name, method, disposal_date, proceeds, evidence_document_ids, reason, book_value, gain, entry_id, requested_by) VALUES ($1,'a1','Laptop','scrap','2026-10-31',0,ARRAY[gen_random_uuid()],'Broken beyond repair',1000,-1000,gen_random_uuid(),$1)", [O]);
-      await expect(db.exec(readSql(P14_RB))).rejects.toThrow(/disposal requests exist/);
-      await db.exec("ROLLBACK");
-      await db.exec(readSql(P14_RB).replace("BEGIN;", "BEGIN; SET LOCAL phase3_p14.drop_requests = 'on';"));
-      expect(await catalog(db)).toEqual(before);
-      await db.close();
-    }, 600_000);
-  }
-});
 
 // ---------------------------------------------------------------------------------------------------------------------------
 // P14-a (WS-E batch 6-8 check, high): the database must not trust a book value supplied by the caller. Direct RPC calls as
@@ -224,3 +205,222 @@ describe("P14-a without P4 (applied schema + P14): approval fails closed, reject
     await db.close();
   }, 600_000);
 });
+
+// ---------------------------------------------------------------------------------------------------------------------------
+// Migration decision brief G9 / G10 (12 Nov 2026). G9: the rollback dropped public.asset_disposal_requests (CASCADE), destroying
+// the disposal approval audit history; lead ruling (as for P20): the rollback retains the table and its rows read-only (row
+// count + content md5 checked and recorded, writes refused, the owner's read kept) and a re-install adopts them. G10: no
+// erasure or demo-cleanup path removed a request row; as for P20, only the owner's own confirmed erasure (E1) and the demo
+// cleanup of an anonymous demo guest (E2) remove them, for that owner only. Isolated PGlite only.
+const u = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+const RO = u(11), RV = u(12), RE = u(13), RG = u(14), RX = u(15), RF = u(16), RG2 = u(17);
+/** One statement as another database role (anon, service_role) or as the superuser (null), in its own transaction. */
+async function asRole(db: PGlite, role: "anon" | "service_role" | null, s: string, p: unknown[] = []) {
+  await actAs(db, null);
+  await db.exec("BEGIN");
+  try { if (role) await db.exec(`SET LOCAL ROLE ${role}`); const rows = (await db.query(s, p)).rows; await db.exec("COMMIT"); return rows; }
+  catch (e) { await db.exec("ROLLBACK"); throw e; }
+  finally { await actAs(db, null); }
+}
+/** One statement as a signed-in client (role authenticated, RLS), in its own transaction. */
+async function asUser(db: PGlite, uid: string, s: string, p: unknown[] = []) {
+  await actAs(db, uid);
+  await db.exec("BEGIN");
+  try { const rows = (await db.query<Row>(s, p)).rows; await db.exec("COMMIT"); return rows; }
+  catch (e) { await db.exec("ROLLBACK"); throw e; }
+  finally { await actAs(db, null); }
+}
+/** Every request row as stored (superuser view), in a stable order. */
+const allRequests = async (db: PGlite) => (await q1<{ id: string; owner_id: string; status: string; j: string }>(db, null,
+  "SELECT id::text, owner_id::text, status, r::text j FROM public.asset_disposal_requests r ORDER BY id"));
+const countOf = async (db: PGlite, owner: string) => (await q1<{ n: number }>(db, null, "SELECT count(*)::int n FROM public.asset_disposal_requests WHERE owner_id = $1", [owner]))[0]!.n;
+const TAMPER_INSERT = (owner: string) => `INSERT INTO public.asset_disposal_requests(owner_id, asset_id, asset_name, method, disposal_date, proceeds, evidence_document_ids, reason, book_value, gain, entry_id, requested_by)
+  VALUES ('${owner}','forged','Forged','scrap','2026-10-31',0,ARRAY[gen_random_uuid()],'Forged audit row',1,-1,gen_random_uuid(),'${owner}')`;
+
+for (const [label, extra, stack] of [["applied schema", [] as string[], false], ["proposed stack P1..P13 (P4 step-up)", STACK, true]] as const) {
+  describe(`P14 disposal audit trail: retained by rollback, removed only by erasure / demo cleanup — ${label} (SQL, isolated PGlite)`, () => {
+    let db: PGlite;
+    let before: string[];
+    let afterRollback: string[];
+    let pendingAtRollback = "";
+    beforeAll(async () => {
+      db = await fullSchemaDb([...extra]);
+      await addUsers(db, { [RO]: "ro@x.in", [RV]: "rv@x.in", [RE]: "re@x.in", [RG]: "", [RX]: "", [RF]: "rf@x.in", [RG2]: "" });
+      for (const id of [RO, RV, RE, RG, RX, RF, RG2]) await db.query("INSERT INTO public.finance_preferences(owner_id, data) VALUES ($1, '{}') ON CONFLICT (owner_id) DO NOTHING", [id]);
+      // RG / RG2: visitor demo guests (demo_sessions row, anonymous identity); RX: anonymous without a demo session (spoofing).
+      await db.query("UPDATE auth.users SET is_anonymous = true WHERE id IN ($1, $2, $3)", [RG, RG2, RX]);
+      await db.query("INSERT INTO public.demo_sessions(owner_id, label) VALUES ($1,'guest-1'), ($2,'guest-2')", [RG, RG2]);
+      await db.query("ALTER ROLE service_role BYPASSRLS"); // as on Supabase: the guard, not RLS, must stop the service role
+      before = await catalog(db);
+    }, 600_000);
+    afterAll(async () => { await db?.close(); });
+
+    /** A request through the real RPC as the owner; returns its id. */
+    const request = async (owner: string) => {
+      const s = await seed(db, owner, {});
+      return (await q1<{ id: string }>(db, owner, REQ, [s.a.id, s.doc, null, crypto.randomUUID()]))[0]!.id;
+    };
+    /** A decision through the real RPC (stack: after the owner's step-up; without P4 only a rejection is possible). */
+    const decide = async (owner: string, id: string, approve: boolean) => {
+      if (stack) await stepUp(db, owner);
+      return (await q1<{ r: Row }>(db, owner, "SELECT public.decide_asset_disposal($1, $2, 'Decided after review', NULL) r", [id, approve]))[0]!.r;
+    };
+    /** The user's confirmed erasure (Settings: delete my data), as the signed-in user. */
+    const erase = async (uid: string) => { if (stack) await stepUp(db, uid); await asUser(db, uid, "SELECT public.delete_my_finance_data()"); };
+    /** The hourly demo cleanup's record removal (src/lib/demo-cleanup.ts, as the route runs it) as the service role. */
+    const demoCleanup = (uid: string) => removeDemoGuestRecords((table) => ({ delete: () => ({ eq: async (column: string, value: string) => {
+      try { await asRole(db, "service_role", `DELETE FROM public.${table} WHERE ${column} = $1`, [value]); return { error: null }; } catch (error) { return { error }; }
+    } }) }), uid);
+
+    it("installs once", async () => {
+      await db.exec(readSql(P14));
+      await expect(db.exec(readSql(P14))).rejects.toThrow(/already installed/);
+      await db.exec("ROLLBACK");
+    }, 600_000);
+
+    it("G10 E1: the owner's confirmed erasure removes that owner's requests (decided and pending) only", async () => {
+      const decided = await request(RE);
+      expect(await decide(RE, decided, false)).toMatchObject({ status: "rejected" });
+      await request(RE);
+      await request(RO);
+      const others = (await allRequests(db)).filter((r) => r.owner_id !== RE);
+      expect(await countOf(db, RE)).toBe(2);
+      // signed-in deletes stay refused, also by the owner and also with the erasure flag set by hand
+      expect(await err(asUser(db, RE, "DELETE FROM public.asset_disposal_requests WHERE owner_id = $1", [RE]))).toMatch(/permission denied/);
+      await erase(RE);
+      expect(await countOf(db, RE)).toBe(0);
+      expect(await allRequests(db)).toEqual(others);
+    }, 600_000);
+
+    it("G10 E2: the demo cleanup removes an anonymous guest's requests; the service role / operator cannot remove anyone else's", async () => {
+      await request(RG);
+      await request(RX);
+      const others = (await allRequests(db)).filter((r) => r.owner_id !== RG);
+      expect(DEMO_GUEST_STEPS.map((x) => x.table)).toContain("asset_disposal_requests");
+      // not a demo guest: the service role (RLS bypassed) and the operator are refused by the guard
+      expect(await err(asRole(db, "service_role", "DELETE FROM public.asset_disposal_requests WHERE owner_id = $1", [RO]))).toMatch(/P14_AUDIT_KEPT/);
+      expect(await err(asRole(db, null, "DELETE FROM public.asset_disposal_requests WHERE owner_id = $1", [RO]))).toMatch(/P14_AUDIT_KEPT/);
+      expect(await err(asRole(db, "service_role", "UPDATE public.asset_disposal_requests SET reason = 'rewritten by the service' WHERE owner_id = $1", [RO]))).toMatch(/permission denied/);
+      expect(await err(asRole(db, null, "UPDATE public.asset_disposal_requests SET reason = 'rewritten by the operator' WHERE owner_id = $1", [RO]))).toMatch(/P14_AUDIT_KEPT/);
+      expect(await err(asRole(db, null, "TRUNCATE public.asset_disposal_requests"))).toMatch(/P14_AUDIT_KEPT/);
+      expect(await demoCleanup(RG)).toEqual({ ok: true });
+      expect(await countOf(db, RG)).toBe(0);
+      // an anonymous user without a demo session is not a guest: the cleanup stops at this step (identity kept)
+      expect(await demoCleanup(RX)).toMatchObject({ ok: false, table: "asset_disposal_requests", error: expect.stringMatching(/P14_AUDIT_KEPT/) });
+      expect(await allRequests(db)).toEqual(others);
+    }, 600_000);
+
+    it("G9: rollback retains every request and decision unchanged, read-only and owner-readable; everything else is restored", async () => {
+      const decided = await request(RO);
+      expect(await decide(RO, decided, stack)).toMatchObject({ status: stack ? "approved" : "rejected" });
+      pendingAtRollback = await request(RO);
+      await request(RV);
+      await request(RF);
+      await request(RG2);
+      const kept = await allRequests(db);
+      const own = (uid: string) => kept.filter((r) => r.owner_id === uid).length;
+      expect(own(RO)).toBe(3);
+
+      await db.exec(readSql(P14_RB));
+      afterRollback = await catalog(db);
+      // nothing P14 added remains except the retained trail, its guards and its records
+      expect(before.filter((x) => !afterRollback.includes(x))).toEqual([]);
+      expect(afterRollback.filter((x) => /^[nt]\|/.test(x) && !before.includes(x)).map((x) => x.split("|").slice(0, 2).join("|")).sort()).toEqual([
+        "n|phase3_p14_audit", "n|phase3_p14_retained",
+        "t|asset_disposal_requests.asset_disposal_requests_guard", "t|asset_disposal_requests.asset_disposal_requests_no_truncate",
+        "t|asset_disposal_requests.asset_disposal_requests_retained_record", "t|expenses.p14_disposal_requests_follow_erasure"]);
+      expect(afterRollback.filter((x) => !before.includes(x)).every((x) => /asset_disposal_requests|phase3_p14_audit|phase3_p14_retained|p14_disposal_requests_follow_erasure/.test(x))).toBe(true);
+      expect((await q1<{ n: number }>(db, null, "SELECT count(*)::int n FROM pg_namespace WHERE nspname = 'phase3_p14'"))[0]!.n).toBe(0);
+      expect((await q1<{ n: number }>(db, null, "SELECT count(*)::int n FROM pg_proc WHERE proname IN ('request_asset_disposal', 'decide_asset_disposal', 'cancel_asset_disposal', 'preview_asset_disposal')"))[0]!.n).toBe(0);
+      // every row is still there, unchanged; the rollback is recorded (row count + content md5) and on the table comment
+      expect(await allRequests(db)).toEqual(kept);
+      const [rec] = await q1<{ rows: string; ok: boolean }>(db, null, "SELECT r.rows::text, r.table_oid = 'public.asset_disposal_requests'::regclass::oid AND r.content_md5 = (SELECT md5(coalesce(string_agg(c::text, E'\\n' ORDER BY c.id), '')) FROM (SELECT * FROM public.asset_disposal_requests) c) ok FROM phase3_p14_retained.rollback r");
+      expect(rec).toEqual({ rows: String(kept.length), ok: true });
+      expect((await q1<{ c: string }>(db, null, "SELECT obj_description('public.asset_disposal_requests'::regclass, 'pg_class') c"))[0]!.c).toMatch(new RegExp(`P14 rolled back .*: ${kept.length} disposal requests retained read-only`));
+      // readable by their owner only; anon reads nothing
+      expect((await asUser(db, RO, "SELECT count(*)::int n FROM public.asset_disposal_requests"))[0]!["n"]).toBe(own(RO));
+      expect((await asUser(db, RV, "SELECT count(*)::int n FROM public.asset_disposal_requests"))[0]!["n"]).toBe(own(RV));
+      expect(await err(asRole(db, "anon", "SELECT count(*) FROM public.asset_disposal_requests"))).toMatch(/permission denied/);
+      // writable by no one: signed-in owner, service role, operator (DML; DDL is out of scope)
+      const row = kept.find((r) => r.owner_id === RO)!;
+      const ins = [TAMPER_INSERT(RO), []] as const;
+      const upd = ["UPDATE public.asset_disposal_requests SET reason = 'rewritten after rollback', status = 'cancelled', decided_at = now() WHERE id = $1", [row.id]] as const;
+      const del = ["DELETE FROM public.asset_disposal_requests WHERE id = $1", [row.id]] as const;
+      for (const [q, p] of [ins, upd, del]) {
+        expect(await err(asUser(db, RO, q, [...p]))).toMatch(/permission denied/);
+        expect(await err(asRole(db, "service_role", q, [...p]))).toMatch(q === del[0] ? /retained audit history/ : /permission denied/);
+        expect(await err(asRole(db, null, q, [...p]))).toMatch(/retained audit history/);
+      }
+      expect(await err(asUser(db, RO, "TRUNCATE public.asset_disposal_requests"))).toMatch(/permission denied/);
+      expect(await err(asRole(db, "service_role", "TRUNCATE public.asset_disposal_requests"))).toMatch(/permission denied/);
+      expect(await err(asRole(db, null, "TRUNCATE public.asset_disposal_requests"))).toMatch(/retained audit history/);
+      expect(await allRequests(db)).toEqual(kept);
+      // G10 while retained: confirmed erasure (RF) and the demo cleanup (RG2) remove exactly their own owner's rows, and the
+      // rollback record follows the rows that remain
+      await erase(RF);
+      expect(await allRequests(db)).toEqual(kept.filter((r) => r.owner_id !== RF));
+      expect(await demoCleanup(RG2)).toEqual({ ok: true });
+      expect(await allRequests(db)).toEqual(kept.filter((r) => r.owner_id !== RF && r.owner_id !== RG2));
+      const [now] = await q1<{ ok: boolean }>(db, null, "SELECT r.rows = (SELECT count(*) FROM public.asset_disposal_requests) AND r.content_md5 = (SELECT md5(coalesce(string_agg(c::text, E'\\n' ORDER BY c.id), '')) FROM public.asset_disposal_requests c) ok FROM phase3_p14_retained.rollback r");
+      expect(now!.ok).toBe(true);
+    }, 600_000);
+
+    it("G9: re-installing P14 keeps every retained row, decides a request pending at rollback, appends new ones; a second rollback retains them all", async () => {
+      const kept = await allRequests(db);
+      await db.exec(readSql(P14));
+      expect(await allRequests(db)).toEqual(kept);
+      expect((await q1<{ n: number }>(db, null, "SELECT count(*)::int n FROM pg_namespace WHERE nspname = 'phase3_p14_retained'"))[0]!.n).toBe(0);
+      expect((await q1<{ c: string }>(db, null, "SELECT obj_description('public.asset_disposal_requests'::regclass, 'pg_class') c"))[0]!.c).toMatch(/P14 rolled back .*; P14 re-installed .*: earlier requests kept/);
+      // the request still pending at rollback is decided through the re-installed workflow; a new request appends
+      expect(await q1<{ r: Row }>(db, RO, "SELECT public.cancel_asset_disposal($1, 'No longer needed after re-install') r", [pendingAtRollback])).toEqual([{ r: expect.objectContaining({ status: "cancelled", replayed: false }) }]);
+      const fresh = await request(RV);
+      const now = await allRequests(db);
+      expect(now.filter((r) => kept.every((k) => k.id !== r.id)).map((r) => r.id)).toEqual([fresh]);
+      expect(now.filter((r) => r.id !== pendingAtRollback && r.id !== fresh)).toEqual(kept.filter((r) => r.id !== pendingAtRollback));
+      // the installed rules are back: client writes refused, approvers' read policy restored
+      expect(await err(asUser(db, RO, "DELETE FROM public.asset_disposal_requests"))).toMatch(/permission denied/);
+      expect((await asUser(db, RV, "SELECT count(*)::int n FROM public.asset_disposal_requests WHERE owner_id = $1", [RO]))[0]!["n"]).toBe(0);
+      expect((await q1<{ p: string }>(db, null, "SELECT string_agg(polname, ',' ORDER BY polname) p FROM pg_policy WHERE polrelid = 'public.asset_disposal_requests'::regclass"))[0]!.p).toContain("Disposal requests: owner and approvers read");
+      // the rollback refuses guards that are not in the ordinary mode
+      await db.exec("BEGIN");
+      await db.exec("ALTER TABLE public.asset_disposal_requests ENABLE ALWAYS TRIGGER asset_disposal_requests_guard");
+      await expect(db.exec(readSql(P14_RB))).rejects.toThrow(/guards are missing or disabled/);
+      await db.exec("ROLLBACK");
+      // a second rollback retains old and new rows and leaves the same catalog as the first
+      const all = await allRequests(db);
+      await db.exec(readSql(P14_RB));
+      expect(await allRequests(db)).toEqual(all);
+      expect(await catalog(db)).toEqual(afterRollback);
+      // a retained table that changed (rows around the guards, shape, policies, grants, identity) is never adopted
+      const tampered: [string, RegExp][] = [
+        ["ALTER TABLE public.asset_disposal_requests DISABLE TRIGGER USER; UPDATE public.asset_disposal_requests SET reason = 'rewritten around the guards' WHERE id = (SELECT id FROM public.asset_disposal_requests ORDER BY id LIMIT 1); ALTER TABLE public.asset_disposal_requests ENABLE TRIGGER USER", /retained disposal requests changed since the P14 rollback/],
+        ["ALTER TABLE public.asset_disposal_requests DISABLE TRIGGER USER; DELETE FROM public.asset_disposal_requests WHERE id = (SELECT id FROM public.asset_disposal_requests ORDER BY id LIMIT 1); ALTER TABLE public.asset_disposal_requests ENABLE TRIGGER USER", /retained disposal requests changed since the P14 rollback/],
+        [`SET LOCAL session_replication_role = replica; ${TAMPER_INSERT(RO)}; SET LOCAL session_replication_role = origin`, /retained disposal requests changed since the P14 rollback/],
+        ["ALTER TABLE public.asset_disposal_requests ALTER COLUMN reason DROP NOT NULL", /does not have the P14 audit shape/],
+        ["DROP INDEX public.asset_disposal_requests_one_open", /does not have the P14 audit shape/],
+        ["ALTER TABLE public.asset_disposal_requests ADD CONSTRAINT stray_fk FOREIGN KEY (entry_id) REFERENCES public.expenses(id) ON DELETE CASCADE NOT VALID", /does not have the P14 audit shape/],
+        ["CREATE POLICY \"anyone writes\" ON public.asset_disposal_requests FOR INSERT TO authenticated WITH CHECK (true)", /triggers or policies P14 did not create/],
+        ["CREATE ROLE p14_stray; GRANT INSERT ON public.asset_disposal_requests TO p14_stray", /unexpected privilege/],
+        ["ALTER TABLE public.asset_disposal_requests OWNER TO service_role", /not the audit trail the P14 rollback retained/],
+        ["DROP TABLE phase3_p14_retained.rollback; DROP SCHEMA phase3_p14_retained", /not an audit trail retained by a P14 rollback/],
+      ];
+      // rows changed with the guards disabled, then a permitted E2 delete: the record goes stale for good, never laundered
+      const launder = `ALTER TABLE public.asset_disposal_requests DISABLE TRIGGER USER; ${TAMPER_INSERT(RG2)}; ALTER TABLE public.asset_disposal_requests ENABLE TRIGGER USER;
+        SET LOCAL ROLE service_role; DELETE FROM public.asset_disposal_requests WHERE owner_id = '${RG2}'; RESET ROLE;`;
+      await db.exec("BEGIN");
+      await db.exec("ALTER TABLE public.asset_disposal_requests DISABLE TRIGGER USER; UPDATE public.asset_disposal_requests SET reason = 'rewritten around the guards' WHERE id = (SELECT id FROM public.asset_disposal_requests ORDER BY id LIMIT 1); ALTER TABLE public.asset_disposal_requests ENABLE TRIGGER USER");
+      await db.exec(launder);
+      expect((await db.query<{ m: string }>("SELECT content_md5 m FROM phase3_p14_retained.rollback")).rows[0]!.m).toMatch(/^stale since /);
+      await expect(db.exec(readSql(P14))).rejects.toThrow(/retained disposal requests changed/);
+      await db.exec("ROLLBACK");
+      for (const [ddl, re] of tampered) {
+        await db.exec("BEGIN");
+        await db.exec(ddl);
+        await expect(db.exec(readSql(P14)), ddl).rejects.toThrow(re);
+        await db.exec("ROLLBACK");
+        expect((await q1<{ n: number }>(db, null, "SELECT count(*)::int n FROM pg_namespace WHERE nspname = 'phase3_p14'"))[0]!.n).toBe(0);
+      }
+      expect(await allRequests(db)).toEqual(all);
+    }, 600_000);
+  });
+}
