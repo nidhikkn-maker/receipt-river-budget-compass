@@ -54,9 +54,12 @@
 -- FIRST: P20_claim_receipt_correction.rollback.sql restores the saved finance_operation definitions, drops the
 -- function and the phase3_p20 schema, and RETAINS the audit table read-only together with phase3_p20_audit (guard and
 -- erasure follow-up) and a phase3_p20_retained record of the rollback (table oid, owner, row count, content md5).
--- While retained, a permitted E1/E2 delete updates that record (phase3_p20_audit.track_retained, definer, AFTER DELETE
--- statement trigger, only while both guard triggers are enabled), so the record always describes the rows that may
--- legitimately remain.
+-- While retained, every DELETE statement on the trail runs phase3_p20_audit.track_retained (definer, AFTER DELETE
+-- statement trigger with the deleted rows as a transition table). It rebuilds the rows as they were just before that
+-- statement (remaining + deleted) and refreshes the record to the remaining rows ONLY if that pre-delete content matches
+-- the record exactly and both guard triggers are enabled ('O'). Otherwise (rows changed around the guards, e.g. with
+-- triggers disabled, or the guards are not enabled now) it marks the record stale, and a stale record is never
+-- refreshed again, so a later permitted E1/E2 delete cannot fold a tampered row into a fresh md5 and re-install refuses.
 -- Re-install after a rollback is supported: the retained table is adopted only if it is the same table (oid and owner
 -- recorded by the rollback), its rows still match the recorded row count and content md5 (any change made around the
 -- guards, e.g. with triggers disabled, is refused), with exactly the P20 shape (columns, types incl. numeric(14,2), NOT NULL, defaults, every
@@ -232,16 +235,22 @@ BEGIN
     ON CONFLICT (signature) DO UPDATE SET definition = EXCLUDED.definition;
   EXECUTE nd;
 END $p18$;
--- R4 record upkeep while retained: a permitted E1/E2 delete leaves the rollback record describing the remaining rows.
--- Only while both guard triggers are enabled; a change made with the guards disabled leaves the record stale, so a
--- re-install refuses it.
+-- R4 record upkeep while retained (see the header): refresh only from a verified pre-delete state, else mark stale.
 CREATE OR REPLACE FUNCTION phase3_p20_audit.track_retained() RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE r record; before_n bigint; before_h text;
 BEGIN
   IF to_regclass('phase3_p20_retained.rollback') IS NULL THEN RETURN NULL; END IF;
-  IF (SELECT count(*) FROM pg_trigger g WHERE g.tgrelid = 'public.claim_receipt_corrections'::regclass AND g.tgenabled = 'O'
-       AND g.tgname IN ('claim_receipt_corrections_guard', 'claim_receipt_corrections_no_truncate')
-       AND g.tgfoid = 'phase3_p20_audit.guard()'::regprocedure) <> 2 THEN
+  SELECT * INTO r FROM phase3_p20_retained.rollback FOR UPDATE; -- serialises record upkeep
+  IF r.content_md5 LIKE 'stale%' THEN RETURN NULL; END IF;  -- never refreshed again
+  SELECT count(*), md5(coalesce(string_agg(x::text, E'\n' ORDER BY x.id), '')) INTO before_n, before_h
+    FROM (SELECT * FROM public.claim_receipt_corrections UNION ALL SELECT * FROM p20_removed) x;
+  IF before_n IS DISTINCT FROM r.rows OR before_h IS DISTINCT FROM r.content_md5
+     OR (SELECT count(*) FROM pg_trigger g WHERE g.tgrelid = 'public.claim_receipt_corrections'::regclass AND g.tgenabled = 'O'
+          AND g.tgname IN ('claim_receipt_corrections_guard', 'claim_receipt_corrections_no_truncate')
+          AND g.tgfoid = 'phase3_p20_audit.guard()'::regprocedure) <> 2 THEN
+    UPDATE phase3_p20_retained.rollback SET content_md5 = format('stale since %s: rows changed outside the guards (record %s rows md5 %s; before delete %s rows md5 %s)',
+      to_char(clock_timestamp() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'), r.rows, r.content_md5, before_n, before_h);
     RETURN NULL;
   END IF;
   UPDATE phase3_p20_retained.rollback SET rows = (SELECT count(*) FROM public.claim_receipt_corrections),
@@ -269,7 +278,7 @@ CREATE TRIGGER claim_receipt_corrections_no_truncate BEFORE TRUNCATE ON public.c
   FOR EACH STATEMENT EXECUTE FUNCTION phase3_p20_audit.guard();
 DROP TRIGGER IF EXISTS claim_receipt_corrections_retained_record ON public.claim_receipt_corrections;
 CREATE TRIGGER claim_receipt_corrections_retained_record AFTER DELETE ON public.claim_receipt_corrections
-  FOR EACH STATEMENT EXECUTE FUNCTION phase3_p20_audit.track_retained();
+  REFERENCING OLD TABLE AS p20_removed FOR EACH STATEMENT EXECUTE FUNCTION phase3_p20_audit.track_retained();
 DROP TRIGGER IF EXISTS p20_claim_corrections_follow_erasure ON public.expenses;
 CREATE TRIGGER p20_claim_corrections_follow_erasure AFTER DELETE ON public.expenses
   FOR EACH STATEMENT EXECUTE FUNCTION phase3_p20_audit.follow_erasure();

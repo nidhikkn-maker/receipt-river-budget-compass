@@ -520,6 +520,12 @@ for (const [label, extra, stack] of [["applied schema + P19", [P19], false], ["p
       expect((await as(db, V, "SELECT count(*)::int n FROM public.claim_receipt_corrections WHERE owner_id = $1", [O]))[0]!["n"]).toBe(0);
       await expect(db.exec(readSql(P20))).rejects.toThrow(/already installed/);
       await db.exec("ROLLBACK");
+      // L1: the rollback accepts the guards only in the mode the retained record upkeep accepts ('O'), not ENABLE ALWAYS
+      await db.exec("BEGIN");
+      await db.exec("ALTER TABLE public.claim_receipt_corrections ENABLE ALWAYS TRIGGER claim_receipt_corrections_guard");
+      await expect(db.exec(readSql(P20_RB))).rejects.toThrow(/guards are missing or disabled/);
+      await db.exec("ROLLBACK");
+      expect(await num(db, "SELECT count(*) FROM pg_namespace WHERE nspname = 'phase3_p20'")).toBe(1);
       // a second rollback retains old and new rows and leaves the same catalog as the first
       await db.exec(readSql(P20_RB));
       expect(await allAudits(db)).toEqual(now);
@@ -543,6 +549,23 @@ for (const [label, extra, stack] of [["applied schema + P19", [P19], false], ["p
         ["ALTER TABLE public.claim_receipt_corrections DISABLE TRIGGER claim_receipt_corrections_guard; DELETE FROM public.claim_receipt_corrections WHERE id = (SELECT id FROM public.claim_receipt_corrections ORDER BY id LIMIT 1); ALTER TABLE public.claim_receipt_corrections ENABLE TRIGGER claim_receipt_corrections_guard", /retained audit rows changed since the P20 rollback/],
         ["SET LOCAL session_replication_role = replica; INSERT INTO public.claim_receipt_corrections(owner_id, claim_id, receipt_id, before_amount, after_amount, before_status, after_status, receipt, reason, actor_id, operation_key) SELECT owner_id, claim_id, receipt_id, 2, 1, 'p', 'p', '{}', 'forged', actor_id, 'forged' FROM public.claim_receipt_corrections ORDER BY id LIMIT 1; SET LOCAL session_replication_role = origin", /retained audit rows changed since the P20 rollback/],
       ];
+      // M1: rows changed with the guards disabled, then a permitted E2 delete (guards enabled again) must not fold the
+      // tampered row into a refreshed record: the record goes stale for good and the re-install refuses
+      const launder = `ALTER TABLE public.claim_receipt_corrections DISABLE TRIGGER USER;
+        UPDATE public.claim_receipt_corrections SET reason = 'rewritten' WHERE id = (SELECT id FROM public.claim_receipt_corrections ORDER BY id LIMIT 1);
+        INSERT INTO public.claim_receipt_corrections(owner_id, claim_id, receipt_id, before_amount, after_amount, before_status, after_status, receipt, reason, actor_id, operation_key)
+          SELECT '${G2}', claim_id, receipt_id, before_amount, after_amount, before_status, after_status, receipt, reason, '${G2}', 'launder' FROM public.claim_receipt_corrections ORDER BY id LIMIT 1;
+        ALTER TABLE public.claim_receipt_corrections ENABLE TRIGGER USER;
+        SET LOCAL ROLE service_role; DELETE FROM public.claim_receipt_corrections WHERE owner_id = '${G2}'; RESET ROLE;`;
+      tampered.push([launder, /retained audit rows changed/]);
+      await db.exec("BEGIN");
+      await db.exec(launder);
+      expect(await num(db, "SELECT count(*) FROM public.claim_receipt_corrections WHERE owner_id = $1", [G2])).toBe(0); // the E2 delete was permitted
+      expect((await sql<{ m: string }>(db, "SELECT content_md5 m FROM phase3_p20_retained.rollback"))[0]!.m).toMatch(/^stale since /);
+      // a later permitted delete never refreshes a stale record
+      await db.exec("SET LOCAL ROLE service_role; DELETE FROM public.claim_receipt_corrections WHERE owner_id = '" + G2 + "'; RESET ROLE;");
+      expect((await sql<{ m: string }>(db, "SELECT content_md5 m FROM phase3_p20_retained.rollback"))[0]!.m).toMatch(/^stale since /);
+      await db.exec("ROLLBACK");
       for (const [ddl, re] of tampered) {
         await db.exec("BEGIN");
         await db.exec(ddl);

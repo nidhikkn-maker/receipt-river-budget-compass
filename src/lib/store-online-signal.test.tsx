@@ -6,12 +6,14 @@ import { act, cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({ rpc: [] as { name: string; args: Record<string, unknown> }[], from: [] as string[], saved: [] as unknown[], queued: [] as unknown[],
-  removed: [] as string[], pending: [] as Record<string, unknown>[] }));
+  removed: [] as string[], pending: [] as Record<string, unknown>[], throwOn: new Set<string>() }));
 vi.mock("@/integrations/supabase/client", () => {
   const result = (table: string) => ({ data: table === "finance_preferences" || table === "profiles" ? null : [], error: null });
+  // throwOn: tables whose read rejects, so the whole cloud read throws (as a dropped connection does)
+  const settle = (table: string) => h.throwOn.has(table) ? Promise.reject(new TypeError("Failed to fetch")) : Promise.resolve(result(table));
   const builder = (table: string): unknown => new Proxy({}, {
-    get: (_t, k) => k === "then" ? (ok: (v: unknown) => void, bad: (e: unknown) => void) => Promise.resolve(result(table)).then(ok, bad)
-      : k === "maybeSingle" || k === "single" ? () => Promise.resolve(result(table)) : () => builder(table),
+    get: (_t, k) => k === "then" ? (ok: (v: unknown) => void, bad: (e: unknown) => void) => settle(table).then(ok, bad)
+      : k === "maybeSingle" || k === "single" ? () => settle(table) : () => builder(table),
   });
   return { supabase: {
     from: (t: string) => { h.from.push(t); return builder(t); },
@@ -51,7 +53,7 @@ const hotel = { ...visa, id: "33333333-3333-4333-8333-333333333333", title: "Hot
   reimbursement: { kind: "employer", payer: "Alpha Traders", reimbursable: 5000, stage: "submitted", receipts: [] } } as unknown as Expense;
 const correction = { receiptId: "v1", newAmount: 0, reason: "Already counted on the hotel claim", operationId: "op-online-1" };
 
-afterEach(() => { cleanup(); h.rpc.length = 0; h.from.length = 0; h.saved.length = 0; h.queued.length = 0; h.removed.length = 0; h.pending = []; seen.s = null; setNavigatorOnline(true); });
+afterEach(() => { cleanup(); h.rpc.length = 0; h.from.length = 0; h.saved.length = 0; h.queued.length = 0; h.removed.length = 0; h.pending = []; h.throwOn.clear(); seen.s = null; setNavigatorOnline(true); });
 const reset = () => { h.rpc.length = 0; h.from.length = 0; h.saved.length = 0; h.queued.length = 0; h.removed.length = 0; };
 const cloudWrites = () => [...h.rpc.map((c) => `rpc:${c.name}`), ...h.from.map((t) => `from:${t}`), ...h.saved.map(() => "saveExpense")];
 const OWNER = "11111111-1111-4111-8111-111111111111";
@@ -201,6 +203,23 @@ describe("a missed 'online' event: the store re-syncs its signal from the browse
     expect(h.saved).toHaveLength(1);
     expect(h.removed).toEqual([QUEUED]);
     expect(reads()).toBe(1);
+  });
+
+  it("an awaited refresh that heals rejects when the reconnect's read fails, as a normal refresh does; the failure is reported", async () => {
+    await offlineThenMissedOnline();
+    h.throwOn.add("profiles");
+    let outcome = "";
+    await act(async () => { outcome = await seen.s!.refresh().then(() => "resolved", (e: Error) => e.message); });
+    await settle();
+    expect(outcome).toBe("Failed to fetch");
+    expect(seen.s!.online).toBe(true);
+    expect(h.saved).toHaveLength(1); // the single reconnect still flushed the queue once
+    expect(seen.s!.syncState).toBe("error");
+    expect(seen.s!.readFailure).toMatchObject({ kind: "failed" });
+    // and a normal (not healing) refresh rejects the same way
+    let normal = "";
+    await act(async () => { normal = await seen.s!.refresh().then(() => "resolved", (e: Error) => e.message); });
+    expect(normal).toBe("Failed to fetch");
   });
 
   it("navigator.onLine still false: focus, visibilitychange, pageshow and refresh leave the store offline; nothing is flushed or read", async () => {

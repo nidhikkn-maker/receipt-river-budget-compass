@@ -289,14 +289,16 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   }, []);
   // R14b reconnect truth (see reconnectRef below): whether the in-memory view still needs a cloud read once online.
   const reconnectNeed = useRef(false);
-  const reconnecting = useRef<Promise<void> | null>(null);
-  const reconnectRef = useRef<(force?: boolean) => Promise<void>>(async () => {});
+  const reconnecting = useRef<Promise<{ read: Promise<void> | null }> | null>(null);
+  // A reconnect run resolves (never rejects) to the cloud read it relied on (its own refresh or a joined in-flight read),
+  // so an awaited refresh() that healed can surface that read's failure exactly as a normal refresh does.
+  const reconnectRef = useRef<(force?: boolean) => Promise<{ read: Promise<void> | null }>>(async () => ({ read: null }));
   // The store re-syncs its signal from the browser: a missed 'online' event (frozen iOS PWA, laptop sleep) must not keep
   // the store offline forever. When the store says offline but navigator.onLine is true (checked on visibilitychange to
   // visible, pageshow, window focus and at the start of every refresh/loadRun), the store goes online and runs the
   // normal single reconnect (queue flushed once, then exactly one refresh); concurrent triggers share that run. Going
   // offline stays immediate on the 'offline' event. Returns the reconnect run, or null when nothing changed.
-  const resyncFromBrowser = useRef((): Promise<void> | null => {
+  const resyncFromBrowser = useRef((): Promise<{ read: Promise<void> | null }> | null => {
     if (onlineRef.current || typeof navigator === "undefined" || !navigator.onLine) return null;
     markOnline(true);
     return reconnectRef.current(true);
@@ -337,8 +339,10 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   const refresh = useCallback((): Promise<void> => {
     if (gate.paused()) { gate.defer(); return Promise.resolve(); }
     // Start of every loadRun: a store left offline by a missed 'online' event heals here (the reconnect refreshes once).
+    // An awaited refresh that healed rejects when the reconnect's read failed, as a normal refresh does (the reconnect
+    // itself has already handled that rejection, so it is reported once: here, to this caller).
     const healed = resyncFromBrowser();
-    if (healed) return healed;
+    if (healed) return healed.then((o) => o.read ?? undefined);
     if (!inFlight.current) { inFlight.current = load().finally(() => { inFlight.current = null; }); return inFlight.current; }
     if (!queued.current) queued.current = inFlight.current.catch(() => {}).then(() => { queued.current = null; return refresh(); });
     return queued.current;
@@ -635,11 +639,13 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
         const need = reconnectNeed.current || !!force, seq = loadSeq.current;
         if (need && !gate.paused()) setSyncState("syncing");
         const saved = await sync(undefined, true);
-        if (!active || !onlineRef.current) return;
-        if (inFlight.current) { await inFlight.current.catch(() => {}); if (!saved) return; }
-        else if (!saved && (!need || loadSeq.current !== seq)) return;
+        if (!active || !onlineRef.current) return { read: null };
+        if (inFlight.current) { const joined = inFlight.current; await joined.catch(() => {}); if (!saved) return { read: joined }; }
+        else if (!saved && (!need || loadSeq.current !== seq)) return { read: null };
         // A whole-read failure is reported through readFailure / syncState / areaStatus, not as an unhandled rejection.
-        await refresh().catch(() => {});
+        const read = refresh();
+        await read.catch(() => {});
+        return { read };
       })().finally(() => { reconnecting.current = null; });
       reconnecting.current = run;
       return run;
