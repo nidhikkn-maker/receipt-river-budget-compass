@@ -184,7 +184,7 @@ describe("demo cleanup fails closed", () => {
     expect(demoCleanupDecision(null)).toBe("skip-unconfirmed");
   });
 
-  it("removes a guest's records in order, including P20 claim corrections; a failed required step stops (identity kept)", async () => {
+  it("removes a guest's records in order, including P20 claim corrections and P14 disposal requests; a failed required step stops (identity kept)", async () => {
     const run = async (fail: Record<string, unknown>) => {
       const calls: string[] = [];
       const result = await removeDemoGuestRecords((table) => ({ delete: () => ({ eq: async (column: string, value: string) => {
@@ -192,11 +192,15 @@ describe("demo cleanup fails closed", () => {
       } }) }), "g");
       return { ...result, calls };
     };
-    const all = ["expenses.employee_id=g", "accounts.owner_id=g", "claim_receipt_corrections.owner_id=g", "finance_preferences.owner_id=g"];
+    const all = ["expenses.employee_id=g", "accounts.owner_id=g", "claim_receipt_corrections.owner_id=g", "asset_disposal_requests.owner_id=g", "finance_preferences.owner_id=g"];
     expect(await run({})).toEqual({ ok: true, calls: all });
     // before P20 is installed the corrections table is missing: only that answer is skipped, the cleanup continues
     expect(await run({ claim_receipt_corrections: { code: "42P01", message: 'relation "public.claim_receipt_corrections" does not exist' } })).toEqual({ ok: true, calls: all });
     expect(await run({ claim_receipt_corrections: { code: "PGRST205", message: "Could not find the table 'public.claim_receipt_corrections' in the schema cache" } })).toEqual({ ok: true, calls: all });
+    // before P14 is installed the disposal request table is missing: skipped the same way; any other error stops (G10)
+    expect(await run({ asset_disposal_requests: { code: "42P01", message: 'relation "public.asset_disposal_requests" does not exist' } })).toEqual({ ok: true, calls: all });
+    expect(await run({ asset_disposal_requests: { code: "PGRST205", message: "Could not find the table 'public.asset_disposal_requests' in the schema cache" } })).toEqual({ ok: true, calls: all });
+    expect(await run({ asset_disposal_requests: { code: "P0001", message: "P14_AUDIT_KEPT" } })).toMatchObject({ ok: false, table: "asset_disposal_requests", calls: all.slice(0, 4) });
     expect(await run({ expenses: new Error("expenses failed") })).toMatchObject({ ok: false, table: "expenses", calls: ["expenses.employee_id=g"] });
     expect(await run({ accounts: new Error("accounts failed") })).toMatchObject({ ok: false, table: "accounts", calls: ["expenses.employee_id=g", "accounts.owner_id=g"] });
   });

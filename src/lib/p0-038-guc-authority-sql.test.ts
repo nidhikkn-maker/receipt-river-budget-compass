@@ -8,6 +8,7 @@
 import { describe, expect, it } from "vitest";
 import type { PGlite } from "@electric-sql/pglite";
 import { actAs, addUsers, fullSchemaDb, readSql } from "@/test/full-schema-pglite";
+import { P14_RETAINED_ACL, P14_RETAINED_KEYS, splitP14Retained } from "@/test/p14-retained-catalog";
 import { ACC as PACC, INSERT_EXPENSE, U as PU, activate, attempt, e as pe, errorText, exParams, id as pid, q, seededDb, stepUp as pStepUp } from "@/test/phase3-fixture";
 
 const u = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
@@ -215,7 +216,12 @@ describe("P0-038 stack P1..P18", () => {
     for (const n of STACK.slice(at)) { try { await db.exec(readSql(f(n))); } catch (e) { throw new Error(`${n}: ${(e as Error).message}`); } }
     expect(await readsRetired(db)).toEqual([]);
     for (const n of STACK.slice(at).reverse()) { try { await db.exec(readSql(`${D}${n}.rollback.sql`)); } catch (e) { throw new Error(`${n} rollback: ${(e as Error).message}`); } }
-    expect(await catalog(db)).toEqual(before);
+    // Exact, plus exactly the disposal audit trail the P14 rollback retains by design (brief G9; p14-asset-disposal-sql.test.ts).
+    const after = splitP14Retained(await catalog(db));
+    expect(splitP14Retained(before).retainedKeys).toEqual([]);
+    expect(after.rest).toEqual(before);
+    expect(after.retainedKeys).toEqual(P14_RETAINED_KEYS);
+    expect(after.acl).toBe(P14_RETAINED_ACL);
     await db.close();
   }, 600_000);
 });

@@ -81,7 +81,7 @@ const post = async () => {
   return { status: res.status, body: await res.json() as { removed: number; failed: unknown[] } };
 };
 const old = (minutes: number) => new Date(Date.now() - 864e5 - minutes * 60e3).toISOString();
-const TABLES = ["expenses", "accounts", "claim_receipt_corrections", "finance_preferences"];
+const TABLES = ["expenses", "accounts", "claim_receipt_corrections", "asset_disposal_requests", "finance_preferences"];
 const seedGuest = (id: string, created: string, opts: { identity?: boolean; records?: boolean } = {}) => {
   h.sessions.set(id, created);
   if (opts.identity ?? true) h.users.set(id, { is_anonymous: true });
@@ -111,9 +111,10 @@ describe("demo cleanup: a guest whose identity is confirmed gone", () => {
     expect(h.calls.filter((c) => c.startsWith("count:")).sort()).toEqual(TABLES.map((t) => `count:${t}=stuck`).sort());
   });
 
-  it("the corrections table not installed yet (42P01 / PGRST205) counts as no corrections", async () => {
+  it("the corrections / disposal request tables not installed yet (42P01 / PGRST205) count as none", async () => {
     seedGuest("stuck", old(5), { identity: false, records: false });
     h.countError["claim_receipt_corrections"] = { code: "PGRST205", message: "not in schema cache" };
+    h.countError["asset_disposal_requests"] = { code: "42P01", message: 'relation "public.asset_disposal_requests" does not exist' };
     expect(await post()).toEqual({ status: 200, body: { removed: 1, failed: [] } });
     expect(h.sessions.has("stuck")).toBe(false);
   });
@@ -133,6 +134,14 @@ describe("demo cleanup: a guest whose identity is confirmed gone", () => {
     h.countError = { claim_receipt_corrections: { code: "42501", message: "permission denied" } };
     expect((await post()).body.removed).toBe(0);
     expect(h.sessions.has("left")).toBe(true);
+    h.countError = { asset_disposal_requests: { code: "42501", message: "permission denied" } };
+    expect((await post()).body.removed).toBe(0);
+    expect(h.sessions.has("left")).toBe(true);
+    // P14 disposal requests remaining for a missing identity also keep the row (G10)
+    h.countError = {}; h.records = { asset_disposal_requests: new Map([["left", 1]]) };
+    expect((await post()).body.removed).toBe(0);
+    expect(h.sessions.has("left")).toBe(true);
+    h.records = {};
     // a count that is not a number
     h.countError = {}; h.countNull = true;
     expect((await post()).body.removed).toBe(0);

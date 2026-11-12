@@ -10,6 +10,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { PGlite } from "@electric-sql/pglite";
 import { actAs, addUsers, fullSchemaDb, readSql } from "@/test/full-schema-pglite";
+import { P14_RETAINED_ACL, P14_RETAINED_KEYS, splitP14Retained } from "@/test/p14-retained-catalog";
 
 const u = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 const O = u(1), V = u(2), M = u(3);
@@ -375,7 +376,17 @@ describe("P19 in the whole proposed stack: install order and exact rollback", ()
       try { await db.exec(readSql(`${D}${n}.rollback.sql`)); } catch (e) { throw new Error(`${n} rollback: ${(e as Error).message}`); }
       // P7 and earlier rollbacks keep archives / re-grant in another ACL order by design, with or without P19 (checked
       // separately: identical result when P19 is not installed), so exactness is asserted from P19 down to P8.
-      if (i >= all.indexOf("P8_asset_depreciation_posting")) expect(await catalog(db), `${n} rollback`).toEqual(snaps[i]);
+      // The P14 rollback retains the read-only disposal audit trail by design (brief G9; p14-asset-disposal-sql.test.ts):
+      // from there down, the catalog is exact plus exactly those retained entries (names, and the table ACL).
+      const now = await catalog(db);
+      const retainedFromHere = i <= all.indexOf("P14_asset_disposal_approval");
+      const split = splitP14Retained(now);
+      if (retainedFromHere) {
+        expect(splitP14Retained(snaps[i]!).retainedKeys, `${n} rollback`).toEqual([]);
+        expect(split.retainedKeys, `${n} rollback`).toEqual(P14_RETAINED_KEYS);
+        expect(split.acl, `${n} rollback`).toBe(P14_RETAINED_ACL);
+      }
+      if (i >= all.indexOf("P8_asset_depreciation_posting")) expect(retainedFromHere ? split.rest : now, `${n} rollback`).toEqual(snaps[i]);
     }
     await db.close();
   }, 900_000);
