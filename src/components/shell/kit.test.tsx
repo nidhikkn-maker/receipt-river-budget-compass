@@ -81,7 +81,7 @@ function Split() {
 describe("list/detail template", () => {
   it("opens the detail beside the list, marks the row, and Back returns focus to that row", async () => {
     render(<Split />);
-    expect(screen.getByText("Choose an item to see its details here.")).toBeInTheDocument();
+    expect(screen.getByText("Accounts: 2 in this list. Choose one to see its details here; it stays open beside the list.")).toBeInTheDocument();
     const row = screen.getByRole("button", { name: /ICICI Current/ });
     row.focus();
     fireEvent.click(row);

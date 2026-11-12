@@ -94,10 +94,10 @@ function Brief() {
         {b.upcoming.shortfall && <p className="mt-1 text-sm font-semibold text-destructive">Possible shortfall — lowest projected {money(b.upcoming.lowest)}</p>}
       </Card>
       <Card title="D. Needs attention">
-        <Row label="Outdated accounts" value={b.attention.staleAccounts.join(", ") || "None"} />
+        <Row label="Outdated accounts" value={b.attention.staleAccounts.join(", ") || "None"} kind="text" />
         <Row label="Pending reimbursements" value={money(b.attention.pendingReimbursements)} />
         <Row label="Open inbox items" value={b.attention.missingItems} />
-        <Row label="Budget warnings" value={b.attention.budgetWarnings.join(", ") || "None"} />
+        <Row label="Budget warnings" value={b.attention.budgetWarnings.join(", ") || "None"} kind="text" />
       </Card>
       <Card title="E. Top recommendations">
         {b.recommendations.length ? <ol className="list-decimal space-y-1 pl-5 text-sm">{b.recommendations.map((r) => <li key={r}>{r}</li>)}</ol> : <p className="text-sm text-muted-foreground">Nothing urgent this week.</p>}

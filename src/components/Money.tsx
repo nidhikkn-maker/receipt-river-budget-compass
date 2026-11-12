@@ -10,15 +10,30 @@ export function Card({ title, children, className, action, "aria-label": label }
   );
 }
 /**
- * Key-value money row. The amount never wraps: when a long label and a long amount (e.g. ₹12,34,56,789.00) do not fit
- * on one line, the amount drops to its own right-aligned line instead of squeezing the label (density audit SH-9).
+ * Values that read as one amount or figure ("₹12,34,56,789.00", "-$1,200.50", "USD 1,200.00", "42%", "7", "—"):
+ * numbers, or short strings with no ordinary space other than one after a currency code. Anything else (a list
+ * such as "HDFC Savings, ICICI card", a sentence, a date with a time) is text and wraps like text.
+ */
+const AMOUNT_TEXT = /^(?:[A-Z]{3} )?[^\s]{1,32}$/u;
+export function isAmountValue(value: ReactNode): boolean {
+  if (typeof value === "number" || typeof value === "bigint") return true;
+  if (typeof value === "string") return AMOUNT_TEXT.test(value.trim());
+  return true; // elements are formatted amounts in every current caller; pass kind="text" for rich text
+}
+/**
+ * Key-value row. An amount never breaks mid-number: when a long label and a long amount do not fit on one line, the
+ * amount drops to its own right-aligned line instead of squeezing the label (density audit SH-9). A text value
+ * (e.g. a list of account names) wraps normally within the row, so it never overflows the screen; it opts out of the
+ * global `.font-mono` nowrap rule (styles.css, "Money figures") with an explicit whitespace-normal. `kind` is
+ * inferred from the value (see isAmountValue); callers that pass lists or sentences can say kind="text".
  * `money-row` lets the Signature Flow theme cap key-value groups to a readable width on wide screens (SH-8).
  */
-export function Row({ label, value, strong, tone }: { label: string; value: ReactNode; strong?: boolean | undefined; tone?: "good" | "bad" | undefined }) {
+export function Row({ label, value, strong, tone, kind }: { label: string; value: ReactNode; strong?: boolean | undefined; tone?: "good" | "bad" | undefined; kind?: "amount" | "text" | undefined }) {
+  const amount = (kind ?? (isAmountValue(value) ? "amount" : "text")) === "amount";
   return (
     <div className="money-row flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b py-3 text-sm last:border-0">
       <span className="min-w-0 flex-auto text-muted-foreground">{label}</span>
-      <span className={cn("ml-auto shrink-0 whitespace-nowrap text-right font-mono font-semibold", strong && "text-base", tone === "good" && "text-success", tone === "bad" && "text-destructive")}>{value}</span>
+      <span data-value-kind={amount ? "amount" : "text"} className={cn("ml-auto text-right font-mono font-semibold", amount ? "shrink-0 whitespace-nowrap" : "min-w-0 whitespace-normal [overflow-wrap:anywhere]", strong && "text-base", tone === "good" && "text-success", tone === "bad" && "text-destructive")}>{value}</span>
     </div>
   );
 }

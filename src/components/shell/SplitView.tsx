@@ -52,7 +52,7 @@ export function SplitView({ label, items, selectedId, onSelect, renderDetail, em
         {selected ? <>
           <button type="button" className="sf-back sf-split-back" onClick={() => onSelect(null)}><ArrowLeft aria-hidden />Back to {label.toLowerCase()}</button>
           {renderDetail(selected.id)}
-        </> : <p className="sf-split-hint">Choose an item to see its details here.</p>}
+        </> : <p className="sf-split-hint">{label}: {items.length} in this list. Choose one to see its details here; it stays open beside the list.</p>}
       </div>
     </div>
   );

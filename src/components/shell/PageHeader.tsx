@@ -39,10 +39,26 @@ export function Breadcrumbs({ search = true }: { search?: boolean }) {
   );
 }
 
+/** Width of the edge fade on the Records row (matches the 40px mask in styles.css). */
+export const SUBNAV_FADE = 40;
+/**
+ * The scroll position that shows the current tab whole and clear of the edge fades, or null when it already is.
+ * `left`/`width` are the tab's offset and width inside the row; the result stays within the row's scroll range.
+ */
+export function subnavScrollFor(left: number, width: number, scrollLeft: number, clientWidth: number, scrollWidth: number, fade = SUBNAV_FADE): number | null {
+  const max = Math.max(0, scrollWidth - clientWidth);
+  const right = left + width;
+  // At either end of the range there is no fade on that side, so the clamp keeps the first/last tab flush.
+  if (left - fade < scrollLeft) return Math.max(0, Math.min(max, left - fade));
+  if (right + fade > scrollLeft + clientWidth) return Math.max(0, Math.min(max, right + fade - clientWidth));
+  return null;
+}
+
 /**
  * Records sub-navigation (KK decision 7): shown on the Records module index pages, e.g. Travel, with the current one
  * marked. Detail pages rely on the labelled Back (SH-1). The row scrolls sideways on iPhone: the current tab is
- * scrolled into view and a fade marks the edge that has more tabs beyond it (SH-2).
+ * scrolled into view clear of the fade, and a fade marks the edge that has more tabs beyond it (SH-2). The marks are
+ * refreshed on scroll and whenever the row or its tabs change size (ResizeObserver: rotation, text zoom, font load).
  */
 export function RecordsSubnav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -60,17 +76,22 @@ export function RecordsSubnav() {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    // Bring the current tab fully into view without scrolling the page itself.
+    // Bring the current tab fully into view, clear of the fade, without scrolling the page itself.
     const current = el.querySelector<HTMLElement>('[aria-current="page"]');
     if (current) {
-      const left = current.offsetLeft; // .sf-subnav is position: relative, so this is measured from the row
-      const right = left + current.offsetWidth;
-      if (left < el.scrollLeft) el.scrollLeft = left;
-      else if (right > el.scrollLeft + el.clientWidth) el.scrollLeft = right - el.clientWidth + 24;
+      // .sf-subnav is position: relative, so offsetLeft is measured from the row
+      const next = subnavScrollFor(current.offsetLeft, current.offsetWidth, el.scrollLeft, el.clientWidth, el.scrollWidth);
+      if (next !== null) el.scrollLeft = next;
     }
     measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", measure);
+      return () => window.removeEventListener("resize", measure);
+    }
+    const ro = new ResizeObserver(() => measure());
+    ro.observe(el);
+    for (const tab of el.children) ro.observe(tab);
+    return () => ro.disconnect();
   }, [active, shown, measure]);
   if (!active || !shown) return null;
   return (
