@@ -21,7 +21,8 @@
 --      phase3_p20_retained.rollback (table oid, table owner, row count, content md5); permitted E1/E2 deletes keep that
 --      record current (phase3_p20_audit.track_retained, which refreshes it only from a verified pre-delete state and
 --      otherwise marks it stale for good); the guards must be enabled in the ordinary mode ('O', the only mode
---      track_retained accepts) before the rollback runs; a later P20 install adopts the table only if it is that same
+--      track_retained accepts) before the rollback runs; the rollback locks the trail (SHARE ROW EXCLUSIVE) before hashing
+--      and every hash pins TimeZone UTC, DateStyle 'ISO, MDY', IntervalStyle postgres and extra_float_digits 1; a later P20 install adopts the table only if it is that same
 --      table with that owner, its rows still match the recorded count and md5, and it has exactly the P20 shape.
 -- Re-installing P20 (P20_claim_receipt_correction.sql) keeps every retained row, removes phase3_p20_retained,
 -- re-applies the grants and policies and appends new corrections.
@@ -43,6 +44,15 @@ BEGIN
     RAISE EXCEPTION 'P20 rollback: the audit trail guards are missing or disabled; review before rolling back';
   END IF;
 END $pre$;
+
+-- R1/R4: no E1/E2 delete may commit between the hash below and this commit (DELETE takes ROW EXCLUSIVE, which this
+-- lock conflicts with), and every hash renders timestamptz with fixed settings (track_retained pins the same ones), so
+-- the record never depends on the session that ran the rollback.
+LOCK TABLE public.claim_receipt_corrections IN SHARE ROW EXCLUSIVE MODE;
+SET LOCAL TimeZone = 'UTC';
+SET LOCAL DateStyle = 'ISO, MDY';
+SET LOCAL IntervalStyle = 'postgres';
+SET LOCAL extra_float_digits = 1;
 
 CREATE TEMP TABLE p20_rollback_rows ON COMMIT DROP AS
   SELECT count(*) n, md5(coalesce(string_agg(c::text, E'\n' ORDER BY c.id), '')) h FROM public.claim_receipt_corrections c;

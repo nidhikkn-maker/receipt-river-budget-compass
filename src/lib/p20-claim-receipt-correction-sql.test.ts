@@ -656,3 +656,94 @@ describe("P20 and P18 in either order (SQL, isolated PGlite)", () => {
     } finally { await db.close(); }
   }, 600_000);
 });
+
+// Release gate (review of 6394ac8): the retained record's md5 is over each row's text, and timestamptz text follows the
+// session's TimeZone/DateStyle. Every hash (rollback, track_retained, re-install adoption) pins the same settings, so a
+// rollback run by an admin in another time zone never makes a later permitted E1/E2 delete look like tampering; and the
+// rollback/adoption lock the trail so no delete can commit between their hash and their commit.
+describe("P20 retained record ignores session settings; rollback locks the trail (SQL, isolated PGlite)", () => {
+  afterAll(() => { vi.unstubAllGlobals(); });
+  const KOLKATA = "SET TimeZone = 'Asia/Kolkata'; SET DateStyle = 'SQL, DMY'; SET IntervalStyle = 'sql_standard'";
+  const RESET = "RESET TimeZone; RESET DateStyle; RESET IntervalStyle";
+  const record = async (db: PGlite) => (await sql<{ m: string; ok: boolean }>(db, `SELECT r.content_md5 m, r.rows = (SELECT count(*) FROM public.claim_receipt_corrections) ok FROM phase3_p20_retained.rollback r`))[0]!;
+  const withoutCommit = (s: string) => { const i = s.lastIndexOf("COMMIT;"); expect(i).toBeGreaterThan(0); return s.slice(0, i); };
+  const holdsShareRowExclusive = (db: PGlite) => num(db, "SELECT count(*) FROM pg_locks WHERE relation = 'public.claim_receipt_corrections'::regclass AND mode = 'ShareRowExclusiveLock' AND granted AND pid = pg_backend_pid()");
+
+  it("rollback in Asia/Kolkata + 'SQL, DMY': later E2 and E1 deletes keep the record fresh, re-install is accepted; tampering is still refused", async () => {
+    vi.stubGlobal("navigator", { onLine: true });
+    const db = await setup([P19]);
+    try {
+      await db.exec(readSql(P20));
+      await corrected(db, O, ACC_O, "tz-o");
+      await corrected(db, G, ACC_G, "tz-g");
+      await corrected(db, E, ACC_E, "tz-e");
+      await actAs(db, null);
+      await db.exec(KOLKATA);
+      expect((await sql<{ t: string }>(db, "SELECT now()::text t"))[0]!.t).toMatch(/\+05:30|IST/);
+      await db.exec(readSql(P20_RB));
+      await db.exec(RESET);
+      expect((await record(db)).m).not.toMatch(/^stale/);
+      // E2 (demo cleanup, service role, default session) keeps the record fresh
+      expect(await demoCleanup(db, G)).toEqual({ ok: true });
+      expect(await record(db)).toEqual({ m: expect.not.stringMatching(/^stale/), ok: true });
+      // E1 (owner erasure) in another non-UTC session also keeps it fresh
+      await db.exec("SET TimeZone = 'America/St_Johns'; SET DateStyle = 'German'");
+      await erase(db, E, false);
+      await db.exec(RESET);
+      expect(await num(db, "SELECT count(*) FROM public.claim_receipt_corrections WHERE owner_id = $1", [E])).toBe(0);
+      expect(await record(db)).toEqual({ m: expect.not.stringMatching(/^stale/), ok: true });
+      // the re-install, run in yet another session setting, adopts the retained rows
+      const kept = await allAudits(db);
+      await db.exec(KOLKATA);
+      await db.exec(readSql(P20));
+      await db.exec(RESET);
+      expect(await allAudits(db)).toEqual(kept);
+      // a second rollback in Kolkata, then rows changed around the guards: the re-install still refuses
+      await db.exec(KOLKATA);
+      await db.exec(readSql(P20_RB));
+      await db.exec(RESET);
+      await db.exec("BEGIN");
+      await db.exec("ALTER TABLE public.claim_receipt_corrections DISABLE TRIGGER USER; UPDATE public.claim_receipt_corrections SET reason = 'rewritten'; ALTER TABLE public.claim_receipt_corrections ENABLE TRIGGER USER");
+      await expect(db.exec(readSql(P20))).rejects.toThrow(/retained audit rows changed since the P20 rollback/);
+      await db.exec("ROLLBACK");
+      // tampering, then a permitted delete in a Kolkata session: stale for good, re-install refuses
+      await db.exec("BEGIN");
+      await db.exec(`ALTER TABLE public.claim_receipt_corrections DISABLE TRIGGER USER; UPDATE public.claim_receipt_corrections SET reason = 'rewritten';
+        ALTER TABLE public.claim_receipt_corrections ENABLE TRIGGER USER; ${KOLKATA.replace(/SET /g, "SET LOCAL ")};
+        SET LOCAL ROLE service_role; DELETE FROM public.claim_receipt_corrections WHERE owner_id = '${G2}'; RESET ROLE`);
+      expect((await record(db)).m).toMatch(/^stale since /);
+      await expect(db.exec(readSql(P20))).rejects.toThrow(/retained audit rows changed since the P20 rollback/);
+      await db.exec("ROLLBACK");
+      await db.exec(RESET);
+      // untampered, the retained trail is still adoptable
+      await db.exec(readSql(P20));
+      expect(await allAudits(db)).toEqual(kept);
+    } finally { await db.close(); }
+  }, 600_000);
+
+  it("the rollback and the re-install adoption hold SHARE ROW EXCLUSIVE on the trail from before their first hash to commit", async () => {
+    const rb = readSql(P20_RB), inst = readSql(P20);
+    const lock = "LOCK TABLE public.claim_receipt_corrections IN SHARE ROW EXCLUSIVE MODE";
+    const body = rb.slice(rb.indexOf("BEGIN;"));
+    expect(body.indexOf(lock)).toBeGreaterThan(0);
+    expect(body.indexOf(lock)).toBeLessThan(body.indexOf("md5("));
+    const ib = inst.slice(inst.indexOf("BEGIN;"));
+    expect(ib.indexOf(lock)).toBeGreaterThan(0);
+    expect(ib.indexOf(lock)).toBeLessThan(ib.indexOf("string_agg(c::text"));
+    vi.stubGlobal("navigator", { onLine: true });
+    const db = await setup([P19]);
+    try {
+      await db.exec(readSql(P20));
+      await corrected(db, O, ACC_O, "lk-o");
+      await actAs(db, null);
+      await db.exec(withoutCommit(rb));
+      expect(await holdsShareRowExclusive(db)).toBe(1);
+      await db.exec("COMMIT");
+      expect((await record(db)).m).not.toMatch(/^stale/);
+      await db.exec(withoutCommit(inst));
+      expect(await holdsShareRowExclusive(db)).toBe(1);
+      await db.exec("COMMIT");
+      expect(await num(db, "SELECT count(*) FROM pg_namespace WHERE nspname = 'phase3_p20_retained'")).toBe(0);
+    } finally { await db.close(); }
+  }, 600_000);
+});

@@ -60,6 +60,10 @@
 -- the record exactly and both guard triggers are enabled ('O'). Otherwise (rows changed around the guards, e.g. with
 -- triggers disabled, or the guards are not enabled now) it marks the record stale, and a stale record is never
 -- refreshed again, so a later permitted E1/E2 delete cannot fold a tampered row into a fresh md5 and re-install refuses.
+-- Every content md5 (rollback, track_retained, re-install adoption) renders the rows with TimeZone UTC, DateStyle
+-- 'ISO, MDY', IntervalStyle postgres and extra_float_digits 1 (function SET clauses / SET LOCAL), so the session that
+-- runs a rollback, delete or install never changes it; the rollback and the adoption hold SHARE ROW EXCLUSIVE on the
+-- trail from before their hash to commit, so no delete commits in between.
 -- Re-install after a rollback is supported: the retained table is adopted only if it is the same table (oid and owner
 -- recorded by the rollback), its rows still match the recorded row count and content md5 (any change made around the
 -- guards, e.g. with triggers disabled, is refused), with exactly the P20 shape (columns, types incl. numeric(14,2), NOT NULL, defaults, every
@@ -89,6 +93,13 @@ BEGIN
       RAISE EXCEPTION 'P20: public.claim_receipt_corrections is not the audit trail the P20 rollback retained (table or owner changed)';
     END IF;
     -- The retained rows must be exactly the rows the rollback recorded (kept current by permitted E1/E2 deletes).
+    -- Locked until commit so no delete lands between this check and the adoption; hashed with the settings the
+    -- rollback and track_retained pin, so the session running the install cannot change the md5.
+    LOCK TABLE public.claim_receipt_corrections IN SHARE ROW EXCLUSIVE MODE;
+    SET LOCAL TimeZone = 'UTC';
+    SET LOCAL DateStyle = 'ISO, MDY';
+    SET LOCAL IntervalStyle = 'postgres';
+    SET LOCAL extra_float_digits = 1;
     IF (SELECT count(*) FROM public.claim_receipt_corrections) IS DISTINCT FROM r.rows
        OR (SELECT md5(coalesce(string_agg(c::text, E'\n' ORDER BY c.id), '')) FROM public.claim_receipt_corrections c) IS DISTINCT FROM r.content_md5 THEN
       RAISE EXCEPTION 'P20: the retained audit rows changed since the P20 rollback (recorded % rows, md5 %); review before re-installing', r.rows, r.content_md5;
@@ -236,8 +247,10 @@ BEGIN
   EXECUTE nd;
 END $p18$;
 -- R4 record upkeep while retained (see the header): refresh only from a verified pre-delete state, else mark stale.
+-- Row text (timestamptz) is rendered with the settings the rollback pins, whatever the deleting session uses.
 CREATE OR REPLACE FUNCTION phase3_p20_audit.track_retained() RETURNS trigger
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp
+  SET TimeZone = 'UTC' SET DateStyle = 'ISO, MDY' SET IntervalStyle = 'postgres' SET extra_float_digits = 1 AS $$
 DECLARE r record; before_n bigint; before_h text;
 BEGIN
   IF to_regclass('phase3_p20_retained.rollback') IS NULL THEN RETURN NULL; END IF;
