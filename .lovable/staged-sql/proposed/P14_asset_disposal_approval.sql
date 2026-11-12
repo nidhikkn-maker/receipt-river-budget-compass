@@ -15,6 +15,12 @@
 --     account's entity; any other disposal-tagged entry stays the P8 exception 'asset_disposal_workflow'. Apply P14
 --     after P8 and roll it back before P8's rollback;
 --   * P11 installed: a checked backup restore (P11's transaction-bound ticket) may carry disposals recorded in the backup.
+--   * P18 (erasure authority) is installed LAST and rolled back FIRST (P18 header). P18 rewrites phase3_p14.exempt() and
+--     phase3_p14_audit.removal_allowed(), which read ledgerline.erasing, to its transaction-bound authority and saves the
+--     originals for its own rollback. A P14 install or re-install while P18 is installed would re-create those functions
+--     trusting the setting (an owner could set it in plain SQL and dispose an asset without approval), and a P14 rollback
+--     under P18 would drop phase3_p14.exempt() that P18's rollback must restore; so both refuse while phase3_p18 exists
+--     (review of fab1ed3, M1): roll back P18 first, then P14 (or install P14), then re-install P18.
 -- Rollback: P14_asset_disposal_approval.rollback.sql (pre-P14 catalog except the RETAINED read-only audit trail
 -- public.asset_disposal_requests, see D). No existing row or value is changed.
 --
@@ -39,7 +45,8 @@
 --    every UPDATE except decide/cancel's own transaction (phase3_p14.writing) and P11's checked restore, every TRUNCATE,
 --    and every DELETE except:
 --      E1 confirmed erasure of the caller's own data: row owner = auth.uid() AND the erasure is authorised (P18
---         erasure authority; ledgerline.erasing before P18, rewritten exactly as P20 K8 E1 does, in either install order).
+--         erasure authority once P18 is installed; before P18 the condition is the session setting ledgerline.erasing,
+--         which any role can set, exactly as the applied guards and P20 before P18: accepted for now, KK decision brief).
 --         delete_my_finance_data does not know this table, so phase3_p14_audit.follow_erasure() (AFTER DELETE ... FOR
 --         EACH STATEMENT on public.expenses; every erasure body deletes the caller's expenses) removes ALL of the
 --         caller's requests in that statement under the same condition; outside E1 it does nothing.
@@ -82,6 +89,10 @@ DO $pre$
 DECLARE t oid := to_regclass('public.asset_disposal_requests'); r record;
 BEGIN
   IF to_regnamespace('phase3_p14') IS NOT NULL THEN RAISE EXCEPTION 'P14 is already installed'; END IF;
+  -- M1: P18 is installed last; installing P14 under it would re-create guards that trust ledgerline.erasing.
+  IF to_regnamespace('phase3_p18') IS NOT NULL THEN
+    RAISE EXCEPTION 'P14: P18 (erasure authority) is installed; roll back P18 first, install P14, then re-install P18 (P18 is installed last)';
+  END IF;
   -- D: an existing request table (or audit guard schema) is accepted only as the trail a P14 rollback retained AND
   -- recorded: the same table (oid) with the same owner, and the guard schemas owned by that owner (shape checked below).
   IF t IS NOT NULL OR to_regnamespace('phase3_p14_audit') IS NOT NULL THEN
@@ -467,6 +478,8 @@ BEGIN
   IF to_regprocedure('phase3_p11.restoring()') IS NULL THEN RETURN false; END IF;
   RETURN phase3_p11.restoring();
 END $$;
+-- Before P18 the erasure exemption is the client-settable setting (as every applied guard); P18, installed after P14,
+-- rewrites it to phase3_p18.erasure_authorised() (and P14 refuses to install or roll back while P18 is installed).
 CREATE FUNCTION phase3_p14.exempt() RETURNS boolean
 LANGUAGE sql STABLE SET search_path = public, pg_temp AS $$
   SELECT current_setting('ledgerline.erasing', true) = 'on'
@@ -523,7 +536,7 @@ DECLARE erasing boolean;
 BEGIN
   IF auth.uid() IS NOT NULL THEN
     IF _owner IS DISTINCT FROM auth.uid() THEN RETURN false; END IF;
-    erasing := current_setting('ledgerline.erasing', true) = 'on'; -- before P18, as P20; rewritten below / by P18
+    erasing := current_setting('ledgerline.erasing', true) = 'on'; -- before P18 only (client-settable, as P20); P18 rewrites it
     RETURN coalesce(erasing, false);
   END IF;
   IF current_user IN ('authenticated', 'anon') THEN RETURN false; END IF;
@@ -546,24 +559,6 @@ BEGIN
   END IF;
   RAISE EXCEPTION 'P14_AUDIT_KEPT: disposal requests and decisions are audit history' USING ERRCODE = '42501';
 END $$;
--- P18 already installed (install or re-install after P18): apply P18's rewrite to removal_allowed() exactly as P18's
--- install does for every guard (same patterns), saving the original so P18's rollback restores the setting read.
-DO $p18$
-DECLARE sig constant text := 'phase3_p14_audit.removal_allowed(uuid)'; def text; nd text;
-BEGIN
-  IF to_regclass('phase3_p18.saved_functions') IS NULL THEN RETURN; END IF;
-  def := pg_get_functiondef(to_regprocedure(sig));
-  nd := regexp_replace(def, 'coalesce\(current_setting\(''ledgerline\.erasing'',\s*true\),\s*''''\)\s*<>\s*''on''', 'NOT phase3_p18.erasure_authorised()', 'gi');
-  nd := regexp_replace(nd, 'current_setting\(''ledgerline\.erasing'',\s*true\)\s*IS\s+DISTINCT\s+FROM\s*''on''', 'NOT phase3_p18.erasure_authorised()', 'gi');
-  nd := regexp_replace(nd, 'coalesce\(current_setting\(''ledgerline\.erasing'',\s*true\),\s*''''\)\s*=\s*''on''', 'phase3_p18.erasure_authorised()', 'gi');
-  nd := regexp_replace(nd, 'current_setting\(''ledgerline\.erasing'',\s*true\)\s*=\s*''on''', 'phase3_p18.erasure_authorised()', 'gi');
-  IF nd LIKE '%current_setting(''ledgerline.erasing''%' OR nd IS NOT DISTINCT FROM def THEN
-    RAISE EXCEPTION 'P14: % could not be moved to the P18 erasure authority', sig;
-  END IF;
-  INSERT INTO phase3_p18.saved_functions(signature, definition) VALUES (sig, def)
-    ON CONFLICT (signature) DO UPDATE SET definition = EXCLUDED.definition;
-  EXECUTE nd;
-END $p18$;
 -- Record upkeep while retained: refresh only from a verified pre-delete state (remaining + deleted rows match the record
 -- and both guards are enabled 'O'), else mark the record stale for good. Row text is rendered with pinned settings.
 CREATE OR REPLACE FUNCTION phase3_p14_audit.track_retained() RETURNS trigger

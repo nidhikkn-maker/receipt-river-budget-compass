@@ -25,6 +25,8 @@
 --      the rollback locks the trail (SHARE ROW EXCLUSIVE) before hashing and every hash pins TimeZone UTC, DateStyle
 --      'ISO, MDY', IntervalStyle postgres and extra_float_digits 1. A later P14 install adopts the table only if it is
 --      that same table with that owner, its rows still match the recorded count and md5, and it has exactly the P14 shape.
+-- Order: P18 is rolled back FIRST; this rollback refuses while phase3_p18 exists (P14 header, M1). Every guard trigger
+-- (incl. the follow_erasure trigger on public.expenses) must call its own phase3_p14_audit function, enabled 'O'.
 -- Re-installing P14 (P14_asset_disposal_approval.sql) keeps every retained row, removes phase3_p14_retained, re-applies
 -- the grants and policies and appends new requests.
 -- ============================================================================================
@@ -33,13 +35,18 @@ BEGIN;
 DO $pre$
 BEGIN
   IF to_regnamespace('phase3_p14') IS NULL THEN RAISE EXCEPTION 'P14 is not installed'; END IF;
+  -- M1: P18 is rolled back first (it saved phase3_p14.exempt() / phase3_p14_audit.removal_allowed() for its own rollback).
+  IF to_regnamespace('phase3_p18') IS NOT NULL THEN
+    RAISE EXCEPTION 'P14 rollback: P18 (erasure authority) is installed; roll back P18 first';
+  END IF;
   IF to_regclass('public.asset_disposal_requests') IS NULL THEN RAISE EXCEPTION 'P14 rollback: the audit trail public.asset_disposal_requests is missing'; END IF;
   IF to_regnamespace('phase3_p14_retained') IS NOT NULL THEN RAISE EXCEPTION 'P14 rollback: phase3_p14_retained already exists'; END IF;
   IF (SELECT count(*) FROM pg_trigger g WHERE g.tgrelid = 'public.asset_disposal_requests'::regclass AND NOT g.tgisinternal AND g.tgenabled = 'O'
        AND g.tgname IN ('asset_disposal_requests_guard', 'asset_disposal_requests_no_truncate') AND g.tgfoid = to_regprocedure('phase3_p14_audit.guard()')) <> 2
      OR NOT EXISTS (SELECT 1 FROM pg_trigger g WHERE g.tgrelid = 'public.asset_disposal_requests'::regclass AND g.tgname = 'asset_disposal_requests_retained_record'
        AND g.tgenabled = 'O' AND g.tgfoid = to_regprocedure('phase3_p14_audit.track_retained()'))
-     OR NOT EXISTS (SELECT 1 FROM pg_trigger g WHERE g.tgrelid = 'public.expenses'::regclass AND g.tgname = 'p14_disposal_requests_follow_erasure' AND g.tgenabled = 'O') THEN
+     OR NOT EXISTS (SELECT 1 FROM pg_trigger g WHERE g.tgrelid = 'public.expenses'::regclass AND g.tgname = 'p14_disposal_requests_follow_erasure' AND g.tgenabled = 'O'
+       AND g.tgfoid = to_regprocedure('phase3_p14_audit.follow_erasure()')) THEN
     RAISE EXCEPTION 'P14 rollback: the audit trail guards are missing or disabled; review before rolling back';
   END IF;
 END $pre$;
@@ -100,7 +107,8 @@ BEGIN
        AND g.tgname IN ('asset_disposal_requests_guard', 'asset_disposal_requests_no_truncate') AND g.tgfoid = to_regprocedure('phase3_p14_audit.guard()')) <> 2
      OR NOT EXISTS (SELECT 1 FROM pg_trigger g WHERE g.tgrelid = 'public.asset_disposal_requests'::regclass AND g.tgname = 'asset_disposal_requests_retained_record'
        AND g.tgenabled = 'O' AND g.tgfoid = to_regprocedure('phase3_p14_audit.track_retained()'))
-     OR NOT EXISTS (SELECT 1 FROM pg_trigger g WHERE g.tgrelid = 'public.expenses'::regclass AND g.tgname = 'p14_disposal_requests_follow_erasure' AND g.tgenabled = 'O') THEN
+     OR NOT EXISTS (SELECT 1 FROM pg_trigger g WHERE g.tgrelid = 'public.expenses'::regclass AND g.tgname = 'p14_disposal_requests_follow_erasure' AND g.tgenabled = 'O'
+       AND g.tgfoid = to_regprocedure('phase3_p14_audit.follow_erasure()')) THEN
     RAISE EXCEPTION 'P14 rollback: the audit trail guards were disabled or changed after the precheck; review before rolling back';
   END IF;
   -- Exactly the retained guards and policies remain on the trail (the CASCADE above removed nothing it needs).

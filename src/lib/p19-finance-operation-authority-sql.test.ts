@@ -10,6 +10,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { PGlite } from "@electric-sql/pglite";
 import { actAs, addUsers, fullSchemaDb, readSql } from "@/test/full-schema-pglite";
+import { P14_RETAINED_ACL, P14_RETAINED_KEYS, splitP14Retained } from "@/test/p14-retained-catalog";
 
 const u = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 const O = u(1), V = u(2), M = u(3);
@@ -363,8 +364,6 @@ for (const [label, extra, stack] of [["applied schema", [] as string[], false], 
   });
 }
 
-/** Catalog entries of the read-only disposal audit trail a P14 rollback retains (brief G9). */
-const P14_RETAINED = (x: string) => /asset_disposal_requests|phase3_p14_audit|phase3_p14_retained|p14_disposal_requests_follow_erasure/.test(x);
 describe("P19 in the whole proposed stack: install order and exact rollback", () => {
   it("applied → P1..P18 → P19 installs in order; rolling back P19, P18 .. P8 restores each previous catalog exactly; P7 .. P1 still roll back", async () => {
     const db = await fullSchemaDb();
@@ -378,13 +377,16 @@ describe("P19 in the whole proposed stack: install order and exact rollback", ()
       // P7 and earlier rollbacks keep archives / re-grant in another ACL order by design, with or without P19 (checked
       // separately: identical result when P19 is not installed), so exactness is asserted from P19 down to P8.
       // The P14 rollback retains the read-only disposal audit trail by design (brief G9; p14-asset-disposal-sql.test.ts):
-      // from there down, the catalog is exact apart from those retained entries.
+      // from there down, the catalog is exact plus exactly those retained entries (names, and the table ACL).
       const now = await catalog(db);
-      if (i <= all.indexOf("P14_asset_disposal_approval")) {
-        expect(snaps[i]!.filter(P14_RETAINED), `${n} rollback`).toEqual([]);
-        expect(now.filter(P14_RETAINED).some((x) => x.startsWith("n|phase3_p14_retained|")), `${n} rollback`).toBe(true);
+      const retainedFromHere = i <= all.indexOf("P14_asset_disposal_approval");
+      const split = splitP14Retained(now);
+      if (retainedFromHere) {
+        expect(splitP14Retained(snaps[i]!).retainedKeys, `${n} rollback`).toEqual([]);
+        expect(split.retainedKeys, `${n} rollback`).toEqual(P14_RETAINED_KEYS);
+        expect(split.acl, `${n} rollback`).toBe(P14_RETAINED_ACL);
       }
-      if (i >= all.indexOf("P8_asset_depreciation_posting")) expect(i <= all.indexOf("P14_asset_disposal_approval") ? now.filter((x) => !P14_RETAINED(x)) : now, `${n} rollback`).toEqual(snaps[i]);
+      if (i >= all.indexOf("P8_asset_depreciation_posting")) expect(retainedFromHere ? split.rest : now, `${n} rollback`).toEqual(snaps[i]);
     }
     await db.close();
   }, 900_000);

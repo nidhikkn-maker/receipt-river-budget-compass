@@ -119,6 +119,38 @@ describe("backup decisions for the proposed P14 / P20 audit tables", () => {
       expect(Object.keys(BACKUP_PROPOSED_EXCLUDED_TABLES).sort()).toEqual(Object.values(added).flat().sort());
     } finally { await db.close(); }
   }, 120000);
+
+  it("a backup file carrying asset_disposal_requests / claim_receipt_corrections keys restores neither (client plan and server restore)", async () => {
+    const D = ".lovable/staged-sql/proposed/";
+    const db = await fullSchemaDb([`${D}P19_finance_operation_authority.sql`, `${D}P14_asset_disposal_approval.sql`, `${D}P20_claim_receipt_correction.sql`]);
+    try {
+      await addUsers(db, { [OWNER_A]: "a@x.in", [OWNER_B]: "b@x.in" });
+      const account = { id: "00000000-0000-4000-8000-00000000c001", owner_id: OWNER_A, name: "HDFC Savings", kind: "savings", opening_balance: 100 };
+      const forged = {
+        asset_disposal_requests: [{ id: "00000000-0000-4000-8000-00000000c002", owner_id: OWNER_A, asset_id: "ast-1", asset_name: "Server", method: "scrap", disposal_date: "2026-10-31", proceeds: 0,
+          evidence_document_ids: ["00000000-0000-4000-8000-00000000c003"], reason: "Restored from a backup", book_value: 1, gain: -1, entry_id: "00000000-0000-4000-8000-00000000c004",
+          requested_by: OWNER_A, status: "approved", decided_by: OWNER_A, decided_at: "2026-10-31T00:00:00Z", decision_reason: "Restored approval" }],
+        claim_receipt_corrections: [{ id: "00000000-0000-4000-8000-00000000c005", owner_id: OWNER_A, claim_id: "00000000-0000-4000-8000-00000000c006", receipt_id: "r1",
+          before_amount: 2, after_amount: 1, before_status: "partial", after_status: "partial", receipt: {}, reason: "Restored correction", actor_id: OWNER_A, operation_key: "restored" }],
+      };
+      const file: Backup = { app: "ledgerline", version: 3, owner: OWNER_A, exportedAt: "2026-11-12", data: { accounts: [account], ...forged } as unknown as Backup["data"] };
+      const audit = async () => (await db.query<{ n: number }>("SELECT ((SELECT count(*) FROM public.asset_disposal_requests) + (SELECT count(*) FROM public.claim_receipt_corrections))::int n")).rows[0]!.n;
+      for (const owner of [OWNER_A, OWNER_B]) { // same account and cross-account
+        const { backup } = readBackup(createBackupZip(file, {}), true);
+        const plan = await planRestore(backup, owner);
+        expect(Object.keys(plan.data).filter((t) => t in BACKUP_PROPOSED_EXCLUDED_TABLES), owner).toEqual([]);
+        expect(plan.data.accounts, owner).toHaveLength(1);
+        const counts = await restore(db, owner, plan.data);
+        expect(counts["accounts"], owner).toBe(1);
+        // the server restore given the raw keys as well writes only its own table list
+        await actAs(db, owner);
+        const raw = (await db.query<{ r: { counts: Record<string, number> } }>("SELECT public.restore_finance_backup($1::jsonb) r", [JSON.stringify({ ...plan.data, ...forged })])).rows[0]!.r;
+        expect(Object.keys(raw.counts).filter((t) => t in BACKUP_PROPOSED_EXCLUDED_TABLES), owner).toEqual([]);
+        await actAs(db, null);
+        expect(await audit(), owner).toBe(0);
+      }
+    } finally { await db.close(); }
+  }, 120000);
 });
 
 describe("restore_finance_backup with the realistic fixture (applied schema)", () => {
