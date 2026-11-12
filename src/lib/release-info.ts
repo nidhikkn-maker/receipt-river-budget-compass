@@ -31,6 +31,8 @@ export interface HealthRow { key: string; label: string; state: HealthState; det
 export interface JobState { name: string; status: string; lastSuccess: string | null; reason: string | null }
 export interface HealthInput {
   signedIn: boolean; online: boolean; loadErrors: readonly LoadArea[]; pendingCount: number;
+  /** The store's readFailure: the whole last cloud read failed (loadErrors then stays empty). */
+  readFailed?: boolean;
   jobs: JobState[] | null; jobsFailed: boolean; worker: "active" | "none" | "unsupported"; today: string;
 }
 const JOB_LABEL: Record<string, string> = { "rule-watch": "Weekly check of official tax pages", "closing-prices": "Evening NSE/BSE closing prices" };
@@ -41,7 +43,10 @@ export function serviceHealth(i: HealthInput): HealthRow[] {
   const rows: HealthRow[] = [
     { key: "session", label: "Sign-in", state: i.signedIn ? "ok" : "attention", detail: i.signedIn ? "Signed in on this device" : "Not signed in" },
     { key: "network", label: "Internet on this device", state: i.online ? "ok" : "attention", detail: i.online ? "Online" : "Offline — changes are kept on this device until you reconnect" },
-    { key: "data", label: "Your records in Lovable Cloud", state: i.loadErrors.length ? "attention" : i.online ? "ok" : "unknown", detail: i.loadErrors.length ? `Couldn't load ${loadAreaList(i.loadErrors)} on the last refresh. Nothing has been deleted.` : i.online ? "Loaded on the last refresh" : "Not checked while offline" },
+    { key: "data", label: "Your records in Lovable Cloud", state: i.loadErrors.length || (i.readFailed && i.online) ? "attention" : i.online ? "ok" : "unknown",
+      detail: i.loadErrors.length ? `Couldn't load ${loadAreaList(i.loadErrors)} on the last refresh. Nothing has been deleted.`
+        : !i.online ? "Not checked while offline"
+        : i.readFailed ? "Couldn't reach your records on the last refresh. Nothing has been deleted." : "Loaded on the last refresh" },
     { key: "sync", label: "Offline entries", state: i.pendingCount ? "attention" : "ok", detail: i.pendingCount ? `${i.pendingCount} saved on this device, waiting to upload` : "Nothing waiting to upload" },
     { key: "worker", label: "Offline app support", state: i.worker === "active" ? "ok" : "unknown", detail: i.worker === "active" ? "Installed on this device" : i.worker === "unsupported" ? "This browser doesn't support it" : "Not installed (it is turned off in development and preview builds)" },
   ];

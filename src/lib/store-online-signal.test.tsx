@@ -222,6 +222,23 @@ describe("a missed 'online' event: the store re-syncs its signal from the browse
     expect(normal).toBe("Failed to fetch");
   });
 
+  it("the queue flush's own refresh failing (retry from Waiting to sync) is reported by the store, never an unhandled rejection", async () => {
+    const unhandled: unknown[] = [];
+    const onUnhandled = (e: unknown) => { unhandled.push(e); };
+    process.on("unhandledRejection", onUnhandled);
+    try {
+      await mount();
+      h.throwOn.add("profiles");
+      h.pending = [{ id: QUEUED, owner: OWNER, input: entry, files: [], createdAt: "2026-11-01T00:00:00Z" }];
+      await act(async () => { await seen.s!.retrySync(); });
+      await settle();
+      expect(h.saved).toHaveLength(1);
+      expect(seen.s!.syncState).toBe("error");
+      expect(seen.s!.readFailure).toMatchObject({ kind: "failed" });
+      expect(unhandled).toEqual([]);
+    } finally { process.off("unhandledRejection", onUnhandled); }
+  });
+
   it("navigator.onLine still false: focus, visibilitychange, pageshow and refresh leave the store offline; nothing is flushed or read", async () => {
     await offlineThenMissedOnline();
     setNavigatorOnline(false);

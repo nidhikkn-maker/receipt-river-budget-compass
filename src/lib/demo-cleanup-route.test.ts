@@ -14,7 +14,8 @@ vi.mock("@/integrations/supabase/client.server", () => ({
       getUserById: async (id: string) => ({ data: { user: { id, is_anonymous: true } }, error: null }),
       deleteUser: async (id: string) => { h.calls.push(`deleteUser:${id}`); return { data: null, error: h.deleteUserError }; },
     } },
-    from: (table: string) => ({ delete: () => ({ eq: async (column: string, value: string) => {
+    from: (table: string) => ({ select: () => { const q = { lt: () => q, order: () => q, range: async () => ({ data: [{ owner_id: "guest-1", created_at: "2026-01-01T00:00:00Z" }], error: null }) }; return q; },
+      delete: () => ({ eq: async (column: string, value: string) => {
       h.calls.push(`delete:${table}.${column}=${value}`);
       return { error: table === "demo_sessions" ? h.sessionError : null };
     } }) }),

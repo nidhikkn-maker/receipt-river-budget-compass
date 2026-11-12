@@ -620,7 +620,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
           }
         }
         if (active) setPendingCount((await pendingEntries(userId)).length);
-        if (saved) { toast.success(`${saved} offline ${saved === 1 ? "entry" : "entries"} synced`); if (!skipRefresh) void refresh(); }
+        if (saved) { toast.success(`${saved} offline ${saved === 1 ? "entry" : "entries"} synced`); if (!skipRefresh) void refresh().catch(() => {}); } // a failed read sets readFailure / syncState
         if (failed) toast.error(`${failed} offline ${failed === 1 ? "entry" : "entries"} couldn't sync — open Waiting to sync to retry`);
       } finally { syncing.current = false; }
       return saved;

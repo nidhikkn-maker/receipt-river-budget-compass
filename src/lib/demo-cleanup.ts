@@ -1,8 +1,17 @@
 // Decides what the hourly demo cleanup may do for one expired demo owner. Fails closed: records are removed only
 // when the identity lookup positively confirms a still-anonymous guest (V4 FND-05: no silent deletion).
-export type DemoCleanupDecision = "remove-guest-records" | "keep-upgraded-account" | "skip-unconfirmed";
+// "identity-missing" is only the auth API's explicit answer that the user does not exist (404 user_not_found), never
+// a lookup error: the route then finishes a half-done cleanup (identity deleted, demo_sessions row left) only when
+// demoGuestRecordsGone confirms every guest record is already gone, and never deletes records itself.
+export type DemoCleanupDecision = "remove-guest-records" | "keep-upgraded-account" | "identity-missing" | "skip-unconfirmed";
+export function isConfirmedMissingIdentity(error: unknown): boolean {
+  const e = error as { status?: unknown; code?: unknown } | null | undefined;
+  return e?.status === 404 && e?.code === "user_not_found";
+}
 export function demoCleanupDecision(lookup: { user?: { is_anonymous?: boolean | null } | null; error?: unknown } | null | undefined): DemoCleanupDecision {
-  if (!lookup || lookup.error || !lookup.user) return "skip-unconfirmed";
+  if (!lookup) return "skip-unconfirmed";
+  if (lookup.error) return isConfirmedMissingIdentity(lookup.error) && !lookup.user ? "identity-missing" : "skip-unconfirmed";
+  if (!lookup.user) return "skip-unconfirmed";
   if (lookup.user.is_anonymous === true) return "remove-guest-records";
   return "keep-upgraded-account";
 }
@@ -43,4 +52,21 @@ export async function removeDemoGuestRecords(from: (table: string) => DeleteBuil
     return { ok: false, table: step.table, error: describeError(error) };
   }
   return { ok: true };
+}
+
+type CountBuilder = { select: (column: string, opts: { count: "exact"; head: true }) => { eq: (column: string, value: string) => PromiseLike<{ count: number | null; error: unknown }> } };
+/**
+ * True only when an exact count of every DEMO_GUEST_STEPS table reads 0 rows for the owner (a missing corrections
+ * table, 42P01/PGRST205 before P20, counts as none). Any error, or a count that is not exactly 0, is doubt: false.
+ */
+export async function demoGuestRecordsGone(from: (table: string) => CountBuilder, owner: string): Promise<boolean> {
+  for (const step of DEMO_GUEST_STEPS) {
+    const { count, error } = await from(step.table).select(step.column, { count: "exact", head: true }).eq(step.column, owner);
+    if (error) {
+      if (step.required === "unless-missing" && isMissingRelation(error)) continue;
+      return false;
+    }
+    if (count !== 0) return false;
+  }
+  return true;
 }

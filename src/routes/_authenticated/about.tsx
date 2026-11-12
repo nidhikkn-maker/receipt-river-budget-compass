@@ -49,13 +49,12 @@ function useWorker(): "active" | "none" | "unsupported" {
 }
 
 function About() {
-  const { userId, loadErrors, pendingCount, refresh } = useStore();
+  const { userId, loadErrors, pendingCount, refresh, online, readFailure } = useStore();
   const jobs = useJobs();
   const worker = useWorker();
   const env = Object.fromEntries(RELEASE_ENV_KEYS.map((k) => [k, (import.meta.env as Record<string, unknown>)[k]]));
   const info = releaseInfo(env, typeof window === "undefined" ? null : window.location.host);
-  const online = typeof navigator === "undefined" ? true : navigator.onLine;
-  const health = serviceHealth({ signedIn: !!userId, online, loadErrors, pendingCount, jobs: jobs.jobs, jobsFailed: jobs.failed, worker, today: todayISO() });
+  const health = serviceHealth({ signedIn: !!userId, online, loadErrors, readFailed: !!readFailure, pendingCount, jobs: jobs.jobs, jobsFailed: jobs.failed, worker, today: todayISO() });
   const rows: [string, string][] = [["Version", info.version], ["Environment", info.environment], ["Build", info.build], ["Commit", info.commit], ["Built on", info.builtAt]];
   return (
     <div className="mx-auto max-w-2xl space-y-5">
@@ -67,7 +66,7 @@ function About() {
         <p className="mt-2 text-xs text-muted-foreground">No keys, tokens or other secrets are shown here.</p>
       </section>
       <section aria-labelledby="about-health" className="rounded-2xl border bg-card p-4">
-        <div className="mb-2 flex flex-wrap items-center justify-between gap-2"><h2 id="about-health" className="font-semibold">Service health</h2><Button size="sm" variant="outline" onClick={() => { jobs.retry(); void refresh(); }}>Check again</Button></div>
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2"><h2 id="about-health" className="font-semibold">Service health</h2><Button size="sm" variant="outline" onClick={() => { jobs.retry(); void Promise.resolve(refresh()).catch(() => {}); /* shown on the records row (readFailure) */ }}>Check again</Button></div>
         <ul className="divide-y text-sm">{health.map((h) => { const s = ICON[h.state]; const Icon = s.icon; return (
           <li key={h.key} className="flex items-start gap-3 py-2"><Icon className={`mt-0.5 h-4 w-4 shrink-0 ${s.tone}`} aria-hidden /><span className="min-w-0 flex-1"><span className="block font-medium">{h.label} <span className={`text-xs font-normal ${s.tone}`}>· {s.label}</span></span><span className="block text-xs text-muted-foreground [overflow-wrap:anywhere]">{h.detail}</span></span></li>
         ); })}</ul>
