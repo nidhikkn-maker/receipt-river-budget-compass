@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { authenticateCronRequest } from "@/integrations/supabase/cron-auth";
-import { demoCleanupDecision } from "@/lib/demo-cleanup";
+import { demoCleanupDecision, removeDemoGuestRecords } from "@/lib/demo-cleanup";
 
 // Removes visitor demo copies older than 24 hours (records, then the guest identity).
 export const Route = createFileRoute("/api/public/jobs/cleanup-demos")({
@@ -13,20 +13,25 @@ export const Route = createFileRoute("/api/public/jobs/cleanup-demos")({
         const { data: owners, error } = await supabaseAdmin.rpc("expired_demo_owners");
         if (error) return Response.json({ error: "lookup failed" }, { status: 500 });
         let removed = 0;
+        const failed: { table: string; error: string }[] = [];
         for (const id of (owners ?? []) as string[]) {
           const { data: u, error: lookupError } = await supabaseAdmin.auth.admin.getUserById(id);
           const decision = demoCleanupDecision({ user: u?.user ?? null, error: lookupError });
           if (decision === "keep-upgraded-account") { await supabaseAdmin.from("demo_sessions").delete().eq("owner_id", id); continue; } // upgraded to a real account: keep records
           if (decision === "skip-unconfirmed") continue; // lookup failed or identity missing: never delete records on doubt
-          const del = await supabaseAdmin.from("expenses").delete().eq("employee_id", id);
-          const acc = del.error ? del : await supabaseAdmin.from("accounts").delete().eq("owner_id", id);
-          if (acc.error) continue;
-          await supabaseAdmin.from("finance_preferences").delete().eq("owner_id", id);
-          await supabaseAdmin.auth.admin.deleteUser(id);
-          await supabaseAdmin.from("demo_sessions").delete().eq("owner_id", id);
+          // Records first (DEMO_GUEST_STEPS order); a failed required step keeps the identity for the next run.
+          const records = await removeDemoGuestRecords((t) => supabaseAdmin.from(t as never) as never, id);
+          if (!records.ok) { failed.push({ table: records.table, error: records.error }); console.error("demo cleanup stopped before identity removal", records.table, records.error); continue; }
+          // The demo_sessions row goes only after the identity is gone: a failed identity removal keeps it, so the next
+          // hourly run finds this guest again (records already removed, the identity retried), and it is reported.
+          const { error: userError } = await supabaseAdmin.auth.admin.deleteUser(id);
+          if (userError) { failed.push({ table: "auth.users", error: userError.message ?? String(userError) }); console.error("demo cleanup could not remove the guest identity", userError); continue; }
+          const { error: sessionError } = await supabaseAdmin.from("demo_sessions").delete().eq("owner_id", id);
+          if (sessionError) { failed.push({ table: "demo_sessions", error: sessionError.message ?? String(sessionError) }); continue; }
           removed++;
         }
-        return Response.json({ removed });
+        // A stopped guest is reported (and retried next hour); its identity and remaining records are kept.
+        return Response.json({ removed, failed }, { status: failed.length ? 500 : 200 });
       },
     },
   },
