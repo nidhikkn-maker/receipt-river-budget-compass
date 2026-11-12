@@ -9,11 +9,16 @@ export function Card({ title, children, className, action, "aria-label": label }
     </section>
   );
 }
+/**
+ * Key-value money row. The amount never wraps: when a long label and a long amount (e.g. ₹12,34,56,789.00) do not fit
+ * on one line, the amount drops to its own right-aligned line instead of squeezing the label (density audit SH-9).
+ * `money-row` lets the Signature Flow theme cap key-value groups to a readable width on wide screens (SH-8).
+ */
 export function Row({ label, value, strong, tone }: { label: string; value: ReactNode; strong?: boolean | undefined; tone?: "good" | "bad" | undefined }) {
   return (
-    <div className="flex items-baseline justify-between gap-3 border-b py-3 text-sm last:border-0">
-      <span className="text-muted-foreground">{label}</span>
-      <span className={cn("text-right font-mono font-semibold", strong && "text-base", tone === "good" && "text-success", tone === "bad" && "text-destructive")}>{value}</span>
+    <div className="money-row flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b py-3 text-sm last:border-0">
+      <span className="min-w-0 flex-auto text-muted-foreground">{label}</span>
+      <span className={cn("ml-auto shrink-0 whitespace-nowrap text-right font-mono font-semibold", strong && "text-base", tone === "good" && "text-success", tone === "bad" && "text-destructive")}>{value}</span>
     </div>
   );
 }

@@ -117,6 +117,15 @@ export function recordsTabOf(path: string): string | null {
 }
 
 /**
+ * The Records sub-navigation row is drawn only on a Records module's index page (/trips, /vault, /assets,
+ * /travel-inbox, /claim-submission). Detail and sub-pages (/trips/<id>, /assets/<id>, /assets/import) rely on the
+ * labelled Back instead (UIX §13.2), so their content starts higher on iPhone (density audit SH-1).
+ */
+export function showsRecordsSubnav(path: string): boolean {
+  return recordsTabOf(path) !== null && pathOnly(path).split("/").filter(Boolean).length === 1;
+}
+
+/**
  * Breadcrumbs follow the real path (§5.1): a page opened from Reports shows Reports, not Home → page.
  * `from` is the in-app location the person came from, if known.
  */

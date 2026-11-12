@@ -228,3 +228,57 @@ describe("Signature Flow shell while locked", () => {
     expect(screen.queryByRole("navigation", { name: "Tab bar" })).toBeNull();
   });
 });
+
+// Density audit SH-1/SH-2/SH-6 (lead gate 12 Nov 2026): one compact Back/Find row, the Records row only on Records
+// index pages, and one shared page container for pages that do not draw their own Signature header.
+describe("Signature Flow shell density (SH-1, SH-2, SH-6)", () => {
+  const subnav = () => screen.queryByRole("navigation", { name: "Records sections" });
+  it("shows the Records row on Records index pages with the current module marked", () => {
+    for (const [path, current] of [["/trips", "Travel"], ["/travel-inbox", "Travel"], ["/vault", "Documents"], ["/assets", "Assets"], ["/claim-submission", "Reimbursements"]] as const) {
+      local.path = path;
+      const view = render(<SignatureShell><p>body</p></SignatureShell>);
+      const row = subnav();
+      expect(row, path).not.toBeNull();
+      expect(within(row!).getByRole("link", { name: current })).toHaveAttribute("aria-current", "page");
+      view.unmount();
+    }
+  });
+  it("hides the Records row on detail and sub-pages, where the labelled Back is enough", () => {
+    for (const path of ["/trips/trip-1", "/trips/trip-1?section=budget", "/assets/import", "/assets/aaaa-1", "/vault/doc-1"]) {
+      local.path = path;
+      const view = render(<SignatureShell><p>detail</p></SignatureShell>);
+      expect(subnav(), path).toBeNull();
+      expect(within(screen.getByRole("navigation", { name: "Breadcrumb" })).getByRole("button", { name: /^Back to / })).toBeInTheDocument();
+      view.unmount();
+    }
+  });
+  it("keeps Find in the Back row with its full accessible name; the label can be visually hidden on iPhone", () => {
+    local.path = "/trips";
+    render(<SignatureShell><p>body</p></SignatureShell>);
+    const row = screen.getByRole("navigation", { name: "Breadcrumb" }).parentElement!;
+    expect(row).toHaveClass("sf-crumbs");
+    const find = within(row).getByRole("button", { name: "Find anything" });
+    expect(find).toHaveClass("sf-find");
+    expect(find.querySelector(".sf-find-label")).toHaveTextContent("Find anything");
+  });
+  it("renders the crumbs, the Records row and the route body inside one shared .sf-page container", () => {
+    local.path = "/trips";
+    const view = render(<SignatureShell><p>route body</p></SignatureShell>);
+    const page = view.container.querySelector(".sf-page[data-sf-page]");
+    expect(page).not.toBeNull();
+    expect(page).toHaveTextContent("route body");
+    expect(page!.querySelector(".sf-crumbs")).not.toBeNull();
+    expect(page!.contains(subnav())).toBe(true);
+  });
+  it("pages that draw their own Signature header keep their layout (no extra container)", () => {
+    local.path = "/home";
+    const view = render(<SignatureShell><p>hub body</p></SignatureShell>);
+    expect(view.container.querySelector(".sf-page[data-sf-page]")).toBeNull();
+    expect(view.container.querySelector(".sf-route-plain")).toHaveTextContent("hub body");
+  });
+  it("header Calendar and Notifications use the 44 px icon-button class", () => {
+    render(<SignatureShell><p>body</p></SignatureShell>);
+    const banner = screen.getByRole("banner");
+    for (const name of ["Calendar", "Notifications"]) expect(within(banner).getByRole("link", { name })).toHaveClass("sf-icon-btn");
+  });
+});
