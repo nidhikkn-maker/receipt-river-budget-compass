@@ -1,0 +1,1 @@
+Stopped by lead 2026-11-11 ~21:45Z during run-1: commit rejected on independent review (HIGH: claim_receipt_corrections FK ON DELETE CASCADE lets a direct expenses DELETE erase correction audit history; predates this commit). Not a runner failure. Superseded by the next tracka/receipt-correction-2 commit.

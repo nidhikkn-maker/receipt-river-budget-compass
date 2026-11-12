@@ -1,0 +1,1331 @@
+
+ RUN  v4.1.12 /home/user/thapal-f1r
+
+stderr | src/components/books/market-workflow-persistence.test.tsx > actual price refresh → installed reviewed-save RPC → net-worth/Home → reload preserves costs and creates no ledger records
+An update to NetWorthCard inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ ✓ src/lib/security-phase1-sql.test.ts (72 tests) 48782ms
+     ✓ legacy_company_viewer: effective rights identical at 0088, P1, P1+P2 and P1+P2+P4, and equal to the stored role  316ms
+     ✓ a short-lived grant expires on its own; another person's grant never helps  1215ms
+     ✓ each __unguarded original is not executable by clients; wrappers keep name, signature, return type, SECURITY and grants  2604ms
+     ✓ the assistant-refusing writer set equals every client-callable VOLATILE non-trigger function of 0088+P1+P2 not already step-up guarded  2155ms
+     ✓ every wrapped RPC refuses an assistant session before doing anything; the same call as the user is not refused for being an assistant  504ms
+     ✓ P4b (optional hook): blocks non-GET assistant requests and revoked clients; humans unaffected; rollback removes only the hook  526ms
+     ✓ same-account restore: refused without step-up, succeeds with it and keeps one copy of each record  2809ms
+     ✓ cross-account restore with step-up remaps ids and leaves the source account untouched; an assistant cannot restore  2620ms
+     ✓ erasure with step-up leaves no owner-linked row outside the documented kept tables; other owners keep theirs  2643ms
+     ✓ no pre-existing row changes through P1, P2 and P4; each rollback restores the previous catalog exactly  4381ms
+stderr | src/components/books/market-workflow-persistence.test.tsx > foreign broker cash linked=false saves currency through the real form, persists FX and produces an INR snapshot without double counting
+An update to NetWorthCard inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+stderr | src/components/books/market-workflow-persistence.test.tsx > foreign broker cash linked=true saves currency through the real form, persists FX and produces an INR snapshot without double counting
+An update to NetWorthCard inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ ✓ src/components/books/market-workflow-persistence.test.tsx (27 tests) 57071ms
+   ✓ actual price refresh → installed reviewed-save RPC → net-worth/Home → reload preserves costs and creates no ledger records  3384ms
+   ✓ missing-price setting=true survives owner save/reload and controls the actual rendered exception  2199ms
+   ✓ missing-price setting=false survives owner save/reload and controls the actual rendered exception  2007ms
+   ✓ saved NAV staleness threshold 7 days drives the actual exception without changing price  2009ms
+   ✓ saved NAV staleness threshold 9 days drives the actual exception without changing price  2135ms
+   ✓ quantity 12 compares against pooled same-ISIN Demat totals and configured alert persists  1846ms
+   ✓ quantity 13 compares against pooled same-ISIN Demat totals and configured alert persists  1954ms
+   ✓ unusual-value threshold enabled=true compares owned cost, not full acquisition cost  2060ms
+   ✓ unusual-value threshold enabled=false compares owned cost, not full acquisition cost  1790ms
+   ✓ persisted live quote displays its exact provenance and last-success facts without rewriting acquisition costs  1910ms
+   ✓ persisted delayed quote displays its exact provenance and last-success facts without rewriting acquisition costs  1965ms
+   ✓ persisted eod quote displays its exact provenance and last-success facts without rewriting acquisition costs  2174ms
+   ✓ persisted nav quote displays its exact provenance and last-success facts without rewriting acquisition costs  2185ms
+   ✓ persisted manual quote displays its exact provenance and last-success facts without rewriting acquisition costs  1795ms
+   ✓ persisted statement quote displays its exact provenance and last-success facts without rewriting acquisition costs  1988ms
+   ✓ persisted Home snapshot shows contribution-adjusted movement and missing-price quality from the actual shared hook  2069ms
+   ✓ failed NAV refresh preserves last successful price/refresh and displays stale valuation after owner reload  2107ms
+   ✓ persisted source-linked bond clean/dirty=false accrual, FX and snapshot use the same actual net-worth flow  2186ms
+   ✓ persisted source-linked bond clean/dirty=true accrual, FX and snapshot use the same actual net-worth flow  2010ms
+   ✓ persisted bond matured stays explicitly incomplete rather than inventing a value  2094ms
+   ✓ persisted bond missing-fx stays explicitly incomplete rather than inventing a value  1884ms
+   ✓ persisted bond missing-original stays explicitly incomplete rather than inventing a value  2046ms
+   ✓ persisted bond missing-terms stays explicitly incomplete rather than inventing a value  1842ms
+   ✓ foreign broker cash linked=false saves currency through the real form, persists FX and produces an INR snapshot without double counting  2577ms
+   ✓ foreign broker cash linked=true saves currency through the real form, persists FX and produces an INR snapshot without double counting  2176ms
+   ✓ actual broker-cash account link saves/reloads, counts ledger cash once and preserves a statement discrepancy  2402ms
+   ✓ linked broker cash, independent deposit and duplicate manual/Demat security remain separately accounted after reload  2266ms
+ ✓ src/lib/failure-injection.test.ts (60 tests) 62827ms
+     ✓ 1. repeat upload of the same file (twice) and a later overlapping re-download → one ledger row per statement line  332ms
+     ✓ 3b. the database commits but the response is lost (entry save, save + read-back, claim, confirm) → no retry creates a second row  542ms
+     ✓ 4. concurrent imports of the same document (claim A, claim B, then saves in either order, confirm both; and fully concurrent) → one row per line, no error  820ms
+     ✓ 5. deletion through the API (PostgREST DELETE, TRUNCATE) instead of the interface: archive-controlled rows and line registrations  448ms
+     ✓ 3b. the database commits but the response is lost (entry save, save + read-back, claim, confirm) → no retry creates a second row  341ms
+     ✓ 4. concurrent imports of the same document (claim A, claim B, then saves in either order, confirm both; and fully concurrent) → one row per line, no error  725ms
+     ✓ W1. Withdraw (app removal path): row and receipt files kept, no DELETE sent, excluded from every reader; Restore counts it again  440ms
+     ✓ W1. Withdraw (app removal path): row and receipt files kept, no DELETE sent, excluded from every reader; Restore counts it again  347ms
+     ✓ W5. a withdrawn entry stays unposted through the posting backfill; Restore posts it; once posted it can no longer be withdrawn  3107ms
+     ✓ D4. step-up required for approval; after approval P7 posts Dr Loss on asset disposal 53,000.00 / Cr Fixed assets 53,000.00; an unapproved disposal entry never posts  3380ms
+     ✓ X4. sensitive export without step-up refused, with step-up audited (step_up true); P2: a viewer without 'export' is refused, a granted company member passes, cross-company refused  3297ms
+     ✓ U1. Undo: created unposted rows withdrawn with reason/actor/time/source (rows, receipts, statement ref and original kept); the matched bill only loses its match; figures back; repeat Undo replays  811ms
+     ✓ U2. interrupted import, failed and lost Undo responses, then a re-import: only confirmed rows withdrawn once; the same lines are neither duplicated nor reactivated  643ms
+     ✓ U3. reordered statement and a different file with the same name: identities come from the lines, never the file; each Undo touches only its own upload  728ms
+     ✓ U4. controlled paths: a created row matched to other statement evidence since → correction (refused, nothing changed); a closed period → refused; the app refuses Undo without P16  701ms
+     ✓ U5. restore only through the authorised operation; an older backup cannot reactivate; a later Undo replay never re-withdraws a restored entry  843ms
+     ✓ U6. R-P10-1 / P7: activating balanced books after an Undo never posts the withdrawn rows; on active books a later Undo reverses posted rows (linked reversal), withdraws none  992ms
+ ✓ src/lib/security-proposed-sql.test.ts (80 tests) 31499ms
+     ✓ P1 then P2 change no pre-existing row (count + md5 per table); rollback restores 0088 objects exactly  406ms
+     ✓ 0088 baseline leaves owner-linked rows in tables added after 0058  2943ms
+     ✓ after P1 (+P2) no owner-linked row remains outside the documented kept tables; other owners keep theirs  4917ms
+     ✓ P1 keeps the delete_my_finance_data contract (no args, void, definer, authenticated only)  2353ms
+     ✓ every new or replaced definer function sets search_path, checks auth.uid() and is not executable by anon/PUBLIC  2235ms
+ ✓ src/lib/backup-restore-sql.test.ts (12 tests) 30604ms
+     ✓ every owner-scoped table in the applied schema is backed up or excluded with a reason; classifications stay current  2834ms
+     ✓ every id-like and JSON column of a backed-up table is classified  2117ms
+     ✓ seeds every table; investment rows are written after the server restore when the server does not count them  2655ms
+     ✓ cross-account restore: zero orphans in the database, identical counts and totals, repeat restore does not duplicate, source untouched  2868ms
+     ✓ legacy v1 JSON and v2 ZIP backups restore through the real restore function  2675ms
+     ✓ same-account restore twice keeps one copy and byte-identical preferences  2748ms
+     ✓ legacy depreciation ids collide across owners in the database; owner-scoped ids do not (R12)  2568ms
+     ✓ the original owner's saved legacy posting is reused even when the screen has not loaded it (no second copy)  2393ms
+     ✓ a backup holding a legacy and an owner-scoped copy of one posting restores both rows across accounts  2585ms
+     ✓ B's restored copy has A's hand-calculated figures; every embedded id is B's own; A is untouched; a failed restore changes nothing  2692ms
+     ✓ applied schema: cross-account restore keeps a withdrawal with its history; an older same-account backup REINSTATES (recorded gap) a withdrawn entry  2210ms
+     ✓ with P10: cross-account restore keeps a withdrawal with its history; an older same-account backup never reinstates a withdrawn entry  2245ms
+ ✓ src/lib/accounting-posting-proposed-sql.test.ts (11 tests) 27959ms
+     ✓ installs on 0088 and backfill preview equals the TypeScript corporate-statements derivation (lines, trial balance, exceptions)  3187ms
+     ✓ commit posts the reviewed preview exactly once; card settlement has no expense line, transfers create no income; replays are idempotent  2651ms
+     ✓ database refuses unbalanced, per-entity/per-currency unbalanced, badly signed or inexact lines, direct writes and any edit of posted lines  2314ms
+     ✓ store.tsx RPC shapes work on the single posting layer: journal post/replay/recovery, immutable anchors, reversal, accountant grant/review/revoke  2663ms
+     ✓ partial settlement leaves the accrual due; one bank payment cannot settle twice or exceed the balance; the settled source is retained  2381ms
+     ✓ closed periods refuse postings (function and direct paths); correcting entries post in an open period; reopening on Audit restores posting  2346ms
+     ✓ after a committed backfill, ledger edits post reversal + replacement (never in place); closed periods block backfill; undo reverses and deactivates  2622ms
+     ✓ RLS: other owners cannot read or write postings; company members and accountants see only granted companies and lose access on revocation  2348ms
+     ✓ delete_my_finance_data and restore_finance_backup succeed with postings present; erasure removes only the caller’s accounting rows  2417ms
+     ✓ installs after P1/P2; P1 erasure still removes postings and revoked company members lose posting access  2283ms
+     ✓ installing, using and rolling back P3 leaves every existing owner table byte-identical and the catalog equal to 0088  2739ms
+ ✓ src/lib/p18-erasure-authority-sql.test.ts (9 tests) 25352ms
+     ✓ attack: SET / set_config of the old settings no longer bypasses any guard; no function reads them  3013ms
+     ✓ authorised erasure works end to end (rows, then files) and writes one append-only audit record  2378ms
+     ✓ a client can't write the authority or audit rows or call the helpers; an exemption never survives its transaction  2219ms
+     ✓ install refuses twice; rollback refuses while audit rows exist, then restores the exact previous catalog  2532ms
+     ✓ attack: SET / set_config of the old settings no longer bypasses any guard; no function reads them  2975ms
+     ✓ authorised erasure works end to end (rows, then files) and writes one append-only audit record  3178ms
+     ✓ a client can't write the authority or audit rows or call the helpers; an exemption never survives its transaction  2914ms
+     ✓ P9: the verified 'saved to add later' cleanup still works through discard_used_pending_document  2990ms
+     ✓ install refuses twice; rollback refuses while audit rows exist, then restores the exact previous catalog  3144ms
+stderr | src/components/register-workflow-persistence.test.tsx > grouped actual file-to-review, installed SQL and read-back acceptance > ambiguous property names require owner selection before any lease record or original is saved
+An update to Button inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ ✓ src/lib/phase3-posting-sql.test.ts (30 tests) 22647ms
+       ✓ a company close blocks that company's postings only; backfill skips closed periods and reports them (DN-P3-4)  3087ms
+       ✓ undo reverses every entry posting (history kept) and deactivates; replay is idempotent; later edits post nothing  2975ms
+       ✓ confirmed erasure removes the owner's posting records only  3149ms
+     ✓ installing P7, previewing, committing the backfill and rolling back never changes a pre-existing row; catalog returns exactly  3410ms
+     ✓ refuses to install without P5, or together with the superseded P3  4977ms
+ ✓ src/lib/phase2-restore-investments-sql.test.ts (8 tests) 20861ms
+     ✓ before P5b the server ignores investment rows (the app writes them in a second, separate step)  3218ms
+     ✓ v3 round trip (same account, then cross-account) restores investments in the server transaction; the client step has nothing left to write  2901ms
+     ✓ v2 backup (no investment tables) still restores and reports zero investment rows  2459ms
+     ✓ a failing investment row rolls back the WHOLE restore (accounts, entries, documents, preferences)  2488ms
+     ✓ natural keys: an existing demat account / holding under another id is matched, kept unchanged, and the differences are reported  2452ms
+     ✓ step-up is still required (P4) and assistants are refused even with step-up  2467ms
+     ✓ rollback restores restore_finance_backup exactly as P4 left it; the P4 rollback refuses while P5b is installed; restored rows stay  2639ms
+     ✓ the old client id (company key + year + count) collides across owners; openingPostingId does not; stored ids are untouched  2230ms
+ ✓ src/components/register-workflow-persistence.test.tsx (10 tests) 20696ms
+     ✓ ambiguous property names require owner selection before any lease record or original is saved  3256ms
+     ✓ lease period, due date, payment terms and GST flag persist without manual duplication and feed rent/tax working  2204ms
+     ✓ direct lease-source correction updates approved records while first printed values remain accessible  2675ms
+     ✓ invoice-derived asset retains existing payment link; ambiguity=false never invents a payment  2203ms
+     ✓ invoice-derived asset retains existing payment link; ambiguity=true never invents a payment  2116ms
+     ✓ GST invoice identity preserves unrelated saved records (same) through review, SQL and report read-back  2023ms
+     ✓ GST invoice identity preserves unrelated saved records (party) through review, SQL and report read-back  2076ms
+     ✓ GST invoice identity preserves unrelated saved records (direction) through review, SQL and report read-back  2196ms
+     ✓ GST invoice identity preserves unrelated saved records (year) through review, SQL and report read-back  1935ms
+ ✓ src/lib/preserve-records-sql.test.ts (2 tests) 16784ms
+     ✓ an unrelated settings change saves without a financial-approval prompt and keeps every stored record  14329ms
+     ✓ the old behaviour (writing the tidied view back) changes financial sections; the database refuses it without approval  2452ms
+ ✓ src/lib/p0-038-guc-authority-sql.test.ts (7 tests) 18923ms
+     ✓ P10 phase3_p10.writing: a set setting does not unfreeze or rewrite a withdrawal; Withdraw / Restore entry still work  3115ms
+     ✓ P13 phase3_p13.applying / deciding: a team member's direct money edit and a request decision stay refused; approval still applies  2643ms
+     ✓ P9 phase3_p9.claiming: a set setting does not let a client write statement-line registration; claim / confirm still work  2272ms
+     ✓ P11 phase3_p11.checked (and P14's restore exemption): the direct restore and a direct disposal stay refused; the checked restore works and is recorded  2297ms
+     ✓ phase3_p7.reversal_insert / reason / request / meta / writer: no direct reversal, no forged posting audit, no direct posting rows  3010ms
+     ✓ ledgerline.posting_writer / accounting_request / restoring: no forged accounting evidence or postings  2236ms
+     ✓ installs in order, no installed function trusts a retired setting, and the reverse rollback restores the exact catalog  3337ms
+ ✓ src/lib/phase2-entities-sql.test.ts (24 tests) 17254ms
+     ✓ P4 rollback refuses while P5 is installed; P5 rollback restores catalog and data exactly; P4/P2/P1 roll back after it; P5 re-applies  3947ms
+     ✓ every owner-scoped table P5 adds has exactly one backup decision; the applied-schema lists need no change yet  2455ms
+ ✓ src/lib/p19-finance-operation-authority-sql.test.ts (18 tests) 15082ms
+     ✓ applied → P1..P18 → P19 installs in order; rolling back P19, P18 .. P8 restores each previous catalog exactly; P7 .. P1 still roll back  4600ms
+     ✓ P19 refuses to install over an unreviewed function body  2181ms
+ ✓ src/lib/statement-pipeline/interruption-flow.test.ts (10 tests) 16810ms
+   ✓ interruption at source-before: no false completion, exact retry, persisted evidence/report and complete undo  2957ms
+   ✓ interruption at save-before: no false completion, exact retry, persisted evidence/report and complete undo  2047ms
+   ✓ interruption at save-after: no false completion, exact retry, persisted evidence/report and complete undo  2055ms
+   ✓ interruption at evidence-before: no false completion, exact retry, persisted evidence/report and complete undo  1944ms
+   ✓ interruption at evidence-after: no false completion, exact retry, persisted evidence/report and complete undo  1859ms
+   ✓ interruption at draft-after: no false completion, exact retry, persisted evidence/report and complete undo  1829ms
+   ✓ interruption at checkpoint-after: no false completion, exact retry, persisted evidence/report and complete undo  1739ms
+   ✓ interruption at refresh-after: no false completion, exact retry, persisted evidence/report and complete undo  2373ms
+ ✓ src/lib/books/document-workflow-persistence.test.ts (6 tests) 13050ms
+   ✓ contract reviewed obligations persist once after a lost response, remain unpaid, and audit is owner-only  3023ms
+   ✓ receipt storage commit changes no financial register and does not manufacture missing values  2139ms
+   ✓ utility bill persists consumer identity and property-source link without invented acquisition cost or assets  1974ms
+   ✓ maintenance invoice links the reviewed asset and source; it never posts depreciation or spends twice  1992ms
+   ✓ invoice source → reviewed GST commit → reloaded liability agrees while its payment is counted once  2044ms
+   ✓ database rejection rolls back preferences, evidence lock and audit together; corrected retry succeeds  1876ms
+ ✓ src/lib/p14-asset-disposal-sql.test.ts (11 tests) 11926ms
+     ✓ applied schema: installs; rollback refuses while requests exist, then restores the exact catalog  3195ms
+     ✓ whole proposed stack P1..P13 (P8 hook wrapped and restored): installs; rollback refuses while requests exist, then restores the exact catalog  3068ms
+     ✓ no step-up check installed → an approval is refused (P14_STEP_UP_UNAVAILABLE) and nothing is disposed  2194ms
+ ✓ src/lib/books/company-upload-workflow.test.ts (7 tests) 14773ms
+   ✓ upload → private read → revocation keeps exact company original, no personal or cross-company access  2886ms
+   ✓ an edit grant cannot upload elsewhere, spoof the storage owner, or reference another company original  2139ms
+   ✓ owner retagging revokes uploader access too; shared editors cannot replace existing source evidence  1945ms
+   ✓ metadata failure safely cleans only uncommitted originals and keeps committed read-back  1979ms
+   ✓ metadata lost safely cleans only uncommitted originals and keeps committed read-back  1922ms
+   ✓ permissive team receipt access cannot unlock private or other-company DocuRepo originals  1809ms
+   ✓ view-only grants read the original but cannot upload; revocation and signed-out access deny it  2090ms
+ ✓ src/lib/p9-payee-archive-sql.test.ts (4 tests) 11851ms
+     ✓ a signed-in write that drops a payee keeps the stored payee; edits and archive still save; whole-row delete and truncate are refused  3724ms
+     ✓ restoring an older backup without a payee keeps that payee; the service path and confirmed erasure still remove payees  2500ms
+     ✓ whole proposed stack + P18: P18 installs over B4 (no session setting to rewrite), payees stay archive-only, authorised erasure removes them  3187ms
+     ✓ rollback restores the exact pre-P9 catalog and leaves the payees as stored; P9 installs again  2437ms
+ ✓ src/lib/p17-locked-evidence-storage-sql.test.ts (4 tests) 12725ms
+     ✓ applied schema: no client path deletes, overwrites, moves, replaces or re-plants a locked file; exact rollback  3983ms
+     ✓ proposed stack P1..P16 (as P15's test, without P3): no client path deletes, overwrites, moves, replaces or re-plants a locked file; exact rollback  3260ms
+     ✓ applied schema: in plain SQL an owner can set ledgerline.erasing and delete a locked documents row, after which P17 no longer protects the file  2376ms
+     ✓ proposed stack (P9 guard trusts the same setting): in plain SQL an owner can set ledgerline.erasing and delete a locked documents row, after which P17 no longer protects the file  3101ms
+ ✓ src/lib/phase2-registers-sql.test.ts (20 tests) 14443ms
+     ✓ P5 rollback refuses while P6 is installed; P6 rollback restores catalog and data; anchors and numbers survive a re-apply; P5 then rolls back  4753ms
+     ✓ every owner-scoped table P6 adds has exactly one backup decision; the applied-schema lists need no change yet  2567ms
+ ✓ src/lib/transaction-deletion.repro.test.ts (4 tests) 10042ms
+     ✓ removes the row permanently; the audit row keeps only amount/date/type/title; links are orphaned; balances change with no reversal  2957ms
+     ✓ deleting one side of a confirmed transfer leaves the other side excluded from balances (money vanishes from the wallet)  2568ms
+     ✓ deleting a loan's funding entry keeps the loan but drops the link; closed periods are protected; the last delete wipes category undo history  2192ms
+     ✓ a team member with the Finance role can hard-delete another person's entry once an admin allows delete_expenses (default off)  2323ms
+ ✓ src/lib/security-proposed-restore-sql.test.ts (4 tests) 10082ms
+     ✓ same-account restore succeeds and keeps one copy of each record  3457ms
+     ✓ cross-account restore succeeds with remapped ids and leaves the source account untouched  2282ms
+     ✓ same-account restore succeeds and keeps one copy of each record  2206ms
+     ✓ cross-account restore succeeds with remapped ids and leaves the source account untouched  2129ms
+ ✓ src/components/smart-add/smart-add-flow.test.tsx (10 tests) 10138ms
+     ✓ reads Amex ending 1006 as a suggestion with evidence; Confirm stays blocked until the owner confirms it; one save with the source  2173ms
+     ✓ changing the payment account by hand, cancelling the confirmation and hiding/reopening the sheet keeps the source and saves once  1570ms
+     ✓ a failed save retried after re-confirming reuses the same draft id, so it can't create a second entry  1049ms
+     ✓ a false-positive duplicate is released only with a reason, which is saved with the entry  1022ms
+     ✓ “It's the same bill” keeps a confirmed duplicate from being posted (Enter can't skip it either)  1010ms
+     ✓ a strong matching entry (Statement Desk rules) also needs a reason to be kept separate, or stays unposted as the same bill  1177ms
+     ✓ the same receipt file already on another entry can't be posted (no 'use anyway')  946ms
+     ✓ after a bill is read, classic Save waits for a confirmed account; 'Not paid from my accounts' is an explicit choice  543ms
+     ✓ the classic Smart Add sheet (same review, no Confirm step) also waits for the owner to confirm the suggested account  342ms
+     ✓ resuming a saved draft keeps its id and receipt and saves once  303ms
+ ✓ src/lib/phase3-depreciation-sql.test.ts (7 tests) 10260ms
+     ✓ installs only on P6 + P7 r2 and only once  4971ms
+ ✓ src/lib/report-specialized-persistence.test.ts (1 test) 9149ms
+   ✓ remaining report families freeze real PDFs and saved source records through lost replies and owner-isolated restart  9148ms
+ ✓ src/lib/phase2-independent.test.ts (2 tests) 8218ms
+     ✓ closed periods: today a company's close blocks personal entries; after P5 only that company's entries are blocked  5447ms
+     ✓ tenant isolation, guarded writes only, assistants read-only  2762ms
+ ✓ src/lib/statement-pipeline/workflow-persistence.test.ts (4 tests) 8871ms
+   ✓ partial persistence, retry, source retention, reconciliation and report all agree on two source lines  2935ms
+   ✓ durable original precedes every post; interrupted source-link retries retain one document, exact figures and traceable rows  2109ms
+   ✓ account creation survives a later failure so an accepted-plan retry reuses the returned account  1861ms
+   ✓ confirmed partial upload survives a new session; stored original retry posts once and financial report agrees  1964ms
+ ✓ src/lib/backup-registry-types.test.ts (3 tests) 9240ms
+     ✓ every id-like path of the stored preference types is classified  1685ms
+     ✓ every id-like path of the JSON columns of backed-up tables is classified  3817ms
+     ✓ every path exception still exists in a stored type (no stale classifications)  3734ms
+ ✓ src/lib/p10-withdrawal-sql.test.ts (3 tests) 9211ms
+     ✓ installs on the applied schema; rollback restores the exact catalog and keeps rows and withdrawal history  3296ms
+     ✓ erasure and the service path still delete; another user and a signed-in DELETE never do; opening Undo withdraws  2471ms
+     ✓ installs on, and rolls back off, the whole proposed stack P1..P9 (catalog exact)  3439ms
+ ✓ src/lib/statement-pipeline/atomic-undo-integration.test.ts (4 tests) 8962ms
+   ✓ actual atomic Undo orchestrator → SQL → persistence success  2711ms
+   ✓ actual atomic Undo orchestrator → SQL → persistence lost-response  2118ms
+   ✓ actual atomic Undo orchestrator → SQL → persistence mid-delete-failure  2155ms
+   ✓ actual atomic Undo orchestrator → SQL → persistence stale-revision  1975ms
+ ✓ src/components/asset-document-persistence.test.tsx (3 tests) 8614ms
+     ✓ maintenance review → installed SQL → reload retains source, tax and book values through lost response and permission denial  3385ms
+     ✓ warranty review → installed SQL → reload retains source, tax and book values through lost response and permission denial  2680ms
+     ✓ asset_invoice review → installed SQL → reload retains source, tax and book values through lost response and permission denial  2546ms
+ ✓ src/lib/integrity-baseline-sql.test.ts (4 tests) 8417ms
+     ✓ runs on the full applied schema inside a read-only transaction and flags lists at a previous cap  3335ms
+     ✓ identical output before and after a no-op, different after any change  2543ms
+     ✓ the read-only transaction refuses writes  2523ms
+ ✓ src/lib/p20-claim-receipt-correction-sql.test.ts (17 tests) 7952ms
+ ✓ src/lib/security-phase1-e2e.test.ts (20 tests) 8167ms
+     ✓ on today's production schema (no P4) the server keeps working: no grant is recorded and the in-memory limiter is used  2381ms
+ ✓ src/lib/books/exception-workflow-persistence.test.ts (1 test) 7647ms
+   ✓ company differences/missing bills persist, resolve from saved evidence, and freeze selected report families with interrupted-save replay  7645ms
+ ✓ src/lib/phase3-coordinator-independent.test.ts (2 tests) 7862ms
+     ✓ balanced per batch and currency, immutable for every role, no hard delete of posted entries, owner-only reads  4512ms
+     ✓ KK decision 1: a reversal keeps the original row unchanged and adds a separate, linked, balanced reversal  3348ms
+ ✓ src/lib/p9-statement-archive-sql.test.ts (14 tests) 7797ms
+     ✓ installs after P8, keeps P1's confirmed erasure working, blocks authenticated deletes, and every rollback runs in reverse  3705ms
+ ✓ src/lib/p13-team-requests-sql.test.ts (2 tests) 6851ms
+     ✓ applied schema + P9 + P10: team deletes and money edits refused; request → owner/Finance decision applies it; audit kept; rollback exact  3556ms
+     ✓ whole stack P1..P11 + P13: entity separation for requests and approvals; confirmed erasure still works; rollback exact  3292ms
+ ✓ src/lib/p11-restore-receipts-sql.test.ts (2 tests) 7177ms
+     ✓ applied schema: direct restore refused; first restore recorded; the same payload again changes nothing; re-restore needs a reason; rollback exact  3651ms
+     ✓ on the whole proposed stack P1..P10: the step-up check stays in force through the checked restore; rollback exact  3524ms
+ ✓ src/lib/p15-export-sql.test.ts (3 tests) 7168ms
+     ✓ applied schema: installs; the audit is append-only; rollback refuses while audit rows exist, then restores the exact catalog  3639ms
+     ✓ whole proposed stack P1..P14: installs; the audit is append-only; rollback refuses while audit rows exist, then restores the exact catalog  3492ms
+stdout | src/lib/books/accounting-annual-acceptance.test.ts > 12-month disposable company: persisted balanced journals, real CSV extraction, statements, source ZIP, correction, restart, review and fail-closed close
+{"company":"Synthetic Meridian Engineering Ltd","period":"2025-04-01 to 2026-03-31","months":12,"journals":117,"canonicalEntries":135,"extractedBankRows":65,"expected":{"profit":286600,"assets":1439600,"liabilities":388000,"equity":1051600,"cash":946000,"operating":426000,"investing":-120000,"financing":40000},"calculated":{"profit":286600,"assets":1439600,"liabilities":388000,"equity":1051600,"cash":{"opening":600000,"operating":426000,"investing":-120000,"financing":40000,"unclassified":0,"closing":946000,"difference":0}},"cashClassificationDifference":{"operating":0,"financing":0},"trialDebit":2353000,"trialCredit":2353000,"originals":117,"unresolved":[],"fullWorkflowAccepted":false,"limitations":["Opening/invoices are supplied synthetic schedules, not actual AI document extraction.","Bank CSV is generated from synthetic canonical movements, not an independent bank original.","Reconciliation persistence uses isolated adapter updates, not installed correction RPC.","No real-route upload-to-close browser journey or hosted acceptance.","Statutory disclosures and filing approval remain incomplete."]}
+
+ ✓ src/lib/books/accounting-annual-acceptance.test.ts (1 test) 6184ms
+   ✓ 12-month disposable company: persisted balanced journals, real CSV extraction, statements, source ZIP, correction, restart, review and fail-closed close  6182ms
+ ✓ src/lib/p9-coordinator-independent.test.ts (2 tests) 6266ms
+     ✓ one statement line can be registered once, however often it is imported  3845ms
+     ✓ signed-in owners cannot delete archive-controlled rows; the service path can  2418ms
+ ✓ src/lib/phase3-completion-sql.test.ts (17 tests) 6333ms
+ ✓ src/lib/no-browser-prompt.acceptance.test.ts (4 tests) 5581ms
+     ✓ every screen fixed so far contains no window.prompt(, window.confirm( or browser prompt(/confirm( call  868ms
+     ✓ strict: no browser prompt or confirm anywhere in src outside tests  4680ms
+ ✓ src/lib/p16-statement-undo-sql.test.ts (3 tests) 5351ms
+ ✓ src/lib/books/corporate-persistence.test.ts (1 test) 5894ms
+   ✓ saved company ledger → all five frozen statements → owner-denied read → lost reply/restart recovery preserves exact originals and single report  5891ms
+ ✓ src/lib/phase3-independent.test.ts (9 tests) 5597ms
+ ✓ src/lib/p16-coordinator-independent.test.ts (8 tests) 4458ms
+ ✓ src/lib/integration-stack.test.ts (1 test) 4814ms
+     ✓ installs together, runs entities → registers → postings, balances, preserves sources, and rolls back in reverse  4811ms
+ ✓ src/lib/statement-line-ref.test.ts (3 tests) 4338ms
+     ✓ on active P7 books both identical lines post once each; a true duplicate source is still refused  4332ms
+ ✓ src/lib/books/grouped-finance-persistence.test.ts (1 test) 3419ms
+   ✓ persisted owner/company ledger produces all report families; reviewed lower-rate allocation survives retry/restart without duplicating source or payment  3417ms
+ ✓ src/lib/books/gst-connected-completion.test.ts (3 tests) 3460ms
+   ✓ original -> frozen draft -> exception -> saved correction -> retry/restart stays owner-isolated  3452ms
+ ✓ src/lib/financial-corrections-sql.test.ts (10 tests) 2731ms
+ ✓ src/components/OwnerLock.test.tsx (17 tests) 4160ms
+     ✓ a guest with an MPIN is locked (not signed out) and unlocks with it  334ms
+     ✓ five wrong PINs remove the MPIN and require a full method  1383ms
+     ✓ a guest whose MPIN is erased after five wrong tries is signed out  1609ms
+ ✓ src/lib/trip-claims-posting-sql.test.ts (3 tests) 4287ms
+ ✓ src/components/investment-review-persistence.test.tsx (1 test) 3556ms
+   ✓ real CSV files → review → source save → failed holdings retry → owner SQL readback → Home; repeat trades/actions never duplicate  3552ms
+ ✓ src/components/shell/SignatureShell.test.tsx (18 tests) 3852ms
+     ✓ has the page landmarks, a skip link and labelled controls  716ms
+     ✓ rail reaches Home, Money, To-do, Records, Reports and Add  524ms
+     ✓ Home: greeting, estimated net worth with as-of note, Coming up, next step and quick links  747ms
+     ✓ Records: Reports is one tap away (two from Home on iPhone) and every row opens an existing page  817ms
+ ✓ src/lib/books/accounting-authority.test.ts (1 test) 3966ms
+   ✓ isolated opening → accrual → correction → disk restart → frozen statements; exact owner/accountant review, revoked denial and unknown acknowledgement recovery  3964ms
+Error: Not implemented: HTMLCanvasElement.prototype.getContext (without installing the canvas npm package)
+    at module.exports (/home/user/thapal-f1r/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)
+    at HTMLCanvasElementImpl.getContext (/home/user/thapal-f1r/node_modules/jsdom/lib/jsdom/living/nodes/HTMLCanvasElement-impl.js:42:5)
+    at HTMLCanvasElement.getContext (/home/user/thapal-f1r/node_modules/jsdom/lib/jsdom/living/generated/HTMLCanvasElement.js:131:58)
+    at canDrawUnicode (/home/user/thapal-f1r/src/lib/pdf-unicode.ts:12:115)
+    at cell (/home/user/thapal-f1r/src/lib/pdf-unicode.ts:19:37)
+    at Array.map (<anonymous>)
+    at /home/user/thapal-f1r/src/lib/expenditure-pdf.ts:31:18
+    at Array.map (<anonymous>)
+    at renderStatementPdf (/home/user/thapal-f1r/src/lib/expenditure-pdf.ts:31:5)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5) undefined
+ ✓ src/lib/security-phase1-independent.test.ts (1 test) 3694ms
+     ✓ blocks self-granted step-up, unguarded copies, assistant writes and stale confirmations; owner work continues  3692ms
+ ✓ src/lib/statement-pipeline/undo-capability.test.ts (2 tests) 3236ms
+     ✓ applied schema → needs-update; with the staged SQL installed → available  3232ms
+ ✓ src/components/expenditure-builder-workflow.test.tsx (4 tests) 3835ms
+   ✓ actual statement builder verifies fetched originals, saves exact PDF despite lost response, and downloads identical bytes  1173ms
+   ✓ actual builder cancel creates no PDF/history; failed upload keeps local PDF and retries the same history identity  1150ms
+   ✓ actual builder offers no history retry until its automatic save has finished, so one report is saved once  379ms
+   ✓ actual claim builder includes missing-document evidence and source pages without saving reimbursement payments  1124ms
+ ✓ src/lib/books/journal-rule-guard-sql.test.ts (8 tests) 2793ms
+ ✓ src/lib/statement-pipeline/statement-undo.repro.test.ts (2 tests) 3061ms
+     ✓ applied schema has neither statement_undo_receipts nor undo_statement_rows; the call fails as a missing function  3054ms
+ ✓ src/components/StatementInbox.duplicate-import.test.tsx (10 tests) 3652ms
+     ✓ a failed read of already-imported lines shows the error with Retry and blocks Register until the read works  664ms
+     ✓ re-importing the same statement (also after Forget last upload) creates no second entry  628ms
+     ✓ retry after a partial failure registers only the failed line and never repeats the saved one  465ms
+     ✓ re-importing the same statement (also after Forget last upload) creates no second entry  358ms
+     ✓ retry after a partial failure registers only the failed line and never repeats the saved one  334ms
+     ✓ retrying after a timeout (entry saved, response lost) reuses the same entry id  417ms
+ ✓ src/lib/books/typed-intake-sql.test.ts (9 tests) 2993ms
+ ✓ src/lib/statement-review-sql.test.ts (9 tests) 4066ms
+   ✓ saved exception survives restart; reviewed source resolves it once, stale revisions fail closed and other accounts remain separate  637ms
+ ✓ src/lib/statement-pipeline/history-persistence.test.ts (2 tests) 3089ms
+   ✓ two sessions, stale revision and lost response retain unrelated preferences, all confirmed sources and completed state  3084ms
+ ✓ src/lib/books/period-figures-sql.test.ts (4 tests) 2270ms
+ ✓ src/components/smart-add/IntelligentCanvas.test.tsx (24 tests) 3107ms
+     ✓ 2 · Review: the review's own button reads “Continue to confirmation” and a persistent footer action does the same  406ms
+     ✓ statements and asset registers go to Statement Desk, the authoritative intake  578ms
+ ✓ src/lib/store-denied-read.test.tsx (40 tests) 3418ms
+ ✓ src/lib/internal-reference-rls.test.ts (4 tests) 2601ms
+ ✓ src/lib/role-access.test.ts (19 tests) 2800ms
+ ✓ src/lib/books/budget-merchant-authority.test.ts (8 tests) 3102ms
+ ✓ src/lib/investments/broker-reconciliation-workflow.test.ts (1 test) 2885ms
+   ✓ cash transfers, securities, fee and bonus evidence reconcile after persistence/reload without counting transfer as income  2883ms
+ ✓ src/lib/phase2-registers-independent.test.ts (1 test) 3945ms
+     ✓ commit preserves the source, isolates owners, refuses direct writes and keeps archived rows  3943ms
+ ✓ src/lib/transfer-rpc-sql.test.ts (21 tests) 3178ms
+ ✓ src/lib/books/entity-transactions-sql.test.ts (4 tests) 2712ms
+ ✓ src/lib/expense-review-security.test.ts (3 tests) 2724ms
+ ✓ src/lib/preserve-records.test.ts (14 tests) 3887ms
+     ✓ an unchanged save writes back exactly what is stored, including unreadable records  645ms
+     ✓ changing an unrelated setting leaves every financial section byte-identical  520ms
+     ✓ adding a journal keeps all 6,001 stored journals (including the unreadable one) and adds the new one  423ms
+     ✓ deleting a journal deliberately removes only that journal  502ms
+     ✓ editing a record that was tidied for display keeps the stored original in preservedRecords; untouched tidied records stay as stored  459ms
+     ✓ a corrupt map entry and an unreadable gold rate survive edits to the same section  720ms
+     ✓ lists every unreadable record for owner review  325ms
+ ✓ src/lib/books/freeze-sql.test.ts (3 tests) 2618ms
+ ✓ src/lib/books/frozen-registers-sql.test.ts (10 tests) 2772ms
+ ✓ src/lib/books/intake-revision-sql.test.ts (9 tests) 3300ms
+ ✓ src/lib/claim-workflow.test.ts (6 tests) 3412ms
+ ✓ src/lib/books/entity-access-sql.test.ts (7 tests) 3026ms
+ ✓ src/lib/books/closed-gst-amendments-sql.test.ts (5 tests) 3123ms
+ ✓ src/lib/review-metadata-sql.test.ts (13 tests) 3049ms
+ ✓ src/lib/books/investment-events-sql.test.ts (2 tests) 3035ms
+ ✓ src/lib/books/category-merge-sql.test.ts (8 tests) 3012ms
+ ✓ src/lib/books/opening-sql.test.ts (3 tests) 3042ms
+ ✓ src/lib/books/preference-approval-sql.test.ts (8 tests) 3135ms
+ ✓ src/lib/books/period-authority-sql.test.ts (3 tests) 2993ms
+ ✓ src/lib/books/period-evidence-sql.test.ts (7 tests) 3104ms
+ ✓ src/lib/report-frozen-persistence.test.ts (1 test) 3870ms
+   ✓ owner/entity source figures freeze in a real PDF; lost insert and readback recover after disk restart without replacing bytes  3868ms
+ ✓ src/lib/family-access.test.ts (3 tests) 2958ms
+ ✓ src/lib/books/entity-upload-sql.test.ts (6 tests) 2955ms
+ ✓ src/lib/books/period-recovery-sql.test.ts (8 tests) 2759ms
+ ✓ src/lib/books/report-history-versions.test.ts (2 tests) 2773ms
+ ✓ src/components/review-history.repro.test.ts (1 test) 3161ms
+     ✓ undo sets undone_at; the store's own filter then hides the batch; a repeat undo is a silent no-op  3159ms
+ ✓ src/components/FinancialCorrectionPanel.test.tsx (2 tests) 2304ms
+   ✓ controlled copy: cancel makes no change; confirm applies reviewed effects and undo restores with confirmation  1027ms
+   ✓ type switches preserve applicable source and repayment values but clear incompatible draft values without saving  1274ms
+ ✓ src/components/prompt-replacement/prompts.repro.test.tsx (7 tests) 1644ms
+     ✓ Plan → Edit amount: labelled field prefilled and focused; the store's amount rule shown inline; saves the same commitment with the new amount  543ms
+     ✓ Plan → Edit amount: Cancel and Escape save nothing  350ms
+ ✓ src/components/prompt-replacement/values2.repro.test.tsx (6 tests) 1624ms
+     ✓ Property → + building / + floor / + unit: a name is required; adds the same part; Cancel adds nothing  572ms
+     ✓ Settings → Rename category: prefilled; an existing name points to Merge; renames references then the catalog  602ms
+ ✓ src/components/SmartAdd.test.tsx (18 tests) 1399ms
+     ✓ opens claim preparation with exactly the saved entry without navigating or saving again  833ms
+ ✓ src/components/FinancialReview.test.tsx (1 test) 1425ms
+     ✓ requires exact preview and explicit confirmation, preserves sources and exposes undo  1422ms
+stderr | src/components/prompt-replacement/destructive.repro.test.tsx > destructive financial actions use in-app dialogs > Expense → Reverse entry (posting active) still opens the existing reversal dialog with a required reason
+An update to ExpenseDetail inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ ✓ src/components/prompt-replacement/destructive.repro.test.tsx (8 tests) 1774ms
+     ✓ Expense → Withdraw entry (posting not active): names the entry, says it is kept in history, excluded from totals and restorable; needs a reason; Keep expense and Escape do nothing  576ms
+stderr | src/components/StepUpHost.test.tsx > sends and verifies the emailed code through the server functions, then settles as confirmed
+An update to StepUpHost inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StepUpHost inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StepUpHost inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StepUpHost inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StepUpHost inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StepUpHost inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StepUpHost inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StepUpHost inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StepUpHost inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StepUpHost inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StepUpHost inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+stderr | src/components/StepUpHost.test.tsx > password and passkey confirmations call the server and settle as confirmed; a wrong password does not
+An update to StepUpHost inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StepUpHost inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StepUpHost inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StepUpHost inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StepUpHost inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StepUpHost inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StepUpHost inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StepUpHost inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StepUpHost inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StepUpHost inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StepUpHost inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+stderr | src/components/StepUpHost.test.tsx > password and passkey confirmations call the server and settle as confirmed; a wrong password does not
+An update to StepUpHost inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StepUpHost inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StepUpHost inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StepUpHost inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StepUpHost inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StepUpHost inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StepUpHost inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StepUpHost inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StepUpHost inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StepUpHost inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ ✓ src/components/StepUpHost.test.tsx (7 tests) 1412ms
+   ✓ offers the emailed code only for adding a passkey  390ms
+ ✓ src/components/prompt-replacement/period-closing.repro.test.tsx (6 tests) 1349ms
+     ✓ Close period: names the period, states what is locked and who can reopen; Close stays off until the period is typed; Cancel and Escape send nothing  479ms
+ ✓ src/components/screens/travel/travel-claim-offline.test.tsx (2 tests) 1205ms
+   ✓ D-1: online the trip advance is offered; offline Generate is disabled, no advance figure is shown, and generate() refuses  430ms
+   ✓ D3 (lead review of 06de426): the builder's claim figures in six read states — labelled offline copy, else hidden  772ms
+ ✓ src/components/integration-links.test.tsx (4 tests) 1027ms
+     ✓ Settings directory links to About Thapal  736ms
+ ✓ src/components/ReviewMetadataPanel.test.tsx (2 tests) 1174ms
+   ✓ previews and cancels without writing and retains the same operation on retry  511ms
+   ✓ combined classification previews one guarded patch and saves only after confirmation  661ms
+stderr | src/components/screens/travel/travel-lead-defects.test.tsx > KK decision (Issue #1): offline cached claim figures, labelled with when they were read > locked: the cached figures are hidden at once
+An update to TripBudgetCard inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to ReimbursementBreakdownCard inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to TripBudgetSection inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+stderr | src/components/screens/travel/travel-lead-defects.test.tsx > lead review of c8672f3: items 1, 2 and 7 on screen (each fails on c8672f3) > 1: case J visa — 'This claim cites money already counted on hotel'; 'Remove this reference' (with a reason) corrects through correctReimbursementReceipt, never updateReimbursement
+An update to ReimbursementEditor inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+stderr | src/components/screens/travel/travel-lead-defects.test.tsx > lead review of c8672f3: items 1, 2 and 7 on screen (each fails on c8672f3) > 2: inside an offline trip screen the editor labels its figures (hidden when locked) and can't write; the store refuses too
+An update to ReimbursementEditor inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+stderr | src/components/screens/travel/travel-lead-defects.test.tsx > lead review of e42c4eb: D-3 and D-4 in the claim editor (each fails on e42c4eb) > D-4: inside a locked trip screen the editor shows no stage ('Fully received') and no receipt amounts
+An update to ReimbursementEditor inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ ✓ src/components/screens/travel/travel-lead-defects.test.tsx (85 tests) 1168ms
+ ✓ src/components/records-archive/loans-goals.repro.test.tsx (2 tests) 1122ms
+     ✓ archive a loan and a goal with a reason; rows, what you owe and goal progress are unchanged; restore works  503ms
+     ✓ regression (integration wiring): WealthPanels archives loans/goals with a reason instead of deleting in one tap  616ms
+stderr | src/components/records-archive/planning.repro.test.tsx > P0-016 planning records: archive instead of delete > milestone: no browser confirm; archived milestone keeps its history and is not updated by the daily progress record
+A component suspended inside an `act` scope, but the `act` call was not awaited. When testing React components that depend on asynchronous data, you must await the result:
+
+await act(() => ...)
+
+ ✓ src/components/records-archive/planning.repro.test.tsx (3 tests) 1034ms
+     ✓ allocation plan: Archive plan with a reason; plan and planned-vs-actual unchanged; restore  426ms
+     ✓ itinerary: Archive keeps the item (with its booking link) out of the day plan; restore puts it back  401ms
+ ✓ src/components/document-intake-workflow.test.tsx (10 tests) 1012ms
+stderr | src/components/records-archive/tax-records.repro.test.tsx > P0-010 tax deductions and credits: archive instead of remove > archives a deduction and a credit with reasons; the tax working and taxes paid do not change
+An update to TaxComputationCard inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ ✓ src/components/records-archive/tax-records.repro.test.tsx (2 tests) 893ms
+     ✓ Archive needs a reason, keeps the invoice byte-identical and in every GST draft; restore works  512ms
+     ✓ archives a deduction and a credit with reasons; the tax working and taxes paid do not change  378ms
+ ✓ src/lib/retention.test.ts (42 tests) 950ms
+ ✓ src/components/expense-table-layout.test.tsx (3 tests) 898ms
+   ✓ iPad landscape opens the expense detail in a side pane, not a modal  738ms
+ ✓ src/components/records-archive/vault.repro.test.tsx (2 tests) 963ms
+     ✓ offers no Delete; Archive needs a reason; the row and file stay, and restore brings the document back  678ms
+ ✓ src/components/DateField.test.tsx (2 tests) 851ms
+     ✓ shows 09 Nov 2026, keeps the stored ISO value, and changes it only when a day is picked  508ms
+     ✓ shows 09 Nov 2026, keeps the stored ISO value, and changes it only when a day is picked  340ms
+ ✓ src/components/prompt-replacement/approvals.repro.test.tsx (5 tests) 832ms
+     ✓ Company journal → Prepare reversal: required reason (the five-character rule) shown inline; prepares the same reversal and opens the journal for review  331ms
+ ✓ src/components/smart-add/receipt-precision-flow.test.tsx (3 tests) 814ms
+     ✓ Confirm details refuses a read ₹1234.567 (even after the review dialog) and shows the read digits  543ms
+ ✓ src/components/books/asset-archive.test.tsx (3 tests) 853ms
+     ✓ archives with who/when/why, keeps the record and every figure, lists it under Archived assets, and restores  397ms
+ ✓ src/components/records-archive/commitments.repro.test.tsx (1 test) 916ms
+     ✓ offers no Delete; an active payment has no Archive (Cancel first); a cancelled one archives and restores  913ms
+ ✓ src/components/screens/travel/travel-money-screens.test.tsx (9 tests) 686ms
+ ✓ src/components/trip/budget-controls.test.tsx (5 tests) 674ms
+stderr | src/components/records-archive/pending-documents.repro.test.tsx > P0-026 pending documents on New entry: archive with reason, never one-tap delete > offers no one-tap Delete; Archive needs a reason, keeps the row and file, and Restore brings it back with history
+An update to NewExpense inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+stderr | src/components/records-archive/pending-documents.repro.test.tsx > P0-026 pending documents on New entry: archive with reason, never one-tap delete > offers no one-tap Delete; Archive needs a reason, keeps the row and file, and Restore brings it back with history
+An update to NewExpense inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ ✓ src/components/records-archive/pending-documents.repro.test.tsx (1 test) 797ms
+     ✓ offers no one-tap Delete; Archive needs a reason, keeps the row and file, and Restore brings it back with history  793ms
+ ✓ src/components/PayeeDirectory.test.tsx (1 test) 728ms
+   ✓ controlled recipient confirms then persists/reopens without bank details or ledger changes  725ms
+ ✓ src/components/merchant-review.test.tsx (2 tests) 693ms
+   ✓ merge/cancel/retry/reopen/unmerge preserves source entries and money  542ms
+Error: Not implemented: HTMLCanvasElement.prototype.getContext (without installing the canvas npm package)
+    at module.exports (/home/user/thapal-f1r/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)
+    at HTMLCanvasElementImpl.getContext (/home/user/thapal-f1r/node_modules/jsdom/lib/jsdom/living/nodes/HTMLCanvasElement-impl.js:42:5)
+    at HTMLCanvasElement.getContext (/home/user/thapal-f1r/node_modules/jsdom/lib/jsdom/living/generated/HTMLCanvasElement.js:131:58)
+    at canDrawUnicode (/home/user/thapal-f1r/src/lib/pdf-unicode.ts:12:115)
+    at cell (/home/user/thapal-f1r/src/lib/pdf-unicode.ts:19:37)
+    at /home/user/thapal-f1r/src/lib/report-pdf.ts:32:165
+    at Array.map (<anonymous>)
+    at renderReportPdf (/home/user/thapal-f1r/src/lib/report-pdf.ts:32:148)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at /home/user/thapal-f1r/src/lib/report-centre-all.test.ts:72:18 undefined
+ ✓ src/components/category-merge-preview.test.tsx (2 tests) 632ms
+   ✓ preview and cancel never move records; split references block an unsafe merge  409ms
+ ✓ src/lib/report-centre-all.test.ts (76 tests) 677ms
+ ✓ src/components/AuthFaceIdOffer.test.tsx (4 tests) 637ms
+   ✓ accepting the offer asks for re-confirmation first and registers only after the server records a grant  352ms
+ ✓ src/components/books/holding-archive.test.tsx (1 test) 566ms
+   ✓ holding: no Remove; archive with reason keeps it valued in net worth; restore is recorded  564ms
+ ✓ src/components/screens/travel/travel-timeline.test.tsx (6 tests) 651ms
+ ✓ src/components/records-archive/valuations.repro.test.tsx (2 tests) 568ms
+     ✓ Archive needs a reason; the valuation row stays and the account value and net worth do not change  359ms
+ ✓ src/components/records-archive/receivables.repro.test.tsx (2 tests) 572ms
+ ✓ src/components/StatementEvidenceReview.test.tsx (1 test) 542ms
+   ✓ controlled statement: confirmation is previewed, cancelled without saving, then explicitly saved and checked  540ms
+ ✓ src/components/shell/kit.test.tsx (12 tests) 480ms
+ ✓ src/components/setup-completion-workflow.test.tsx (1 test) 504ms
+   ✓ setup completion failure stays open; retry persists done and reload suppresses repeated prompt but permits explicit reopen  502ms
+ ✓ src/components/records-archive/entities.repro.test.tsx (2 tests) 573ms
+     ✓ offers no Delete; Archive keeps the profile, tax years and account links; restore brings it back  502ms
+ ✓ src/components/ClaimExpenseDetails.test.tsx (1 test) 515ms
+   ✓ edits the exact existing expense in place and reads refreshed bill evidence without leaving the claim  513ms
+ ✓ src/lib/store-lock-pause.test.tsx (4 tests) 478ms
+ ✓ src/components/useClaimPreparation.test.tsx (6 tests) 464ms
+Error: Not implemented: HTMLCanvasElement.prototype.getContext (without installing the canvas npm package)
+    at module.exports (/home/user/thapal-f1r/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)
+    at HTMLCanvasElementImpl.getContext (/home/user/thapal-f1r/node_modules/jsdom/lib/jsdom/living/nodes/HTMLCanvasElement-impl.js:42:5)
+    at HTMLCanvasElement.getContext (/home/user/thapal-f1r/node_modules/jsdom/lib/jsdom/living/generated/HTMLCanvasElement.js:131:58)
+    at canDrawUnicode (/home/user/thapal-f1r/src/lib/pdf-unicode.ts:12:115)
+    at cell (/home/user/thapal-f1r/src/lib/pdf-unicode.ts:19:37)
+    at /home/user/thapal-f1r/src/lib/report-pdf.ts:32:165
+    at Array.map (<anonymous>)
+    at renderReportPdf (/home/user/thapal-f1r/src/lib/report-pdf.ts:32:148)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at /home/user/thapal-f1r/src/lib/report-centre.test.ts:46:18 undefined
+ ✓ src/lib/report-centre.test.ts (6 tests) 474ms
+     ✓ renders a multi-page PDF for large reports  458ms
+ ✓ src/components/ReviewMappingPanel.test.tsx (1 test) 450ms
+     ✓ does not save on preview or cancel, and explicitly confirms reviewed records  446ms
+Error: Not implemented: HTMLCanvasElement.prototype.getContext (without installing the canvas npm package)
+    at module.exports (/home/user/thapal-f1r/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)
+    at HTMLCanvasElementImpl.getContext (/home/user/thapal-f1r/node_modules/jsdom/lib/jsdom/living/nodes/HTMLCanvasElement-impl.js:42:5)
+    at HTMLCanvasElement.getContext (/home/user/thapal-f1r/node_modules/jsdom/lib/jsdom/living/generated/HTMLCanvasElement.js:131:58)
+    at canDrawUnicode (/home/user/thapal-f1r/src/lib/pdf-unicode.ts:12:115)
+    at cell (/home/user/thapal-f1r/src/lib/pdf-unicode.ts:19:37)
+    at Array.map (<anonymous>)
+    at /home/user/thapal-f1r/src/lib/expenditure-pdf.ts:31:18
+    at Array.map (<anonymous>)
+    at renderStatementPdf (/home/user/thapal-f1r/src/lib/expenditure-pdf.ts:31:5)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5) undefined
+ ✓ src/lib/receipt-correction-editor.test.tsx (3 tests) 411ms
+ ✓ src/lib/expenditure-statement.test.ts (15 tests) 417ms
+     ✓ renders one PDF and marks unreadable bills instead of dropping them  323ms
+stderr | src/components/shell/switch.test.tsx > AppShell switch > renders today's shell by default and the Signature Flow shell when switched on; records are never written
+React does not recognize the `activeProps` prop on a DOM element. If you intentionally want it to appear in the DOM as a custom attribute, spell it as lowercase `activeprops` instead. If you accidentally passed it from a parent component, remove it from the DOM element.
+
+ ✓ src/components/shell/switch.test.tsx (8 tests) 366ms
+     ✓ renders today's shell by default and the Signature Flow shell when switched on; records are never written  345ms
+ ✓ src/components/closed-period-asset-refusal.test.tsx (4 tests) 450ms
+     ✓ a database refusal for a closed-period date names the period and the adjustment needed, not the raw text  301ms
+ ✓ src/lib/store-load-failure.test.tsx (4 tests) 398ms
+ ✓ src/components/c2-screens.test.tsx (4 tests) 370ms
+ ✓ src/components/books/closing-prices.load-error.test.tsx (1 test) 317ms
+     ✓ shows a load error with Retry instead of 'not fetched yet', blocks saving a valuation, and recovers on Retry  314ms
+ ✓ src/components/budget-alert-workflow.test.tsx (1 test) 353ms
+   ✓ owner chooses threshold and saves; reloaded alert follows split expenditure and clears below threshold  351ms
+ ✓ src/components/DocumentIntake-retry.test.tsx (2 tests) 322ms
+ ✓ src/lib/books/corporate-audit-pack.test.ts (2 tests) 260ms
+ ✓ src/components/screens/travel/travel-records-screens.test.tsx (4 tests) 217ms
+ ✓ src/components/loan-export-workflow.test.tsx (1 test) 324ms
+   ✓ exports the actual loan CSV button with ledger-consistent FX principal, interest and outstanding  322ms
+ ✓ src/lib/app-lock-state.test.tsx (5 tests) 252ms
+ ✓ src/lib/trip-settlement-acceptance.test.ts (73 tests) 253ms
+ ✓ src/components/ReviewRecurringPanel.test.tsx (1 test) 328ms
+     ✓ requires explicit confirmation and preserves one retry identifier without creating a ledger entry  325ms
+ ✓ src/lib/mpin.test.ts (4 tests) 243ms
+ ✓ src/components/PreviewInfoPanel.test.tsx (9 tests) 204ms
+ ✓ src/components/card-payment.repro.test.tsx (4 tests) 199ms
+ ✓ src/components/ReviewHistory.restored.test.tsx (2 tests) 314ms
+ ✓ src/components/DeviceSecurity.test.tsx (8 tests) 232ms
+ ✓ src/lib/backup-restore.test.ts (19 tests) 143ms
+ ✓ src/components/report-document-verification.test.tsx (2 tests) 246ms
+ ✓ src/components/books/ModuleCapture.test.tsx (2 tests) 198ms
+ ✓ src/components/shell/pass2.test.tsx (27 tests) 162ms
+ ✓ src/components/books/rules-register.load-error.test.tsx (1 test) 207ms
+ ✓ src/components/DematHoldings.load-error.test.tsx (2 tests) 150ms
+ ✓ src/lib/books/corporate-statements.test.ts (8 tests) 118ms
+ ✓ src/lib/books/shared-company.test.ts (8 tests) 76ms
+ ✓ src/lib/toast-placement.test.tsx (2 tests) 160ms
+ ✓ src/lib/planning.test.ts (15 tests) 85ms
+ ✓ src/components/LoadError.test.tsx (3 tests) 147ms
+ ✓ src/lib/backup-registry.test.ts (5 tests) 81ms
+ ✓ src/lib/email-templates/accountant-upload-link.test.tsx (3 tests) 77ms
+ ✓ src/lib/email-templates/accountant-upload-received.test.tsx (3 tests) 90ms
+ ✓ src/lib/report-documents.test.ts (3 tests) 104ms
+ ✓ src/lib/cross-module-consistency.test.ts (8 tests) 107ms
+ ✓ src/lib/email-templates/receipt-problem-report.test.tsx (3 tests) 97ms
+ ✓ src/lib/phase23.test.ts (19 tests) 103ms
+ ✓ src/components/TeamAccess.test.tsx (1 test) 92ms
+ ✓ src/lib/reports.test.ts (8 tests) 70ms
+ ✓ src/lib/push-crypto.test.ts (2 tests) 85ms
+ ✓ src/lib/email-templates/accountant-upload-reminder.test.tsx (3 tests) 128ms
+ ✓ src/lib/trip-advances.test.ts (27 tests) 80ms
+ ✓ src/lib/statement-import.test.ts (3 tests) 70ms
+ ✓ src/lib/offline-scan.test.ts (5 tests) 39ms
+ ✓ src/lib/books/books.test.ts (37 tests) 61ms
+ ✓ src/lib/acceptance-v4.test.ts (17 tests) 70ms
+ ✓ src/lib/report-jobs-recovery.test.ts (7 tests) 37ms
+ ✓ src/lib/statement-pipeline/pipeline.test.ts (27 tests) 46ms
+ ✓ src/lib/review-centre.test.ts (12 tests) 39ms
+ ✓ src/lib/books/company-report.test.ts (2 tests) 57ms
+ ✓ src/lib/trip-lead-defects.test.ts (15 tests) 50ms
+ ✓ src/lib/decimal-precision.test.ts (18 tests) 44ms
+ ✓ src/lib/trip-withdrawn.test.ts (8 tests) 90ms
+ ✓ src/lib/statement-pipeline/card-payment-flow.test.ts (2 tests) 30ms
+ ✓ src/lib/claim-preparations.test.ts (7 tests) 32ms
+ ✓ src/lib/private-files-download.test.ts (7 tests) 37ms
+ ✓ src/lib/projection.test.ts (7 tests) 23ms
+ ✓ src/lib/trip-lead-acceptance.test.ts (12 tests) 51ms
+ ✓ src/lib/use-idle-lock.test.tsx (7 tests) 40ms
+ ✓ src/lib/priority2.test.ts (11 tests) 48ms
+ ✓ src/lib/financial-audit-v54.test.ts (14 tests) 33ms
+ ✓ src/lib/books/v6-batch7.test.ts (24 tests) 32ms
+ ✓ src/lib/trip-budget.test.ts (18 tests) 35ms
+ ✓ src/lib/v4.test.ts (29 tests) 37ms
+ ✓ src/lib/phase1.test.ts (15 tests) 34ms
+ ✓ src/lib/offline.test.ts (5 tests) 45ms
+ ✓ src/components/shell/routes.test.tsx (29 tests) 57ms
+ ✓ src/lib/travel-reports.test.ts (18 tests) 26ms
+ ✓ src/lib/books/tax-workpaper.test.ts (14 tests) 36ms
+ ✓ src/lib/integrity.test.ts (15 tests) 33ms
+ ✓ src/lib/portfolio.test.ts (9 tests) 20ms
+ ✓ src/lib/receipt-reading.test.ts (39 tests) 28ms
+ ✓ src/lib/books/docrepo-assignment.test.ts (10 tests) 18ms
+ ✓ src/lib/statement-pipeline/upload-snapshot.test.ts (2 tests) 34ms
+ ✓ src/lib/loan-funding.test.ts (11 tests) 19ms
+ ✓ src/lib/v591-acceptance.test.ts (15 tests) 25ms
+ ✓ src/lib/historical-import.test.ts (22 tests) 26ms
+ ✓ src/components/screens/travel/travel-routes.test.tsx (18 tests) 33ms
+ ✓ src/lib/insights.test.ts (12 tests) 26ms
+ ✓ src/lib/trip-financial-scenarios.test.ts (8 tests) 31ms
+ ✓ src/lib/books/docrepo-export.test.ts (6 tests) 30ms
+ ✓ src/lib/position.test.ts (4 tests) 25ms
+ ✓ src/components/screens/travel/travel-store-owner-key.test.tsx (1 test) 30ms
+ ✓ src/lib/books/gst-special.test.ts (10 tests) 23ms
+ ✓ src/lib/phase3-c11.test.ts (9 tests) 26ms
+ ✓ src/lib/trip-history-protection.test.ts (66 tests) 28ms
+ ✓ src/lib/plain-language.test.ts (16 tests) 26ms
+ ✓ src/lib/financial-review.test.ts (16 tests) 23ms
+ ✓ src/lib/precision-connected.test.ts (3 tests) 15ms
+ ✓ src/lib/phase3-readers.test.ts (21 tests) 29ms
+ ✓ src/lib/allocation.test.ts (9 tests) 23ms
+ ✓ src/lib/travel-precision-connected.test.ts (1 test) 21ms
+ ✓ src/lib/statement-auto.test.ts (14 tests) 21ms
+ ✓ src/lib/books/accounting-foundation.test.ts (7 tests) 25ms
+ ✓ src/lib/rules-engine.test.ts (10 tests) 23ms
+ ✓ src/lib/archive.test.ts (11 tests) 24ms
+ ✓ src/lib/statement-pipeline/evidence-recovery.test.ts (4 tests) 23ms
+ ✓ src/lib/review-workflow.test.ts (4 tests) 17ms
+ ✓ src/lib/books/itr-handoff.test.ts (5 tests) 24ms
+ ✓ src/lib/card-trend.test.ts (12 tests) 39ms
+ ✓ src/lib/insights-charts.test.ts (4 tests) 20ms
+ ✓ src/lib/books/investment-alerts.test.ts (5 tests) 18ms
+ ✓ src/lib/books/fund-statement.test.ts (4 tests) 18ms
+ ✓ src/lib/push-rules.test.ts (13 tests) 22ms
+ ✓ src/lib/use-review-view.test.tsx (1 test) 21ms
+ ✓ src/components/shell/fidelity.test.ts (9 tests) 21ms
+ ✓ src/components/BackgroundReports.lock.test.tsx (1 test) 33ms
+ ✓ src/lib/import-groups.test.ts (9 tests) 15ms
+ ✓ src/lib/statement-action.test.ts (6 tests) 26ms
+ ✓ src/lib/priority3.test.ts (8 tests) 25ms
+ ✓ src/lib/import-rule-conditions.test.ts (8 tests) 27ms
+ ✓ src/lib/import-month-acceptance.test.ts (14 tests) 32ms
+ ✓ src/lib/transfer-match.test.ts (14 tests) 18ms
+ ✓ src/lib/card-balance.test.ts (5 tests) 19ms
+ ✓ src/lib/preference-review.test.ts (5 tests) 14ms
+ ✓ src/lib/payment-instruments.test.ts (7 tests) 13ms
+ ✓ src/lib/books/intake-fixtures.test.ts (24 tests) 15ms
+ ✓ src/lib/entry-repeat.test.ts (12 tests) 14ms
+ ✓ src/lib/statement-evidence.test.ts (9 tests) 21ms
+ ✓ src/lib/travel-calendar.test.ts (9 tests) 22ms
+ ✓ src/lib/save-expense-precision.test.ts (8 tests) 21ms
+ ✓ src/lib/books/compliance.test.ts (23 tests) 21ms
+ ✓ src/lib/money-workflow.test.ts (5 tests) 21ms
+ ✓ src/lib/books/posting-ids.test.ts (8 tests) 15ms
+ ✓ src/lib/inbox-reconciliation-completion.test.ts (1 test) 19ms
+ ✓ src/lib/financial-review-intelligence.test.ts (10 tests) 18ms
+ ✓ src/lib/books/recon-completion.test.ts (6 tests) 22ms
+ ✓ src/lib/trip-claims.test.ts (6 tests) 19ms
+ ✓ src/lib/step-up-server.test.ts (18 tests) 49ms
+ ✓ src/lib/reimbursement-profiles.test.ts (18 tests) 17ms
+ ✓ src/lib/books/accounting-workflows.test.ts (6 tests) 20ms
+ ✓ src/lib/books/tax-regression.test.ts (18 tests) 21ms
+ ✓ src/lib/books/runs.test.ts (9 tests) 17ms
+ ✓ src/lib/books/allocation-recon.test.ts (6 tests) 16ms
+ ✓ src/lib/records-archive.test.ts (9 tests) 17ms
+ ✓ src/lib/books/loan-balances.test.ts (11 tests) 17ms
+ ✓ src/lib/readiness.test.ts (9 tests) 26ms
+ ✓ src/lib/books/reconciliation-context-completion.test.ts (4 tests) 14ms
+ ✓ src/lib/books/scheduled-depreciation.test.ts (6 tests) 26ms
+ ✓ src/lib/books/closed-period-refusal.test.ts (3 tests) 11ms
+ ✓ src/lib/trip-actions.test.ts (9 tests) 17ms
+ ✓ src/lib/investments/demat.test.ts (3 tests) 10ms
+ ✓ src/lib/trip-itinerary.test.ts (14 tests) 32ms
+ ✓ src/lib/upload-link.test.ts (27 tests) 15ms
+ ✓ src/lib/books/fx-valuation.test.ts (8 tests) 20ms
+ ✓ src/lib/books/flow-alerts.test.ts (2 tests) 31ms
+ ✓ src/lib/import-patterns.test.ts (7 tests) 19ms
+ ✓ src/lib/net-worth-events.test.ts (3 tests) 24ms
+ ✓ src/lib/expenses.test.ts (23 tests) 14ms
+ ✓ src/lib/step-up.test.ts (10 tests) 11ms
+ ✓ src/lib/brand-compat.test.ts (3 tests) 19ms
+ ✓ src/lib/drafts.load-error.test.ts (4 tests) 12ms
+ ✓ src/lib/lock-gate.test.ts (5 tests) 16ms
+ ✓ src/lib/books/v6-gaps.test.ts (13 tests) 15ms
+ ✓ src/lib/ledger.test.ts (9 tests) 15ms
+ ✓ src/components/shell/navigation.test.ts (31 tests) 10ms
+ ✓ src/lib/books/rule-watch.test.ts (4 tests) 8ms
+ ✓ src/lib/books/gst-notes.test.ts (7 tests) 19ms
+ ✓ src/lib/device-report.test.ts (15 tests) 12ms
+ ✓ src/lib/account-evidence.test.ts (23 tests) 14ms
+ ✓ src/lib/tax-rules.test.ts (6 tests) 11ms
+ ✓ src/lib/push-dispatch.test.ts (3 tests) 10ms
+ ✓ src/lib/device-reauth.test.ts (10 tests) 16ms
+ ✓ src/lib/forex-statement.test.ts (4 tests) 14ms
+ ✓ src/lib/c2-screens.test.ts (8 tests) 12ms
+ ✓ src/lib/statement-pipeline/single-entry.test.ts (7 tests) 12ms
+ ✓ src/lib/books/accounting-settlement.test.ts (4 tests) 16ms
+ ✓ src/lib/trip-collaborators.test.ts (3 tests) 14ms
+ ✓ src/lib/trip-timeline.test.ts (7 tests) 18ms
+ ✓ src/lib/books/recon-extra.test.ts (10 tests) 10ms
+ ✓ src/lib/books/phase1-acceptance.test.ts (17 tests) 21ms
+ ✓ src/lib/receipt-audit.test.ts (9 tests) 9ms
+ ✓ src/lib/receipt-precision.test.ts (12 tests) 19ms
+ ✓ src/lib/report-scope-completion.test.ts (4 tests) 14ms
+ ✓ src/lib/books/accounting-cash-review.test.ts (3 tests) 10ms
+ ✓ src/lib/search.test.ts (11 tests) 15ms
+ ✓ src/lib/request-dedupe.test.ts (4 tests) 10ms
+ ✓ src/lib/statement-pipeline/coverage.test.ts (4 tests) 13ms
+ ✓ src/lib/investments/investment-doc-fixtures.test.ts (7 tests) 12ms
+ ✓ src/lib/cards.test.ts (13 tests) 10ms
+ ✓ src/lib/merchant-management.test.ts (2 tests) 18ms
+ ✓ src/lib/claim-discovery.test.ts (8 tests) 13ms
+ ✓ src/lib/idle-policy.test.ts (28 tests) 18ms
+ ✓ src/lib/trip-settlement.test.ts (7 tests) 15ms
+ ✓ src/lib/notification-settings.test.ts (3 tests) 10ms
+ ✓ src/lib/emi-match.test.ts (10 tests) 6ms
+ ✓ src/lib/account-statement-status.test.ts (15 tests) 12ms
+ ✓ src/lib/entry-form.test.ts (4 tests) 12ms
+ ✓ src/lib/themes.test.ts (13 tests) 11ms
+ ✓ src/lib/duplicate-decision.test.ts (8 tests) 12ms
+ ✓ src/lib/v49-acceptance.test.ts (8 tests) 14ms
+ ✓ src/lib/books/period-figures.test.ts (8 tests) 11ms
+ ✓ src/lib/financial-inbox-acceptance.test.ts (8 tests) 10ms
+ ✓ src/lib/statement-post.test.ts (6 tests) 9ms
+ ✓ src/lib/correction-fields.test.ts (10 tests) 8ms
+ ✓ src/lib/setup-status.test.ts (10 tests) 8ms
+ ✓ src/lib/bill-duplicates.test.ts (6 tests) 5ms
+ ✓ src/lib/financial-corrections.test.ts (10 tests) 12ms
+ ✓ src/lib/gstr2b.test.ts (2 tests) 4ms
+ ✓ src/lib/trip-planning.test.ts (2 tests) 9ms
+ ✓ src/lib/books/derived-evidence.test.ts (4 tests) 10ms
+ ✓ src/lib/payees.test.ts (7 tests) 8ms
+ ✓ src/lib/recon-loan.test.ts (11 tests) 11ms
+ ✓ src/lib/backup.test.ts (8 tests) 11ms
+ ✓ src/lib/books/recon.test.ts (4 tests) 8ms
+ ✓ src/lib/statement-pipeline/summary.test.ts (9 tests) 10ms
+ ✓ src/lib/statement-pipeline/save-status.test.ts (18 tests) 12ms
+ ✓ src/lib/card-payment-summary.test.ts (9 tests) 19ms
+ ✓ src/lib/statement-reader.test.ts (2 tests) 8ms
+ ✓ src/lib/books/asset-read.test.ts (2 tests) 6ms
+ ✓ src/lib/delete-data.test.ts (6 tests) 8ms
+ ✓ src/lib/books/evidence.test.ts (6 tests) 7ms
+ ✓ src/lib/books/recon-ambiguity.test.ts (2 tests) 8ms
+ ✓ src/lib/mutual-funds.test.ts (7 tests) 10ms
+ ✓ src/lib/trip-lifecycle.test.ts (4 tests) 9ms
+ ✓ src/lib/assets.test.ts (7 tests) 9ms
+ ✓ src/lib/preferences.test.ts (10 tests) 9ms
+ ✓ src/lib/first-use-guide.test.ts (5 tests) 9ms
+ ✓ src/lib/investments/milestone2-independent.test.ts (8 tests) 10ms
+ ✓ src/test/app-routing.test.tsx (1 test) 9ms
+ ✓ src/lib/books/gst-source-chain-completion.test.ts (3 tests) 10ms
+ ✓ src/lib/statement-pipeline/new-account.test.ts (4 tests) 7ms
+ ✓ src/lib/gst-recon.test.ts (3 tests) 8ms
+ ✓ src/lib/pending-documents.test.ts (4 tests) 8ms
+ ✓ src/lib/payee-tracking.test.ts (3 tests) 6ms
+ ✓ src/lib/back-nav.test.ts (7 tests) 4ms
+ ✓ src/lib/statement-fingerprint.test.ts (6 tests) 6ms
+ ✓ src/lib/trip-accounts.test.ts (3 tests) 4ms
+ ✓ src/lib/report-save.test.ts (6 tests) 7ms
+ ✓ src/lib/report-specialized-scope.test.ts (2 tests) 7ms
+ ✓ src/lib/planning-decimal-workflow.test.ts (3 tests) 11ms
+ ✓ src/lib/import-review.test.ts (6 tests) 7ms
+ ✓ src/lib/books/entity-accounts.test.ts (8 tests) 8ms
+ ✓ src/lib/assistant-context.test.ts (3 tests) 8ms
+ ✓ src/lib/device-unlock.test.ts (3 tests) 5ms
+ ✓ src/lib/review-navigation.test.ts (5 tests) 5ms
+ ✓ src/lib/documents.test.ts (8 tests) 9ms
+ ✓ src/lib/withdrawal.test.ts (2 tests) 12ms
+ ✓ src/lib/review-reminders.test.ts (3 tests) 5ms
+ ✓ src/lib/balance-verification.test.ts (6 tests) 5ms
+ ✓ src/lib/passkey-origin.test.ts (8 tests) 9ms
+ ✓ src/components/screens/travel/travel-records-filter.test.ts (3 tests) 5ms
+ ✓ src/lib/push-worker.test.ts (1 test) 7ms
+ ✓ src/lib/import-manifest.test.ts (8 tests) 7ms
+ ✓ src/lib/statement-desk-reconciliation.test.ts (5 tests) 6ms
+ ✓ src/lib/books/from-entities.test.ts (7 tests) 6ms
+ ✓ src/lib/step-up-check.test.ts (4 tests) 7ms
+ ✓ src/lib/statement-pipeline/atomic-undo.test.ts (4 tests) 11ms
+ ✓ src/lib/pending-sync.test.ts (6 tests) 6ms
+ ✓ src/lib/home-modes.test.ts (3 tests) 7ms
+ ✓ src/lib/advance-claim.test.ts (5 tests) 6ms
+ ✓ src/lib/import-learning.test.ts (7 tests) 7ms
+ ✓ src/lib/review-mapping.test.ts (5 tests) 8ms
+ ✓ src/lib/statement-pipeline/draft-match.test.ts (4 tests) 8ms
+ ✓ src/lib/audit-checked.test.ts (4 tests) 4ms
+ ✓ src/lib/books/asset-verification.test.ts (6 tests) 6ms
+ ✓ src/lib/saved-views.test.ts (2 tests) 6ms
+ ✓ src/lib/push-depreciation.test.ts (3 tests) 7ms
+ ✓ src/lib/trip-status.test.ts (5 tests) 4ms
+ ✓ src/lib/review-recurring.test.ts (4 tests) 6ms
+ ✓ src/lib/books/investment-flows.test.ts (7 tests) 5ms
+ ✓ src/lib/statement-remembered.load-error.test.ts (2 tests) 5ms
+ ✓ src/lib/review-metadata.test.ts (5 tests) 7ms
+ ✓ src/lib/quick-entry.test.ts (8 tests) 5ms
+ ✓ src/lib/books/allocation-change.test.ts (3 tests) 5ms
+ ✓ src/lib/tax-summary.test.ts (1 test) 5ms
+ ✓ src/lib/contracts.test.ts (3 tests) 6ms
+ ✓ src/lib/statement-crosscheck.test.ts (3 tests) 6ms
+ ✓ src/lib/market/bhavcopy.test.ts (4 tests) 6ms
+ ✓ src/lib/books/close-registry.test.ts (8 tests) 7ms
+ ✓ src/lib/books/asset-events-posting.test.ts (3 tests) 6ms
+ ✓ src/lib/books/invoice-accrual.test.ts (2 tests) 6ms
+ ✓ src/lib/books/price-overrides.test.ts (3 tests) 5ms
+ ✓ src/components/screens/travel/travel-checkbox-target.test.ts (5 tests) 5ms
+ ✓ src/lib/statement-pipeline/independent-bank.test.ts (5 tests) 5ms
+ ✓ src/lib/drafts.test.ts (9 tests) 5ms
+ ✓ src/lib/books/docrepo-search.test.ts (1 test) 6ms
+ ✓ src/lib/books/opening-fixed-assets.test.ts (2 tests) 5ms
+ ✓ src/lib/entities.test.ts (4 tests) 5ms
+ ✓ src/lib/receipt-handoff.test.ts (3 tests) 6ms
+ ✓ src/lib/release-blockers.test.ts (3 tests) 5ms
+ ✓ src/lib/statement-pipeline/save-recovery.test.ts (8 tests) 5ms
+ ✓ src/lib/home-shortcuts.test.ts (5 tests) 5ms
+ ✓ src/lib/perf-check.test.ts (4 tests) 5ms
+ ✓ src/lib/report-centre-trip-refund.test.ts (2 tests) 5ms
+ ✓ src/lib/booking-import.test.ts (3 tests) 7ms
+ ✓ src/lib/statement-upload-history.test.ts (1 test) 4ms
+ ✓ src/lib/market/exchange-close.test.ts (5 tests) 6ms
+ ✓ src/lib/mark-done.test.ts (3 tests) 4ms
+ ✓ src/lib/books/bonds.test.ts (7 tests) 5ms
+ ✓ src/lib/books/source-corrections.test.ts (5 tests) 5ms
+ ✓ src/lib/books/trading-status.test.ts (4 tests) 4ms
+ ✓ src/lib/email-allowance.test.ts (5 tests) 4ms
+ ✓ src/lib/duplicate-compare.test.ts (3 tests) 5ms
+ ✓ src/lib/statement-pipeline/running-balance.test.ts (7 tests) 7ms
+ ✓ src/lib/family-requests.test.ts (2 tests) 5ms
+ ✓ src/lib/company-tax-csv.test.ts (4 tests) 5ms
+ ✓ src/lib/books/v6-final.test.ts (4 tests) 5ms
+ ✓ src/lib/documents-linked-search.test.ts (6 tests) 5ms
+ ✓ src/lib/trip-report.test.ts (3 tests) 4ms
+ ✓ src/lib/travel-inbox.test.ts (1 test) 3ms
+ ✓ src/components/ModuleDirectory.test.tsx (3 tests) 4ms
+ ✓ src/lib/trip-evidence.test.ts (3 tests) 4ms
+ ✓ src/lib/receipt-corrections.test.ts (3 tests) 6ms
+ ✓ src/lib/scanned-import-policy.test.ts (5 tests) 5ms
+ ✓ src/lib/trip-filters.test.ts (4 tests) 4ms
+ ✓ src/lib/import-inbox.test.ts (2 tests) 5ms
+ ✓ src/lib/report-status.test.ts (3 tests) 4ms
+ ✓ src/lib/confirm.test.ts (2 tests) 4ms
+ ✓ src/lib/family-email-edit.test.ts (3 tests) 4ms
+ ✓ src/lib/statement-rows.test.ts (2 tests) 4ms
+ ✓ src/lib/books/loan-source-link.test.ts (3 tests) 4ms
+ ✓ src/lib/review-recovery.test.ts (3 tests) 3ms
+ ✓ src/lib/books/corp-action.test.ts (2 tests) 4ms
+ ✓ src/lib/reconciliation-report.test.ts (1 test) 4ms
+ ✓ src/lib/audit-dashboard.test.ts (1 test) 4ms
+ ✓ src/lib/latest-request.test.ts (2 tests) 5ms
+ ✓ src/lib/shared-files.test.ts (2 tests) 4ms
+ ✓ src/lib/csv-safe.test.ts (2 tests) 5ms
+ ✓ src/lib/pdf-unicode.test.ts (2 tests) 3ms
+ ✓ src/lib/stable-receipt-path.test.ts (1 test) 3ms
+
+ Test Files  466 passed (466)
+      Tests  3812 passed (3812)
+   Start at  17:46:05
+   Duration  433.95s (transform 18.13s, setup 59.48s, import 105.56s, tests 947.57s, environment 124.46s)
+
+JSON report written to /tmp/claude-0/-home-user-receipt-river-budget-compass/382db65e-850d-5794-85c4-0e091a6faac5/scratchpad/acceptance-wsf1-ffa0e82/run-3/vitest.json

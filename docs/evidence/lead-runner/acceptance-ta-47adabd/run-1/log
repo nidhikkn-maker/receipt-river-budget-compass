@@ -1,0 +1,165 @@
+
+ RUN  v4.1.12 /home/user/thapal-ta7
+
+stderr | src/components/books/market-workflow-persistence.test.tsx > actual price refresh → installed reviewed-save RPC → net-worth/Home → reload preserves costs and creates no ledger records
+An update to NetWorthCard inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ ✓ src/lib/security-phase1-sql.test.ts (72 tests) 54801ms
+     ✓ legacy_company_editor: effective rights identical at 0088, P1, P1+P2 and P1+P2+P4, and equal to the stored role  364ms
+     ✓ a short-lived grant expires on its own; another person's grant never helps  1215ms
+     ✓ each __unguarded original is not executable by clients; wrappers keep name, signature, return type, SECURITY and grants  2681ms
+     ✓ the assistant-refusing writer set equals every client-callable VOLATILE non-trigger function of 0088+P1+P2 not already step-up guarded  2763ms
+     ✓ every wrapped RPC refuses an assistant session before doing anything; the same call as the user is not refused for being an assistant  533ms
+     ✓ P4b (optional hook): blocks non-GET assistant requests and revoked clients; humans unaffected; rollback removes only the hook  699ms
+     ✓ same-account restore: refused without step-up, succeeds with it and keeps one copy of each record  2775ms
+     ✓ cross-account restore with step-up remaps ids and leaves the source account untouched; an assistant cannot restore  2725ms
+     ✓ erasure with step-up leaves no owner-linked row outside the documented kept tables; other owners keep theirs  3253ms
+     ✓ no pre-existing row changes through P1, P2 and P4; each rollback restores the previous catalog exactly  5132ms
+stderr | src/components/books/market-workflow-persistence.test.tsx > foreign broker cash linked=false saves currency through the real form, persists FX and produces an INR snapshot without double counting
+An update to NetWorthCard inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+stderr | src/components/books/market-workflow-persistence.test.tsx > foreign broker cash linked=true saves currency through the real form, persists FX and produces an INR snapshot without double counting
+An update to NetWorthCard inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ ✓ src/components/books/market-workflow-persistence.test.tsx (27 tests) 64626ms
+   ✓ actual price refresh → installed reviewed-save RPC → net-worth/Home → reload preserves costs and creates no ledger records  3771ms
+   ✓ missing-price setting=true survives owner save/reload and controls the actual rendered exception  2353ms
+   ✓ missing-price setting=false survives owner save/reload and controls the actual rendered exception  2204ms
+   ✓ saved NAV staleness threshold 7 days drives the actual exception without changing price  2276ms
+   ✓ saved NAV staleness threshold 9 days drives the actual exception without changing price  2238ms
+   ✓ quantity 12 compares against pooled same-ISIN Demat totals and configured alert persists  2243ms
+   ✓ quantity 13 compares against pooled same-ISIN Demat totals and configured alert persists  2265ms
+   ✓ unusual-value threshold enabled=true compares owned cost, not full acquisition cost  2140ms
+   ✓ unusual-value threshold enabled=false compares owned cost, not full acquisition cost  2117ms
+   ✓ persisted live quote displays its exact provenance and last-success facts without rewriting acquisition costs  2327ms
+   ✓ persisted delayed quote displays its exact provenance and last-success facts without rewriting acquisition costs  2318ms
+   ✓ persisted eod quote displays its exact provenance and last-success facts without rewriting acquisition costs  2319ms
+   ✓ persisted nav quote displays its exact provenance and last-success facts without rewriting acquisition costs  2138ms
+   ✓ persisted manual quote displays its exact provenance and last-success facts without rewriting acquisition costs  2137ms
+   ✓ persisted statement quote displays its exact provenance and last-success facts without rewriting acquisition costs  2460ms
+   ✓ persisted Home snapshot shows contribution-adjusted movement and missing-price quality from the actual shared hook  2010ms
+   ✓ failed NAV refresh preserves last successful price/refresh and displays stale valuation after owner reload  2745ms
+   ✓ persisted source-linked bond clean/dirty=false accrual, FX and snapshot use the same actual net-worth flow  2146ms
+   ✓ persisted source-linked bond clean/dirty=true accrual, FX and snapshot use the same actual net-worth flow  2376ms
+   ✓ persisted bond matured stays explicitly incomplete rather than inventing a value  2424ms
+   ✓ persisted bond missing-fx stays explicitly incomplete rather than inventing a value  2309ms
+   ✓ persisted bond missing-original stays explicitly incomplete rather than inventing a value  2424ms
+   ✓ persisted bond missing-terms stays explicitly incomplete rather than inventing a value  2250ms
+   ✓ foreign broker cash linked=false saves currency through the real form, persists FX and produces an INR snapshot without double counting  2844ms
+   ✓ foreign broker cash linked=true saves currency through the real form, persists FX and produces an INR snapshot without double counting  2606ms
+   ✓ actual broker-cash account link saves/reloads, counts ledger cash once and preserves a statement discrepancy  2671ms
+   ✓ linked broker cash, independent deposit and duplicate manual/Demat security remain separately accounted after reload  2512ms
+ ✓ src/lib/failure-injection.test.ts (60 tests) 71246ms
+     ✓ 1. repeat upload of the same file (twice) and a later overlapping re-download → one ledger row per statement line  322ms
+     ✓ 3b. the database commits but the response is lost (entry save, save + read-back, claim, confirm) → no retry creates a second row  613ms
+     ✓ 4. concurrent imports of the same document (claim A, claim B, then saves in either order, confirm both; and fully concurrent) → one row per line, no error  749ms
+     ✓ 5. deletion through the API (PostgREST DELETE, TRUNCATE) instead of the interface: archive-controlled rows and line registrations  539ms
+     ✓ 3b. the database commits but the response is lost (entry save, save + read-back, claim, confirm) → no retry creates a second row  451ms
+     ✓ 4. concurrent imports of the same document (claim A, claim B, then saves in either order, confirm both; and fully concurrent) → one row per line, no error  801ms
+     ✓ 5. deletion through the API (PostgREST DELETE, TRUNCATE) instead of the interface: archive-controlled rows and line registrations  332ms
+     ✓ W1. Withdraw (app removal path): row and receipt files kept, no DELETE sent, excluded from every reader; Restore counts it again  339ms
+     ✓ W1. Withdraw (app removal path): row and receipt files kept, no DELETE sent, excluded from every reader; Restore counts it again  410ms
+     ✓ W5. a withdrawn entry stays unposted through the posting backfill; Restore posts it; once posted it can no longer be withdrawn  3744ms
+     ✓ D4. step-up required for approval; after approval P7 posts Dr Loss on asset disposal 53,000.00 / Cr Fixed assets 53,000.00; an unapproved disposal entry never posts  3520ms
+     ✓ X4. sensitive export without step-up refused, with step-up audited (step_up true); P2: a viewer without 'export' is refused, a granted company member passes, cross-company refused  3464ms
+     ✓ U1. Undo: created unposted rows withdrawn with reason/actor/time/source (rows, receipts, statement ref and original kept); the matched bill only loses its match; figures back; repeat Undo replays  985ms
+     ✓ U2. interrupted import, failed and lost Undo responses, then a re-import: only confirmed rows withdrawn once; the same lines are neither duplicated nor reactivated  878ms
+     ✓ U3. reordered statement and a different file with the same name: identities come from the lines, never the file; each Undo touches only its own upload  926ms
+     ✓ U4. controlled paths: a created row matched to other statement evidence since → correction (refused, nothing changed); a closed period → refused; the app refuses Undo without P16  844ms
+     ✓ U5. restore only through the authorised operation; an older backup cannot reactivate; a later Undo replay never re-withdraws a restored entry  924ms
+     ✓ U6. R-P10-1 / P7: activating balanced books after an Undo never posts the withdrawn rows; on active books a later Undo reverses posted rows (linked reversal), withdraws none  1007ms
+ ✓ src/lib/security-proposed-sql.test.ts (80 tests) 33890ms
+     ✓ P1 then P2 change no pre-existing row (count + md5 per table); rollback restores 0088 objects exactly  435ms
+     ✓ 0088 baseline leaves owner-linked rows in tables added after 0058  2838ms
+     ✓ after P1 (+P2) no owner-linked row remains outside the documented kept tables; other owners keep theirs  5346ms
+     ✓ P1 keeps the delete_my_finance_data contract (no args, void, definer, authenticated only)  2546ms
+     ✓ every new or replaced definer function sets search_path, checks auth.uid() and is not executable by anon/PUBLIC  2526ms
+ ✓ src/lib/backup-restore-sql.test.ts (12 tests) 33316ms
+     ✓ every owner-scoped table in the applied schema is backed up or excluded with a reason; classifications stay current  3174ms
+     ✓ every id-like and JSON column of a backed-up table is classified  2430ms
+     ✓ seeds every table; investment rows are written after the server restore when the server does not count them  3083ms
+     ✓ cross-account restore: zero orphans in the database, identical counts and totals, repeat restore does not duplicate, source untouched  3021ms
+     ✓ legacy v1 JSON and v2 ZIP backups restore through the real restore function  2988ms
+     ✓ same-account restore twice keeps one copy and byte-identical preferences  2897ms
+     ✓ legacy depreciation ids collide across owners in the database; owner-scoped ids do not (R12)  2558ms
+     ✓ the original owner's saved legacy posting is reused even when the screen has not loaded it (no second copy)  2467ms
+     ✓ a backup holding a legacy and an owner-scoped copy of one posting restores both rows across accounts  2770ms
+     ✓ B's restored copy has A's hand-calculated figures; every embedded id is B's own; A is untouched; a failed restore changes nothing  2699ms
+     ✓ applied schema: cross-account restore keeps a withdrawal with its history; an older same-account backup REINSTATES (recorded gap) a withdrawn entry  2592ms
+     ✓ with P10: cross-account restore keeps a withdrawal with its history; an older same-account backup never reinstates a withdrawn entry  2623ms
+ ✓ src/lib/accounting-posting-proposed-sql.test.ts (11 tests) 31012ms
+     ✓ installs on 0088 and backfill preview equals the TypeScript corporate-statements derivation (lines, trial balance, exceptions)  3665ms
+     ✓ commit posts the reviewed preview exactly once; card settlement has no expense line, transfers create no income; replays are idempotent  2754ms
+     ✓ database refuses unbalanced, per-entity/per-currency unbalanced, badly signed or inexact lines, direct writes and any edit of posted lines  2703ms
+     ✓ store.tsx RPC shapes work on the single posting layer: journal post/replay/recovery, immutable anchors, reversal, accountant grant/review/revoke  2439ms
+     ✓ partial settlement leaves the accrual due; one bank payment cannot settle twice or exceed the balance; the settled source is retained  2629ms
+     ✓ closed periods refuse postings (function and direct paths); correcting entries post in an open period; reopening on Audit restores posting  2504ms
+     ✓ after a committed backfill, ledger edits post reversal + replacement (never in place); closed periods block backfill; undo reverses and deactivates  2987ms
+     ✓ RLS: other owners cannot read or write postings; company members and accountants see only granted companies and lose access on revocation  2559ms
+     ✓ delete_my_finance_data and restore_finance_backup succeed with postings present; erasure removes only the caller’s accounting rows  2944ms
+     ✓ installs after P1/P2; P1 erasure still removes postings and revoked company members lose posting access  2532ms
+     ✓ installing, using and rolling back P3 leaves every existing owner table byte-identical and the catalog equal to 0088  3287ms
+ ✓ src/lib/p18-erasure-authority-sql.test.ts (9 tests) 28728ms
+     ✓ attack: SET / set_config of the old settings no longer bypasses any guard; no function reads them  3316ms
+     ✓ authorised erasure works end to end (rows, then files) and writes one append-only audit record  2562ms
+     ✓ a client can't write the authority or audit rows or call the helpers; an exemption never survives its transaction  2527ms
+     ✓ install refuses twice; rollback refuses while audit rows exist, then restores the exact previous catalog  2647ms
+     ✓ attack: SET / set_config of the old settings no longer bypasses any guard; no function reads them  3564ms
+     ✓ authorised erasure works end to end (rows, then files) and writes one append-only audit record  3493ms
+     ✓ a client can't write the authority or audit rows or call the helpers; an exemption never survives its transaction  3350ms
+     ✓ P9: the verified 'saved to add later' cleanup still works through discard_used_pending_document  3562ms
+     ✓ install refuses twice; rollback refuses while audit rows exist, then restores the exact previous catalog  3698ms
+stderr | src/components/register-workflow-persistence.test.tsx > grouped actual file-to-review, installed SQL and read-back acceptance > ambiguous property names require owner selection before any lease record or original is saved
+An update to Button inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ ✓ src/lib/phase3-posting-sql.test.ts (30 tests) 25773ms
+       ✓ a company close blocks that company's postings only; backfill skips closed periods and reports them (DN-P3-4)  3656ms
+       ✓ undo reverses every entry posting (history kept) and deactivates; replay is idempotent; later edits post nothing  3407ms
+       ✓ confirmed erasure removes the owner's posting records only  3698ms
+     ✓ installing P7, previewing, committing the backfill and rolling back never changes a pre-existing row; catalog returns exactly  3857ms
+     ✓ refuses to install without P5, or together with the superseded P3  5256ms
+ ✓ src/lib/phase2-restore-investments-sql.test.ts (8 tests) 23613ms
+     ✓ before P5b the server ignores investment rows (the app writes them in a second, separate step)  3594ms
+     ✓ v3 round trip (same account, then cross-account) restores investments in the server transaction; the client step has nothing left to write  3126ms
+     ✓ v2 backup (no investment tables) still restores and reports zero investment rows  2720ms
+     ✓ a failing investment row rolls back the WHOLE restore (accounts, entries, documents, preferences)  3258ms
+     ✓ natural keys: an existing demat account / holding under another id is matched, kept unchanged, and the differences are reported  2789ms
+     ✓ step-up is still required (P4) and assistants are refused even with step-up  2841ms
+     ✓ rollback restores restore_finance_backup exactly as P4 left it; the P4 rollback refuses while P5b is installed; restored rows stay  2768ms
+     ✓ the old client id (company key + year + count) collides across owners; openingPostingId does not; stored ids are untouched  2510ms

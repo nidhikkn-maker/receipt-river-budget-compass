@@ -1,0 +1,1 @@
+Stopped by lead 2026-11-11 ~23:00Z: commit rejected on independent review (MEDIUM: store online state can stick false forever after a missed 'online' event — loadRun no longer heals it; MEDIUM: demo cleanup ignores all errors on claim_receipt_corrections then deletes the auth user, orphaning rows). Not a runner failure.
