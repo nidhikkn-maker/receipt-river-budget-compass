@@ -450,3 +450,22 @@ None of these is database evidence.
 3. P20 hosted install: Approve / **Decline (recommended now; requires a separate P19 decision first)**
 4. Optional, per migration: approve a read-only hosted drift check (§0.3) and a rehearsal on a restored copy (§0.4), with access granted by KK and results recorded under `docs/evidence/hosted/`.
 5. P14: decide whether disposal requests must survive account erasure (current behaviour) or be erased, and whether the rollback may ever drop them.
+
+
+## Addendum, 12 Nov 2026 22:45 UTC: P14 gaps closed in staged SQL (develop/sf-base 6408e610)
+
+G9, G10 and G11 are closed in the staged P14 SQL and tests (Track A dc41336, lead-verified, evidence `docs/evidence/lead-runner/acceptance-ta-dc41336`):
+- The rollback keeps the audit trail, verified and read-only. Re-installing accepts the trail only if it is unchanged.
+- Rows can be removed only by the owner's confirmed erasure or by demo-guest cleanup.
+- The P14 and P20 trails are excluded from backup restore.
+- P14 refuses to install or roll back while P18 is installed.
+
+The P14 checksums above are superseded. Re-compute them from develop/sf-base 6408e610 before any approval.
+
+**New points for KK's decision on P14:**
+1. **Owner erasure:** it would delete the owner's disposal requests, including a Finance approver's decision.
+2. **Backup restore:** it excludes the trail, so restored disposal entries become unposted P8 exceptions that need review again.
+3. **Before P18:** removal relies on a client-settable session flag, the same as P20. P18 closes this.
+4. **Re-installing P14 later:** it requires rolling back P18 first, including P18's audit-drop step, which needs KK approval.
+
+The recommendation is unchanged: decline the hosted install for now. G1–G8 and G12–G15 remain open.

@@ -1,0 +1,1 @@
+Lead: environment failure, not a code defect. ta8/node_modules was a symlink to ta7, so Vite refused '?url' font imports outside the root (2 suites: app-routing, shell/routes). All 3,463 tests passed. Rerun with a real (hardlinked) node_modules.
