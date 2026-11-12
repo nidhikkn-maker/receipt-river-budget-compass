@@ -1,0 +1,4 @@
+# Lead note — WS-E cfbc2c5 (ws/e-records-next22, share follow-ups)
+WS-E runner ACCEPTED 3 x 4,221 (self-reported). Lead runner stopped during run-1 (rejected on review).
+Review: data safety verified (preserveForSave keeps unchanged records byte-identical; no approval dialog for unchanged assets; backup-remap carries marker; posted journals don't use sharePct; stale marker dropped; share edit clears marker).
+Not accepted: M1 legacy negative share changes tax/depreciation figures (taxDraft, taxComputation, booksHeads → TaxCentre, workpaper, ITR hand-off) from 0 to full with no flag. Lead ruling: flag beside every affected tax/depreciation figure and list in the ITR hand-off review section. Lows: [50]-style non-number share passes as valid; marker round-trip tests; in-session save not normalised (pre-existing).

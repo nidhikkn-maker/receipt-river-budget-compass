@@ -1,0 +1,4 @@
+# Review — WS-E f8883a5 vs cfbc2c5 (2026-11-12 ~19:40Z)
+No High. Verified: tax figures, rounding, CSV columns unchanged (notes/open count only); notes scoped to the figure (entity/person/FY, non-zero depreciation, heads assets); earlier hand-off packages unchanged, open count display-only; savePreferences normalises state only, no approval prompt for unchanged data, no render loop.
+Open (routed to next23, recorded against tax screens, not Records): M1 partnership/LLP notes leak into the personal working and add a false open item (carry for proprietorships only); L1 duplicate note in README/PDF; L2 type cast; L3 React keys/de-dup; L4 long values; L5 tests.
+Lead decision: acceptable for the Records follow-up (no figure change; over-flag only, on tax screens outside this candidate's screen set) pending runner.
