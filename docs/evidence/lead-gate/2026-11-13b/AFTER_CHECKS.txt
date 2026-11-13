@@ -1,0 +1,4 @@
+after-checks 2026-11-13T07:13:50Z
+anonymous: 302
+revoked link sets cookie: 1
+re-check 07:14:05Z: revoked link sets cookie: 0; the link redirects to Vercel SSO (302); anonymous 302. The first check (07:13:50Z) read 1, within seconds of the revoke (propagation).
