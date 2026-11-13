@@ -2,7 +2,7 @@
 // for the CATALOG query shared by p0-038-guc-authority-sql.test.ts and p19-finance-operation-authority-sql.test.ts
 // (entries are "kind|name|value"). A reverse rollback through P14 must leave the previous catalog exactly, plus exactly
 // these entries: no other leftover schema, function, trigger, policy, column or grant is hidden by this list.
-const COLUMNS = ["id", "owner_id", "asset_id", "asset_name", "asset_ordinal", "entity_id", "method", "disposal_date", "proceeds", "proceeds_entry_id", "evidence_document_ids",
+const COLUMNS = ["id", "owner_id", "asset_id", "asset_name", "asset_ordinal", "asset_owner_entity", "entity_id", "method", "disposal_date", "proceeds", "proceeds_entry_id", "evidence_document_ids",
   "reason", "book_value", "gain", "entry_id", "inputs", "requested_by", "requested_at", "status", "decided_by", "decided_at", "decision_reason"];
 const POLICIES = ["Disposal requests: owner reads retained history", "P14 requests recorded only by the disposal workflow", "P14 requests cannot be changed",
   "P14 requests cannot be deleted", "P14 service reads disposal requests", "P14 demo cleanup removes guest requests"];

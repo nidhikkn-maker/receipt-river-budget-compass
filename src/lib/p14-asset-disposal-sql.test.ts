@@ -328,6 +328,169 @@ describe("P14-c: the disposal copy of a duplicated asset id (app rule, ordinal, 
   });
 });
 
+// ---------------------------------------------------------------------------------------------------------------------------
+// P14-d (independent review of 6ea9c77: M1, L1-L4). Each case fails on 6ea9c77 and passes now (L4: the explicit refusal).
+// Fixture (1) of P14-c: machinery 1,20,000.00 SLM 20%, in use 2026-04-01, disposal 2026-10-15 → book value 1,07,032.26.
+describe("P14-d: copy-owner keyed open requests, app parity edges, sold rows bound to their approval, legacy requests", () => {
+  let db: PGlite;
+  const owners = Array.from({ length: 8 }, (_, i) => `00000000-0000-4000-8000-0000000002${String(i).padStart(2, "0")}`);
+  beforeAll(async () => {
+    db = await fullSchemaDb([...STACK, P14]);
+    await addUsers(db, Object.fromEntries(owners.map((o, i) => [o, `d${i}@x.in`])));
+  }, 600_000);
+  afterAll(async () => { await db.close(); });
+
+  const base = async (owner: string) => {
+    const acc = crypto.randomUUID(), doc = crypto.randomUUID();
+    await actAs(db, null);
+    await db.query("INSERT INTO public.finance_preferences(owner_id, data) VALUES ($1, '{}') ON CONFLICT (owner_id) DO NOTHING", [owner]);
+    await db.query("INSERT INTO public.accounts(id, owner_id, name, kind, opening_balance) VALUES ($1,$2,'Fixed assets','other_asset',0)", [acc, owner]);
+    await db.query("INSERT INTO public.documents(id, owner_id, title, file_path, file_name, size_bytes, notes) VALUES ($1,$2,'Sale invoice',$3,'inv.pdf',1000,'')", [doc, owner, `${owner}/docs/${doc}-inv.pdf`]);
+    return { acc, doc };
+  };
+  /** rows as JSON text (so numbers JSON.stringify cannot write, like 1e-400, can be stored as written) */
+  const setRegisterText = async (owner: string, json: string) => { await actAs(db, null); await db.query("UPDATE public.finance_preferences SET data = jsonb_set(data, '{assets}', $2::jsonb) WHERE owner_id = $1", [owner, json]); };
+  const setRegister = (owner: string, rows: Row[]) => setRegisterText(owner, JSON.stringify(rows));
+  const register = async (owner: string) => (await q1<{ t: string }>(db, null, "SELECT data::text t FROM public.finance_preferences WHERE owner_id = $1", [owner]))[0]!.t;
+  const rowText = async (owner: string, i: number) => (await q1<{ t: string }>(db, null, "SELECT (data->'assets'->$2::int)::text t FROM public.finance_preferences WHERE owner_id = $1", [owner, i]))[0]!.t;
+  const rows = async (owner: string) => (await q1<{ a: Row[] }>(db, null, "SELECT data->'assets' a FROM public.finance_preferences WHERE owner_id = $1", [owner]))[0]!.a;
+  const SALE = "SELECT public.request_asset_disposal(p_asset => $1, p_method => 'sale', p_date => $2::date, p_proceeds => 100000, p_proceeds_entry => NULL, p_evidence => ARRAY[$3]::uuid[], p_reason => 'Sold to a dealer', p_entry => $4, p_book_value => $5, p_owner_entity => $6) id";
+  const request = async (owner: string, doc: string, ent: string | null = null, date = "2026-10-15") =>
+    (await q1<{ id: string }>(db, owner, SALE, ["AST-1", date, doc, crypto.randomUUID(), null, ent]))[0]!.id;
+  const preview = async (owner: string, ent: string | null = null) =>
+    (await q1<{ p: Row }>(db, owner, "SELECT public.preview_asset_disposal('AST-1', '2026-10-15', 100000, $1) p", [ent]))[0]!.p;
+  const approve = async (owner: string, id: string) => { await stepUp(db, owner); return (await q1<{ r: Row }>(db, owner, "SELECT public.decide_asset_disposal($1, true, 'Approved after review', NULL) r", [id]))[0]!.r; };
+  const machine = (acc: string, x: Row = {}): Row => ({ id: "AST-1", name: "Lathe", kind: "machinery", cost: 120000, inUse: "2026-04-01", sharePct: 100, bookMethod: "slm", bookRatePct: 20, accountId: acc, ...x });
+  const edit = (owner: string, sql: string) => q1(db, owner, `UPDATE public.finance_preferences SET data = ${sql} WHERE owner_id = $1`, [owner]);
+
+  it("M1: entity A's copy approved, then entity B's copy of the same id is requested and approved on its own row; A's row is untouched", async () => {
+    const o = owners[0]!, { acc, doc } = await base(o);
+    await setRegister(o, [machine(acc, { ownerEntityId: "ent-a" }), machine(acc, { name: "Lathe (B)", ownerEntityId: "ent-b", cost: 240000 })]);
+    const a = await request(o, doc, "ent-a");
+    expect((await q1<Row>(db, null, "SELECT asset_ordinal o, entity_id ent FROM public.asset_disposal_requests WHERE id = $1", [a]))[0]).toEqual({ o: 1, ent: "ent-a" });
+    expect(await approve(o, a)).toMatchObject({ status: "approved", ordinal: 1 });
+    const aRow = await rowText(o, 0);
+    // before P14-d: P14_PENDING for good (the open-request index was (owner_id, asset_id))
+    const b = await request(o, doc, "ent-b");
+    expect((await q1<Row>(db, null, "SELECT asset_owner_entity e FROM public.asset_disposal_requests WHERE id = $1", [a]))[0]).toEqual({ e: "ent-a" });
+    expect((await q1<Row>(db, null, "SELECT asset_ordinal o, asset_owner_entity e, book_value::text bv FROM public.asset_disposal_requests WHERE id = $1", [b]))[0]).toEqual({ o: 2, e: "ent-b", bv: "214064.52" });
+    // still one open request per copy owner
+    expect(await err(request(o, doc, "ent-b"))).toMatch(/P14_PENDING/);
+    expect(await preview(o, "ent-b")).toMatchObject({ ordinal: 2, problems: ["This asset already has an open disposal request"] });
+    expect(await approve(o, b)).toMatchObject({ status: "approved", ordinal: 2, bookValue: 214064.52 });
+    expect(await rowText(o, 0)).toBe(aRow);
+    const after = await rows(o);
+    expect(after[0]).toMatchObject({ ownerEntityId: "ent-a", disposal: { requestId: a } });
+    expect(after[1]).toMatchObject({ ownerEntityId: "ent-b", soldOn: "2026-10-15", disposal: { requestId: b, bookValue: 214064.52 } });
+    expect((await q1(db, null, "SELECT count(*)::int n FROM public.expenses WHERE employee_id = $1 AND 'disposal' = ANY(tags)", [o]))[0]).toEqual({ n: 2 });
+  });
+
+  it("L1a: a kind that is not an ASSET_KINDS own key is unreadable: never chosen as depreciating, and refused (never priced) when it is the only copy", async () => {
+    const o = owners[1]!, { acc, doc } = await base(o);
+    for (const kind of ["toString", "constructor", "__proto__", ""]) {
+      await setRegister(o, [machine(acc, { kind })]);
+      const snap = await register(o);
+      expect(await err(request(o, doc)), kind).toMatch(/P14_UNVERIFIABLE: .*no known asset kind/);
+      expect(await preview(o), kind).toMatchObject({ bookValue: null, problems: [expect.stringMatching(/no known asset kind/)] });
+      expect(await register(o)).toBe(snap);
+    }
+    expect((await q1(db, null, "SELECT count(*)::int n FROM public.asset_disposal_requests WHERE owner_id = $1", [o]))[0]).toEqual({ n: 0 });
+    // with a readable machinery copy as well, the machinery copy is priced
+    await setRegister(o, [machine(acc, { kind: "toString", cost: 500000 }), machine(acc)]);
+    expect(await preview(o)).toMatchObject({ ordinal: 2, bookValue: 107032.26, problems: [] });
+  });
+
+  it("L1b: ownerEntityId counts only as a non-empty string; true, 1, 0, false, '' and null are all personal", async () => {
+    const o = owners[2]!, { acc, doc } = await base(o);
+    for (const odd of [true, 1, 0, false, "", null]) {
+      await setRegister(o, [machine(acc, { ownerEntityId: odd, cost: 240000 }), machine(acc, { ownerEntityId: "" })]);
+      expect(await preview(o), String(odd)).toMatchObject({ ordinal: 1, ownerEntityId: null, bookValue: 214064.52, problems: [] });
+      expect(await preview(o, ""), String(odd)).toMatchObject({ ordinal: 1, ownerEntityId: null });
+    }
+    await setRegister(o, [machine(acc, { ownerEntityId: 1, cost: 240000 }), machine(acc)]);
+    const id = await request(o, doc);
+    expect((await q1<Row>(db, null, "SELECT asset_ordinal o, asset_owner_entity e, entity_id ent FROM public.asset_disposal_requests WHERE id = $1", [id]))[0]).toEqual({ o: 1, e: "", ent: null });
+    expect(await approve(o, id)).toMatchObject({ status: "approved", ordinal: 1 });
+  });
+
+  it("L1c: a numeric excludedAt is truthy iff JS parses it to non-zero (1e-400 → 0, not excluded; 1e400 → Infinity, excluded)", async () => {
+    const o = owners[3]!, { acc, doc } = await base(o);
+    const withExcluded = (n: string) => JSON.stringify([machine(acc, { cost: 240000, excludedAt: "X" }), machine(acc)]).replace('"X"', n);
+    for (const [n, ordinal] of [["1e-400", 1], ["-1e-400", 1], ["2.4703282292062327e-324", 1], ["0", 1], ["0.0", 1], ["5e-324", 2], ["1e400", 2], ["1", 2]] as const) {
+      await setRegisterText(o, withExcluded(n));
+      expect(Number(n) !== 0, n).toBe(ordinal === 2); // JS truthiness of the parsed number
+      expect(await preview(o), n).toMatchObject({ ordinal, problems: [] });
+    }
+    await setRegisterText(o, withExcluded("1e-400"));
+    const id = await request(o, doc);
+    expect((await q1<Row>(db, null, "SELECT asset_ordinal o, book_value::text bv FROM public.asset_disposal_requests WHERE id = $1", [id]))[0]).toEqual({ o: 1, bv: "214064.52" });
+  });
+
+  it("L2: a sold row keeps its approved position and priced financial fields: relocating its facts, changing its owner or cost is refused; renaming works", async () => {
+    const o = owners[4]!, { acc, doc } = await base(o);
+    const A = machine(acc), B = machine(acc, { name: "Lathe (B)", cost: 240000, inUse: "2026-05-01" });
+    await setRegister(o, [A, B]);
+    const id = await request(o, doc);
+    expect(await approve(o, id)).toMatchObject({ status: "approved", ordinal: 1 });
+    const sold = (await rows(o))[0]!;
+    const facts = { soldOn: sold["soldOn"], saleValue: sold["saleValue"], disposal: sold["disposal"] };
+    const snap = await register(o);
+    const refused = async (label: string, next: Row[]) => {
+      expect(await err(q1(db, o, "UPDATE public.finance_preferences SET data = jsonb_set(data, '{assets}', $2::jsonb) WHERE owner_id = $1", [o, JSON.stringify(next)])), label).toMatch(/P14_DISPOSAL_APPROVAL_REQUIRED/);
+      expect(await register(o), label).toBe(snap);
+    };
+    // [A sold, B] → [B with A's facts, A unsold]: the multiset of facts is unchanged, the sold row is not the row approved
+    await refused("relocate", [{ ...B, ...facts }, A]);
+    await refused("reorder", [B, sold]);
+    await refused("owner", [{ ...sold, ownerEntityId: "ent-x" }, B]);
+    await refused("cost", [{ ...sold, cost: 1 }, B]);
+    await refused("in use", [{ ...sold, inUse: "2026-05-01" }, B]);
+    await refused("rate", [{ ...sold, bookRatePct: 10 }, B]);
+    await refused("life", [{ ...sold, usefulLifeYears: 3 }, B]);
+    await refused("kind", [{ ...sold, kind: "computer" }, B]);
+    await refused("insert before", [machine(acc, { id: "AST-0", name: "Drill" }), sold, B]);
+    expect(await err(edit(o, "jsonb_set(data, '{assets,0,residualPct}', '5')"))).toMatch(/P14_DISPOSAL_APPROVAL_REQUIRED/);
+    expect(await err(edit(o, "jsonb_set(data, '{assets,0,bookMethod}', '\"wdv\"')"))).toMatch(/P14_DISPOSAL_APPROVAL_REQUIRED/);
+    expect(await register(o)).toBe(snap);
+    // operational fields stay editable; the unsold copy B stays editable; appending a new asset after it works
+    await edit(o, "jsonb_set(jsonb_set(jsonb_set(data, '{assets,0,name}', '\"Lathe, sold\"'), '{assets,0,location}', '\"Yard\"'), '{assets,0,notes}', '\"buyer collected\"')");
+    await edit(o, "jsonb_set(data, '{assets,1,cost}', '250000')");
+    await edit(o, `jsonb_set(data, '{assets}', (data->'assets') || '${JSON.stringify([machine(acc, { id: "AST-2", name: "Drill" })])}'::jsonb)`);
+    const now = await rows(o);
+    expect(now[0]).toEqual({ ...sold, name: "Lathe, sold", location: "Yard", notes: "buyer collected" });
+    expect(now.map((r) => r["cost"])).toEqual([120000, 250000, 120000]);
+  });
+
+  it("L4: a legacy request without asset_ordinal is never approved, and can be rejected or cancelled", async () => {
+    const o = owners[5]!, { acc, doc } = await base(o);
+    await setRegister(o, [machine(acc)]);
+    const legacy = async () => {
+      const id = crypto.randomUUID();
+      await actAs(db, null);
+      await db.query(`INSERT INTO public.asset_disposal_requests(id, owner_id, asset_id, asset_name, method, disposal_date, proceeds, evidence_document_ids, reason, book_value, gain, entry_id, inputs, requested_by)
+        VALUES ($1, $2, 'AST-1', 'Lathe', 'sale', '2026-10-15', 100000, ARRAY[$3]::uuid[], 'Sold to a dealer', 107032.26, -7032.26, $4, jsonb_build_object('asset', $5::jsonb), $2)`,
+        [id, o, doc, crypto.randomUUID(), JSON.stringify(machine(acc))]);
+      return id;
+    };
+    const r1 = await legacy();
+    const snap = await register(o);
+    await stepUp(db, o);
+    expect(await err(q1(db, o, "SELECT public.decide_asset_disposal($1, true, 'Approved after review', NULL)", [r1]))).toMatch(/P14_CHANGED: this request has no recorded copy position/);
+    expect(await register(o)).toBe(snap);
+    expect((await q1<Row>(db, null, "SELECT status, asset_ordinal o FROM public.asset_disposal_requests WHERE id = $1", [r1]))[0]).toEqual({ status: "pending", o: null });
+    // it blocks a new request for the same copy until it is closed
+    expect(await err(request(o, doc))).toMatch(/P14_PENDING/);
+    expect((await q1<{ r: Row }>(db, o, "SELECT public.decide_asset_disposal($1, false, 'Recorded before the copy rule', NULL) r", [r1]))[0]!.r).toMatchObject({ status: "rejected" });
+    const r2 = await legacy();
+    expect((await q1<{ r: Row }>(db, o, "SELECT public.cancel_asset_disposal($1, 'Recorded before the copy rule') r", [r2]))[0]!.r).toMatchObject({ status: "cancelled" });
+    expect(await register(o)).toBe(snap);
+    expect((await q1(db, null, "SELECT count(*)::int n FROM public.expenses WHERE employee_id = $1", [o]))[0]).toEqual({ n: 0 });
+    // a new request (with its position) is then approved normally
+    const id = await request(o, doc);
+    expect(await approve(o, id)).toMatchObject({ status: "approved", ordinal: 1, bookValue: 107032.26 });
+  });
+});
+
 describe("P14-a without P4 (applied schema + P14): approval fails closed, rejection still works", () => {
   it("no step-up check installed → an approval is refused (P14_STEP_UP_UNAVAILABLE) and nothing is disposed", async () => {
     const db = await fullSchemaDb([P14]);
