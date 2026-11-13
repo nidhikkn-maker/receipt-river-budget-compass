@@ -476,3 +476,20 @@ The recommendation is unchanged: decline the hosted install for now. G1–G8 and
 - **The staged fix:** `docs/evidence/verification/ws-e/next25-fin5/staged-guard_books_registers-every-copy.sql` on `ws/e-records-next25-fin5` (d371590e). It pairs identical rows first, then the rest by order, and checks id-less rows.
 - **Review result:** identical to 0069 for unique ids, and stricter for duplicates. Tested in PGlite only.
 - **Status:** staged only. It needs its own KK decision, with the same rehearsal, drift-check and backup requirements as the other hosted changes (G1–G8). Nothing is applied.
+
+## Addendum, 13 Nov 2026 10:55 UTC: P14 marked BLOCKED, DO NOT INSTALL (independent note 4227345959)
+
+The staged `P14_asset_disposal_approval.sql` (develop/sf-base) resolves the asset with a first-row `asset_of` / `LIMIT 1`, and its approval write can mark **every** row sharing the asset id as sold:
+- **Wrong copy priced.** Land ₹30,00,000 before machinery ₹1,20,000: the app book value is ₹1,07,032.26, but the SQL re-prices the land, or rejects with `P14_BOOK_VALUE`.
+- **Other owners' records changed.** Copies of the same id under another entity could be modified.
+
+**Status:** P14 is **BLOCKED, DO NOT INSTALL** as staged, separately from the general hosted-approval requirement. WS-E fin8 (`e68061b9`) carries a replacement proposal (`staged-P14-asset_of-copy-rule.sql`), which is not verified.
+
+**Routed to Track A**, which owns the staged P14 SQL. Required: an owner- and month-aware copy rule matching the app's `depreciationCopy`, and a single-ordinal update. PGlite tests must fail before the fix and pass after, for:
+1. land first, machinery second: book value ₹1,07,032.26;
+2. an excluded duplicate, and a sold chosen copy;
+3. two entities sharing an id: only the requested owner and ordinal are updated;
+4. parity between preview, request and approval;
+5. rollback with no change on refusal.
+
+I05/F05 remain blocked.
