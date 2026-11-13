@@ -2014,7 +2014,7 @@ html[data-theme="signature-flow"] .sf-next .sf-btn { --sf-pill-h: 36px; --sf-pil
   html[data-theme="signature-flow"] .sf-home-head .sf-btn::before { content: ""; position: absolute; z-index: -1; inset: 4px 0; border-radius: 10px; background: var(--sf-pill-bg, transparent); border: 1px solid var(--sf-pill-line, transparent); }
   html[data-theme="signature-flow"] .sf-home-head .sf-btn svg { width: 11px; height: 11px; }
   html[data-theme="signature-flow"] .sf-home-head .sf-overline { margin-top: 0; }
-  html[data-theme="signature-flow"] .sf-hero-title { font-size: 26px; letter-spacing: -0.05em; }
+  html[data-theme="signature-flow"] .sf-hero-title { font-size: 28px; letter-spacing: -0.05em; } /* §3.3 phone hero 28-34 (was 26) */
   html[data-theme="signature-flow"] .sf-lede { margin-top: 6px; font-size: 13px; line-height: 1.5; }
   html[data-theme="signature-flow"] .sf-worth { padding: 26px 21px 24px; border-radius: 18px; }
   html[data-theme="signature-flow"] .sf-worth .sf-overline { font-size: 10px; font-weight: 800; letter-spacing: .18em; }
@@ -2290,6 +2290,18 @@ html[data-theme="signature-flow"] .plan-cal-scroll { max-width: 100%; overflow-x
 html[data-theme="signature-flow"] .plan-cal-grid { grid-template-columns: repeat(7, minmax(44px, 1fr)); }
 html[data-theme="signature-flow"] .plan-cal-cell { min-width: 44px; min-height: 44px; }
 html[data-theme="signature-flow"] .plan-cal-meta { font-size: 12px; line-height: 16px; white-space: normal; }
+/* Density pass 4 (review M1): the 12 px labels made a day taller than the fixed h-20 / sm:h-24 cell, so at 320 px
+ * "12 items" or pending + completed spilled into the next week's row. The cell now grows from those heights (rows grow
+ * together: grid rows size to their tallest day), the pending/completed pair wraps inside the cell instead of
+ * running past it, and below 375 px the count shows as "12" (the cell's accessible name keeps "12 items", and from
+ * 375 px "items" is visible again). Nothing is clipped or hidden: every count stays on screen at 12 px. */
+html[data-theme="signature-flow"] .plan-cal-grid .plan-cal-cell { height: auto; min-height: 80px; }
+@media (min-width: 640px) { html[data-theme="signature-flow"] .plan-cal-grid .plan-cal-cell { min-height: 96px; } }
+html[data-theme="signature-flow"] .plan-cal-cell > * { max-width: 100%; }
+html[data-theme="signature-flow"] .plan-cal-status { flex-wrap: wrap; justify-content: center; }
+@media (max-width: 374px) { html[data-theme="signature-flow"] .plan-cal-unit { display: none; } }
+/* Review L2: while more days are off to the right of the calendar's own scroll box, its right edge fades. */
+html[data-theme="signature-flow"] .plan-cal-scroll[data-fade-end] { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent); }
 /* The 12 px support text must stay whole: the line under a net-worth metric breaks long words (hyphenated where the
  * browser can) instead of ending in an ellipsis, and the two net-worth actions go onto two lines on a narrow iPhone
  * rather than letting a 12 px label run past its button. */

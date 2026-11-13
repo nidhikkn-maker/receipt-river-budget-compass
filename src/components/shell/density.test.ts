@@ -99,10 +99,40 @@ describe("density rules (Signature Flow only)", () => {
     expect(rule(block, ".plan-cal-meta")).toContain("font-size: 12px");
     expect(rule(block, ".plan-cal-scroll")).toMatch(/max-width: 100%; overflow-x: auto/);
     const src = readFileSync("src/components/PlanCalendar.tsx", "utf8");
-    expect(src).toContain('<div className="plan-cal-scroll"><div className="plan-cal-grid grid grid-cols-7');
+    expect(src).toContain('data-fade-end={moreRight || undefined}><div className="plan-cal-grid grid grid-cols-7');
     expect(src).toContain('cn("plan-cal-cell h-20');
     expect(src.match(/className="plan-cal-meta/g)?.length).toBe(2);
     expect(src.match(/text-\[10px\]/g)?.length).toBe(2); // the only 10 px labels, both raised by .plan-cal-meta
+  });
+  it("density 4 / review M1: Plan calendar days grow with their 12 px labels instead of spilling into the next week", () => {
+    // jsdom cannot lay out, so the rules are checked here and the overlap itself is measured in the 320/375/390 captures.
+    const cell = rule(block, ".plan-cal-grid .plan-cal-cell");
+    expect(cell).toContain("height: auto"); // beats the fixed h-20 / sm:h-24 (more specific than a Tailwind utility)
+    expect(cell).toContain("min-height: 80px"); // the old h-20 is now a floor
+    expect(block).toContain(`@media (min-width: 640px) { ${SF} .plan-cal-grid .plan-cal-cell { min-height: 96px; } }`);
+    expect(rule(block, ".plan-cal-grid")).not.toMatch(/grid-auto-rows|grid-template-rows/); // rows stay auto: a week is as tall as its tallest day
+    expect(rule(block, ".plan-cal-status")).toContain("flex-wrap: wrap"); // pending + completed wrap inside a 44 px day
+    expect(rule(block, ".plan-cal-cell > *")).toContain("max-width: 100%");
+    expect(rule(block, ".plan-cal-meta")).toContain("font-size: 12px"); // the floor stays
+    // Below 375 px only the word "items" goes; the number stays and the accessible name keeps "N items".
+    expect(block).toContain(`@media (max-width: 374px) { ${SF} .plan-cal-unit { display: none; } }`);
+    expect(block.match(/\.plan-cal-[a-z]+[^{]*\{[^}]*display: none/g)).toHaveLength(1);
+    const src = readFileSync("src/components/PlanCalendar.tsx", "utf8");
+    expect(src).toContain('{items.length}<span className="plan-cal-unit"> items</span>');
+    expect(src).toContain('className="plan-cal-meta plan-cal-status flex');
+    expect(src).toContain("open ${only.name}, ${items.length} items, ${statusLabel}");
+    expect(src).toContain("aria-label={`Calendar ${date}, ${items.length} items, ${statusLabel}`}");
+  });
+  it("review L2: the calendar's own sideways scroll fades at the right edge while more days are off-screen", () => {
+    expect(rule(block, ".plan-cal-scroll[data-fade-end]")).toContain("mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent)");
+    const src = readFileSync("src/components/PlanCalendar.tsx", "utf8");
+    expect(src).toContain('className="plan-cal-scroll" onScroll={measureScroll} data-fade-end={moreRight || undefined}');
+    expect(src).toContain("el.scrollWidth - el.clientWidth - el.scrollLeft > 1");
+  });
+  it("review L5: the phone hero title is 28 px (§3.3 phone hero 28-34)", () => {
+    const phoneSf = sfCss.slice(sfCss.indexOf(`@media (max-width: 767px) {\n  ${SF} .sf-shell { --sf-tabbar-h: 58px; }`));
+    expect(phoneSf.length).toBeLessThan(sfCss.length);
+    expect(rule(phoneSf, ".sf-hero-title")).toContain("font-size: 28px");
   });
   it("§3.3 text roles: shell support text is at least 12 px", () => {
     expect(block).toContain(':is(.sf-back, .sf-crumbs ol, .sf-find, .sf-link, .sf-note, .sf-footnote) { font-size: 12px; }');
@@ -132,6 +162,16 @@ describe("/assets app pages vs the build's hashed files", () => {
     expect(rule).toContain('url.pathname.startsWith("/_build/")');
     expect(rule).not.toContain("/assets");
     expect(rule).toContain('request.mode !== "navigate"');
+  });
+  it("review L1: on activate the worker drops orphaned /assets/* entries from ledgerline-lazy, and only those", () => {
+    const sw = readFileSync("public/sw-extras.js", "utf8");
+    const step = sw.slice(sw.indexOf('var LAZY = "ledgerline-lazy"'), sw.indexOf("Share to Thapal"));
+    expect(step).toContain('self.addEventListener("activate"');
+    expect(step).toContain('url.pathname.indexOf("/assets/") === 0');
+    expect(step).toContain("url.origin === self.location.origin");
+    expect(step).toContain("cache.delete(req)");
+    expect(step).not.toMatch(/caches\.delete|_build/); // never the whole cache, never the current /_build/ files
+    expect(config).toContain('importScripts: ["/push-events.js", "/sw-extras.js"]');
   });
   it("keeps the precache 'client/' prefix strip (without it every entry 404s and the worker never installs)", () => {
     expect(config).toContain('modifyURLPrefix: { "client/": "" }');

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight, Plane, CalendarClock, CheckCircle2, Clock3 } from "lucide-react";
 import { Button } from "./ui/button";
@@ -20,6 +20,27 @@ export function PlanCalendar() {
   const [month, setMonth] = useReviewView("calendar-month", todayISO().slice(0, 7) + "-01");
   const [selected, setSelected] = useReviewView("calendar-date", todayISO());
   const [chooseDate, setChooseDate] = useState<string | null>(null);
+  // Where the grid is wider than its box (seven 44 px days on a 320 px iPhone) it scrolls sideways; the right edge
+  // fades while more days are off-screen (Signature Flow styles the cue, other themes ignore the attribute).
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [moreRight, setMoreRight] = useState(false);
+  const measureScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (el) setMoreRight(el.scrollWidth - el.clientWidth - el.scrollLeft > 1);
+  }, []);
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    measureScroll();
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", measureScroll);
+      return () => window.removeEventListener("resize", measureScroll);
+    }
+    const ro = new ResizeObserver(() => measureScroll());
+    ro.observe(el);
+    if (el.firstElementChild) ro.observe(el.firstElementChild);
+    return () => ro.disconnect();
+  }, [measureScroll]);
   const first = (new Date(month + "T00:00:00Z").getUTCDay() + 6) % 7;
   const cells = Array.from({ length: 42 }, (_, i) => addDays(month, i - first));
   const from = cells[0] ?? month;
@@ -40,7 +61,7 @@ export function PlanCalendar() {
       <div className="flex gap-1"><Button size="icon" variant="ghost" aria-label="Previous calendar month" onClick={() => changeMonth(-1)}><ChevronLeft className="h-4 w-4" /></Button><Button size="sm" variant="ghost" onClick={() => { setMonth(todayISO().slice(0, 7) + "-01"); setSelected(todayISO()); }}>Today</Button><Button size="icon" variant="ghost" aria-label="Next calendar month" onClick={() => changeMonth(1)}><ChevronRight className="h-4 w-4" /></Button></div>
     </div>
     <div className="mb-2 flex flex-wrap gap-4 text-xs text-muted-foreground"><span className="flex items-center gap-1"><Plane className="h-3 w-3 text-primary" />Trips</span><span className="flex items-center gap-1"><CalendarClock className="h-3 w-3 text-warning" />Booking dues</span><span>Payments & deadlines</span><span className="flex items-center gap-1"><Clock3 className="h-3 w-3 text-warning" />Pending</span><span className="flex items-center gap-1"><CheckCircle2 className="h-3 w-3 text-success" />Completed</span></div>
-    <div className="plan-cal-scroll"><div className="plan-cal-grid grid grid-cols-7 border-l border-t">
+    <div ref={scrollRef} className="plan-cal-scroll" onScroll={measureScroll} data-fade-end={moreRight || undefined}><div className="plan-cal-grid grid grid-cols-7 border-l border-t">
       {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(day => <div key={day} className="border-b border-r p-2 text-center text-xs text-muted-foreground">{day}</div>)}
       {cells.map(date => {
         const items = planned.filter(x => x.date === date);
@@ -48,11 +69,11 @@ export function PlanCalendar() {
         const only = destinations.length === 1 ? destinations[0] : undefined;
         const content = <>
           <span className="text-xs">{Number(date.slice(8))}</span>
-          {items.length > 0 && <><span className="flex gap-1">{items.some(x => x.kind === "trip") && <Plane className="h-3 w-3 text-primary" />}{items.some(x => x.kind === "booking") && <CalendarClock className="h-3 w-3 text-warning" />}</span><span className="plan-cal-meta text-[10px]">{items.length} items</span><span className="plan-cal-meta flex gap-1 text-[10px]">{items.some(x => x.reviewStatus !== "completed") && <span title="Pending review" className="flex items-center text-warning"><Clock3 className="h-3 w-3" />{items.filter(x => x.reviewStatus !== "completed").length}</span>}{items.some(x => x.reviewStatus === "completed") && <span title="Completed review" className="flex items-center text-success"><CheckCircle2 className="h-3 w-3" />{items.filter(x => x.reviewStatus === "completed").length}</span>}</span></>}
+          {items.length > 0 && <><span className="flex gap-1">{items.some(x => x.kind === "trip") && <Plane className="h-3 w-3 text-primary" />}{items.some(x => x.kind === "booking") && <CalendarClock className="h-3 w-3 text-warning" />}</span><span className="plan-cal-meta text-[10px]">{items.length}<span className="plan-cal-unit"> items</span></span><span className="plan-cal-meta plan-cal-status flex gap-1 text-[10px]">{items.some(x => x.reviewStatus !== "completed") && <span title="Pending review" className="flex items-center text-warning"><Clock3 className="h-3 w-3" />{items.filter(x => x.reviewStatus !== "completed").length}</span>}{items.some(x => x.reviewStatus === "completed") && <span title="Completed review" className="flex items-center text-success"><CheckCircle2 className="h-3 w-3" />{items.filter(x => x.reviewStatus === "completed").length}</span>}</span></>}
         </>;
         const className = cn("plan-cal-cell h-20 min-w-0 flex-col justify-start gap-1 rounded-none border-b border-r p-1 sm:h-24", !date.startsWith(month.slice(0, 7)) && "text-muted-foreground", selected === date && "bg-secondary", date === todayISO() && "text-primary");
         const statusLabel = `${items.filter(x => x.reviewStatus !== "completed").length} pending, ${items.filter(x => x.reviewStatus === "completed").length} completed`;
-        return only ? <Button key={date} asChild variant="ghost" className={className}><Link {...calendarTarget(only)} onClick={() => setSelected(date)} aria-current={selected === date ? "date" : undefined} aria-label={`Calendar ${date}, open ${only.name}, ${statusLabel}`}>{content}</Link></Button> : <Button key={date} variant="ghost" className={className} aria-label={`Calendar ${date}, ${items.length} items, ${statusLabel}`} aria-pressed={selected === date} onClick={() => { setSelected(date); if (items.length) setChooseDate(date); }}>{content}</Button>;
+        return only ? <Button key={date} asChild variant="ghost" className={className}><Link {...calendarTarget(only)} onClick={() => setSelected(date)} aria-current={selected === date ? "date" : undefined} aria-label={`Calendar ${date}, open ${only.name}, ${items.length} items, ${statusLabel}`}>{content}</Link></Button> : <Button key={date} variant="ghost" className={className} aria-label={`Calendar ${date}, ${items.length} items, ${statusLabel}`} aria-pressed={selected === date} onClick={() => { setSelected(date); if (items.length) setChooseDate(date); }}>{content}</Button>;
       })}
     </div></div>
     <div className="mt-3"><h3 className="text-sm font-medium">{selected}</h3><ul className="divide-y text-sm">{selectedItems.map((item, index) => <li key={index} className="flex justify-between gap-3 py-2">

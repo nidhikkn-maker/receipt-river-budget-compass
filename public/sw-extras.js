@@ -29,6 +29,27 @@
   });
 })();
 
+/* One-time cleanup after the move of built files from /assets/ to /_build/: workers from earlier releases cached
+   /assets/* files in "ledgerline-lazy", and nothing reads them any more (the cache-first rule covers /_build/ only,
+   and /assets is the Asset register's page). On activate, delete those orphaned /assets/* entries; /_build/ files
+   and every other cache are left alone. Once they are gone the step finds nothing to delete, so it is idempotent. */
+(function () {
+  var LAZY = "ledgerline-lazy";
+  self.addEventListener("activate", function (event) {
+    event.waitUntil(caches.has(LAZY).then(function (has) {
+      if (!has) return;
+      return caches.open(LAZY).then(function (cache) {
+        return cache.keys().then(function (keys) {
+          return Promise.all(keys.filter(function (req) {
+            var url = new URL(req.url);
+            return url.origin === self.location.origin && url.pathname.indexOf("/assets/") === 0;
+          }).map(function (req) { return cache.delete(req); }));
+        });
+      });
+    }).catch(function () {}));
+  });
+})();
+
 /* Share to Thapal: files shared from WhatsApp, Photos or Files are kept on this phone only
    (never uploaded here) and the shared page asks what to do with them. */
 (function () {
