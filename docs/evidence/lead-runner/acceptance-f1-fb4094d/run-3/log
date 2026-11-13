@@ -1,0 +1,45 @@
+Error: Not implemented: HTMLCanvasElement.prototype.getContext (without installing the canvas npm package)
+    at module.exports (/home/user/thapal-f1r/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)
+    at HTMLCanvasElementImpl.getContext (/home/user/thapal-f1r/node_modules/jsdom/lib/jsdom/living/nodes/HTMLCanvasElement-impl.js:42:5)
+    at HTMLCanvasElement.getContext (/home/user/thapal-f1r/node_modules/jsdom/lib/jsdom/living/generated/HTMLCanvasElement.js:131:58)
+    at canDrawUnicode (/home/user/thapal-f1r/src/lib/pdf-unicode.ts:12:115)
+    at cell (/home/user/thapal-f1r/src/lib/pdf-unicode.ts:19:37)
+    at Array.map (<anonymous>)
+    at /home/user/thapal-f1r/src/lib/expenditure-pdf.ts:31:18
+    at Array.map (<anonymous>)
+    at renderStatementPdf (/home/user/thapal-f1r/src/lib/expenditure-pdf.ts:31:5)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5) undefined
+Error: Not implemented: HTMLCanvasElement.prototype.getContext (without installing the canvas npm package)
+    at module.exports (/home/user/thapal-f1r/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)
+    at HTMLCanvasElementImpl.getContext (/home/user/thapal-f1r/node_modules/jsdom/lib/jsdom/living/nodes/HTMLCanvasElement-impl.js:42:5)
+    at HTMLCanvasElement.getContext (/home/user/thapal-f1r/node_modules/jsdom/lib/jsdom/living/generated/HTMLCanvasElement.js:131:58)
+    at canDrawUnicode (/home/user/thapal-f1r/src/lib/pdf-unicode.ts:12:115)
+    at cell (/home/user/thapal-f1r/src/lib/pdf-unicode.ts:19:37)
+    at /home/user/thapal-f1r/src/lib/report-pdf.ts:32:165
+    at Array.map (<anonymous>)
+    at renderReportPdf (/home/user/thapal-f1r/src/lib/report-pdf.ts:32:148)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at /home/user/thapal-f1r/src/lib/report-centre-all.test.ts:72:18 undefined
+Error: Not implemented: HTMLCanvasElement.prototype.getContext (without installing the canvas npm package)
+    at module.exports (/home/user/thapal-f1r/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)
+    at HTMLCanvasElementImpl.getContext (/home/user/thapal-f1r/node_modules/jsdom/lib/jsdom/living/nodes/HTMLCanvasElement-impl.js:42:5)
+    at HTMLCanvasElement.getContext (/home/user/thapal-f1r/node_modules/jsdom/lib/jsdom/living/generated/HTMLCanvasElement.js:131:58)
+    at canDrawUnicode (/home/user/thapal-f1r/src/lib/pdf-unicode.ts:12:115)
+    at cell (/home/user/thapal-f1r/src/lib/pdf-unicode.ts:19:37)
+    at /home/user/thapal-f1r/src/lib/report-pdf.ts:32:165
+    at Array.map (<anonymous>)
+    at renderReportPdf (/home/user/thapal-f1r/src/lib/report-pdf.ts:32:148)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at /home/user/thapal-f1r/src/lib/report-centre.test.ts:46:18 undefined
+Error: Not implemented: HTMLCanvasElement.prototype.getContext (without installing the canvas npm package)
+    at module.exports (/home/user/thapal-f1r/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)
+    at HTMLCanvasElementImpl.getContext (/home/user/thapal-f1r/node_modules/jsdom/lib/jsdom/living/nodes/HTMLCanvasElement-impl.js:42:5)
+    at HTMLCanvasElement.getContext (/home/user/thapal-f1r/node_modules/jsdom/lib/jsdom/living/generated/HTMLCanvasElement.js:131:58)
+    at canDrawUnicode (/home/user/thapal-f1r/src/lib/pdf-unicode.ts:12:115)
+    at cell (/home/user/thapal-f1r/src/lib/pdf-unicode.ts:19:37)
+    at Array.map (<anonymous>)
+    at /home/user/thapal-f1r/src/lib/expenditure-pdf.ts:31:18
+    at Array.map (<anonymous>)
+    at renderStatementPdf (/home/user/thapal-f1r/src/lib/expenditure-pdf.ts:31:5)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5) undefined
+JSON report written to /tmp/claude-0/-home-user-receipt-river-budget-compass/382db65e-850d-5794-85c4-0e091a6faac5/scratchpad/acceptance-f1-fb4094d-assembled/run-3/vitest.json
