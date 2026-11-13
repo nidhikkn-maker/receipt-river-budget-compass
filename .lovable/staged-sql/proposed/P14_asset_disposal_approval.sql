@@ -98,10 +98,26 @@
 --   L2 a row whose disposal names an approved request of the owner is bound to it: it stays at the approved position
 --      (asset_ordinal) with the id and financial fields priced (cost, inUse, kind, ownerEntityId, bookMethod, bookRatePct,
 --      usefulLifeYears, residualPct); operational fields (name, location, notes, ...) stay editable
---      (phase3_p14.sold_rows_moved, called by the disposal-field guard). Before, sold facts could be moved onto another
+--      (phase3_p14.sold_rows_moved, called by the disposal-field guard; P14-e: phase3_p14.sold_row_refusal). Before, sold facts could be moved onto another
 --      copy of the id and a sold row's owner or cost changed.
 --   L4 a request without asset_ordinal (recorded before P14-c) is never approved (explicit P14_CHANGED); it can be
 --      rejected or cancelled.
+-- P14-e (13 Nov 2026, Track A; independent review of 4d3ba2cf, M-a + M-b + lows):
+--   M-a a sold row bound to its approved request is compared by meaning, not bytes (phase3_p14.sold_row_refusal, replacing
+--      sold_rows_moved): the app rewrites a row as it displays it (ownerEntityId ''/null/false/whitespace dropped, bookMethod
+--      missing/invalid -> 'slm', bookRatePct missing -> 0), so a name-only edit of a sold row stored untidied was refused.
+--      Now: id, owner_of = the request's copy owner, kind, inUse, cost, normalised method / rate / life / residual equal to
+--      the priced row's, the book value at the disposal date (book_value: also freezes openingWdv, adjustments,
+--      policyHistory, buildingPolicy where they move the figure) equal to r.book_value and verifiable, soldOn / saleValue
+--      equal to the request's date and proceeds.
+--   M-b excluding the sold copy (excludedAt truthy on the row bound to an approved request) is refused ('a sold copy cannot be
+--      excluded'): it undid the disposal (the other copy then previewed as held). The preview's open-request check counts
+--      'approved' as well as 'pending', as the open-request index does.
+--   L2 position: the sold row keeps its rank among the non-excluded copies of the same id and owner (the order that decides
+--      which copy counts), compared with the previous register; unrelated rows may be inserted before it.
+--   Lows: the fallback copy is refused (P14_UNVERIFIABLE) whenever cleanAssets would drop it (no string name, no numeric
+--      cost, inUse not YYYY-MM-DD), not only for an unknown kind; a whitespace-only ownerEntityId (JS trim() empty) is
+--      personal (phase3_p14.js_blank), also as a named p_owner_entity.
 -- Known limit (KK review): the posted paise figure is the database's full-precision working rounded once; the app engine
 -- (carried-forward paise) may differ from it by up to the tolerance above and is only checked against it. 0069's closed-period register guard still
 -- applies to the asset change: an asset bought before a closed period cannot be changed (also not disposed) until
@@ -196,11 +212,20 @@ LANGUAGE sql IMMUTABLE SET search_path = public, pg_temp AS $$
   SELECT CASE jsonb_typeof(_v) WHEN 'string' THEN (_v #>> '{}') <> '' WHEN 'boolean' THEN _v = 'true'::jsonb
     WHEN 'number' THEN abs((_v #>> '{}')::numeric) * power(2::numeric, 1075) > 1 WHEN 'object' THEN true WHEN 'array' THEN true ELSE false END
 $$;
+-- P14-e: true when JS String.prototype.trim() leaves nothing (ECMAScript WhiteSpace + LineTerminator: TAB, LF, VT, FF, CR,
+-- SPACE, NBSP, U+1680, U+2000-U+200A, U+2028, U+2029, U+202F, U+205F, U+3000, U+FEFF). NULL stays NULL.
+CREATE FUNCTION phase3_p14.js_blank(_s text) RETURNS boolean
+LANGUAGE sql IMMUTABLE SET search_path = public, pg_temp AS $$
+  SELECT btrim(_s, chr(9) || chr(10) || chr(11) || chr(12) || chr(13) || chr(32) || chr(160) || chr(5760) || chr(8192) || chr(8193) || chr(8194)
+    || chr(8195) || chr(8196) || chr(8197) || chr(8198) || chr(8199) || chr(8200) || chr(8201) || chr(8202) || chr(8232) || chr(8233) || chr(8239)
+    || chr(8287) || chr(12288) || chr(65279)) = ''
+$$;
 -- P14-d (L1b): the owner of a copy, as the app normalises ownerEntityId (WS-E fin9): a non-empty JSON string, else personal
--- (NULL). false, 0, 1, true, '' and null are all personal.
+-- (NULL). false, 0, 1, true, '' and null are all personal. P14-e: a whitespace-only string (JS trim() empty) is personal
+-- too, as the app's ownerEntityId.trim() check; a non-blank string is returned as stored.
 CREATE FUNCTION phase3_p14.owner_of(_a jsonb) RETURNS text
 LANGUAGE sql IMMUTABLE SET search_path = public, pg_temp AS $$
-  SELECT CASE WHEN jsonb_typeof(_a->'ownerEntityId') = 'string' AND (_a->>'ownerEntityId') <> '' THEN _a->>'ownerEntityId' END
+  SELECT CASE WHEN jsonb_typeof(_a->'ownerEntityId') = 'string' AND NOT phase3_p14.js_blank(_a->>'ownerEntityId') THEN _a->>'ownerEntityId' END
 $$;
 -- P14-d (L1a): src/lib/assets.ts ASSET_KINDS own keys (the app's cleanAssets checks Object.hasOwn(ASSET_KINDS, kind), WS-E
 -- fin9); anything else ("toString", "constructor", "", a number) is unreadable.
@@ -231,7 +256,7 @@ BEGIN
    WHERE p.owner_id = _owner AND jsonb_typeof(t.x) = 'object' AND jsonb_typeof(t.x->'id') = 'string' AND t.x->>'id' = _asset
      AND NOT phase3_p14.truthy(t.x->'excludedAt');
   IF jsonb_array_length(copies) = 0 THEN RETURN NULL; END IF;
-  IF _named THEN ent := nullif(_entity, '');
+  IF _named THEN ent := CASE WHEN NOT phase3_p14.js_blank(_entity) THEN _entity END;   -- P14-e: blank = personal, as owner_of
   ELSE
     IF (SELECT count(DISTINCT coalesce(c->>'w', '')) FROM jsonb_array_elements(copies) c) > 1 THEN
       RETURN jsonb_build_object('code', '22023', 'refused', 'P14_OWNER: this asset is recorded under more than one owner; name the owner whose copy is disposed (p_owner_entity, '''' for personal). Nothing was requested');
@@ -271,6 +296,12 @@ BEGIN
   -- P14-d (L1a): a fallback copy whose kind is not an asset kind is unreadable to the app; it is refused, never priced.
   IF NOT coalesce(phase3_p14.known_kind(pick_a), false) THEN
     RETURN jsonb_build_object('code', '22023', 'refused', 'P14_UNVERIFIABLE: the database cannot check this asset''s book value (the copy has no known asset kind); nothing was requested');
+  END IF;
+  -- P14-e: any copy cleanAssets drops (no string name, no numeric cost, inUse not YYYY-MM-DD) is not shown or depreciated by
+  -- the app either; it is refused, never priced or disposed.
+  IF NOT coalesce(jsonb_typeof(pick_a->'name') = 'string' AND jsonb_typeof(pick_a->'cost') = 'number'
+                  AND jsonb_typeof(pick_a->'inUse') = 'string' AND (pick_a->>'inUse') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$', false) THEN
+    RETURN jsonb_build_object('code', '22023', 'refused', 'P14_UNVERIFIABLE: the database cannot check this asset''s book value (the copy is not a readable asset: it needs a name, a numeric cost and a put-to-use date YYYY-MM-DD); nothing was requested');
   END IF;
   RETURN jsonb_build_object('asset', pick_a, 'ordinal', pick_o, 'ownerEntityId', ent);
 END $$;
@@ -593,8 +624,12 @@ BEGIN
   IF nullif(a->>'soldOn', '') IS NOT NULL THEN problems := problems || format('This asset was disposed on %s', a->>'soldOn'); END IF;
   IF p_date > current_date + 31 OR p_date < coalesce(nullif(a->>'inUse', '')::date, p_date) THEN problems := problems || 'The disposal date must be on or after the date the asset was put to use'::text; END IF;
   IF p_proceeds IS NULL OR p_proceeds < 0 THEN problems := problems || 'Enter the proceeds (0 if nothing was received)'::text; END IF;
+  -- P14-e (M-b): 'approved' counts as well as 'pending', exactly as the open-request index request_asset_disposal hits
+  -- (P14_PENDING), so the preview never shows a clean plan the request then refuses.
   IF EXISTS (SELECT 1 FROM public.asset_disposal_requests q WHERE q.owner_id = uid AND q.asset_id = p_asset AND q.status = 'pending'
-              AND q.asset_owner_entity = coalesce(c->>'ownerEntityId', '')) THEN problems := problems || 'This asset already has an open disposal request'::text; END IF;
+              AND q.asset_owner_entity = coalesce(c->>'ownerEntityId', '')) THEN problems := problems || 'This asset already has an open disposal request'::text;
+  ELSIF EXISTS (SELECT 1 FROM public.asset_disposal_requests q WHERE q.owner_id = uid AND q.asset_id = p_asset AND q.status = 'approved'
+              AND q.asset_owner_entity = coalesce(c->>'ownerEntityId', '')) THEN problems := problems || 'This asset already has an approved disposal request'::text; END IF;
   b := phase3_p14.book_value(a, p_date);
   IF b ? 'unverifiable' THEN problems := problems || format('The database cannot check this asset''s book value (%s)', b->>'unverifiable'); END IF;
   acc := nullif(a->>'accountId', '')::uuid;
@@ -654,35 +689,97 @@ LANGUAGE sql STABLE SET search_path = public, pg_temp AS $$
       OR phase3_p14.p11_restoring()   -- checked backup restore (P11 ticket, not a session setting)
       OR (auth.uid() IS NULL AND current_user NOT IN ('authenticated', 'anon'))
 $$;
--- P14-d (L2): true when the write moves or re-prices a sold row bound to its approved request. A row whose disposal names an
--- approved request of this owner (disposal.requestId) must stay at the request's position (asset_ordinal) with the id and
--- the financial fields priced (r.inputs->'asset'); operational fields (name, location, notes, archive status, ...) may
--- change. A row that already differed before the write (not produced by this workflow) is refused only if the write changes
--- its position or those fields again. SECURITY DEFINER: reads the request (an approver may not hold the owner's read).
-CREATE FUNCTION phase3_p14.sold_rows_moved(_owner uuid, _old jsonb, _new jsonb) RETURNS boolean
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
-  WITH f(k) AS (VALUES ('id'), ('cost'), ('inUse'), ('kind'), ('ownerEntityId'), ('bookMethod'), ('bookRatePct'), ('usefulLifeYears'), ('residualPct')),
-  n AS (SELECT t.o, t.x FROM jsonb_array_elements(CASE WHEN jsonb_typeof(_new) = 'array' THEN _new ELSE '[]'::jsonb END) WITH ORDINALITY t(x, o)
-         WHERE jsonb_typeof(t.x) = 'object' AND jsonb_typeof(t.x->'disposal') = 'object' AND jsonb_typeof(t.x->'disposal'->'requestId') = 'string'),
-  o AS (SELECT t.o, t.x FROM jsonb_array_elements(CASE WHEN jsonb_typeof(_old) = 'array' THEN _old ELSE '[]'::jsonb END) WITH ORDINALITY t(x, o)
-         WHERE jsonb_typeof(t.x) = 'object' AND jsonb_typeof(t.x->'disposal') = 'object' AND jsonb_typeof(t.x->'disposal'->'requestId') = 'string')
-  SELECT EXISTS (
-    SELECT 1 FROM n JOIN public.asset_disposal_requests r ON r.owner_id = _owner AND r.status = 'approved' AND r.id::text = n.x->'disposal'->>'requestId'
-       -- reveals nothing the caller cannot read already (the table's SELECT policy: the owner or an approver)
-       AND (auth.uid() IS NULL OR r.owner_id = auth.uid() OR phase3_p14.may_approve(r.owner_id, r.entity_id))
-     WHERE (n.o IS DISTINCT FROM r.asset_ordinal::bigint OR EXISTS (SELECT 1 FROM f WHERE n.x->f.k IS DISTINCT FROM r.inputs->'asset'->f.k))
-       AND NOT EXISTS (SELECT 1 FROM o WHERE o.o = n.o AND o.x->'disposal'->>'requestId' = n.x->'disposal'->>'requestId'
-                        AND NOT EXISTS (SELECT 1 FROM f WHERE n.x->f.k IS DISTINCT FROM o.x->f.k)))
+-- P14-d (L2) / P14-e (M-a, M-b, L2): a sold row bound to its approved request (its disposal.requestId names an approved
+-- request of this owner) is compared by MEANING, never by bytes: the app rewrites a row as it displays it (cleanAssets /
+-- preserve-records: an ownerEntityId of '', null, false or whitespace dropped, a missing or invalid bookMethod -> 'slm', a
+-- missing bookRatePct -> 0), and a name-only edit of a row stored untidied must still save. phase3_p14.sold_meaning is
+-- what the approval priced and disposed:
+--   excluded (JS truthy excludedAt), id, owner (owner_of), kind, inUse, cost, method ('wdv' or else 'slm'), rate, life,
+--   residual (numbers; missing = 0), the book value at the disposal date (phase3_p14.book_value rounded to paise; NULL when
+--   unverifiable: it reads cost, inUse, kind, method, rate, life, residual, openingWdv, adjustments, policyHistory and
+--   buildingPolicy, so a change to any of those that moves the figure is caught), soldOn and saleValue.
+-- The expected meaning comes from the request: not excluded, r.asset_id, nullif(r.asset_owner_entity, ''), the priced row's
+-- kind / inUse / cost / method / rate / life / residual (r.inputs->'asset', read the same normalised way), r.book_value,
+-- r.disposal_date, r.proceeds. Position: the row keeps its rank among the non-excluded copies of the same id and owner
+-- (the order that decides which copy counts), compared with the previous register; unrelated rows may be added, removed
+-- or moved around it. A row that already differed before the write (not produced by this workflow) is refused only if the
+-- write changes its meaning or rank again. Returns NULL (allowed) or the refusal message. SECURITY DEFINER: reads the
+-- request (an approver may not hold the owner's read).
+CREATE FUNCTION phase3_p14.sold_meaning(_x jsonb, _on date) RETURNS jsonb
+LANGUAGE plpgsql STABLE SET search_path = public, pg_temp AS $$
+DECLARE b jsonb; v numeric;
+BEGIN
+  BEGIN
+    b := phase3_p14.book_value(_x, _on);
+    v := CASE WHEN b ? 'value' THEN round((b->>'value')::numeric, 2) END;
+  EXCEPTION WHEN OTHERS THEN v := NULL;   -- e.g. inUse 2026-13-40 (format right, no such date): unverifiable
+  END;
+  RETURN jsonb_build_array(phase3_p14.truthy(_x->'excludedAt'), _x->'id', phase3_p14.owner_of(_x), _x->'kind', _x->'inUse',
+    phase3_p14.num(_x->'cost'), coalesce(_x->'bookMethod' = '"wdv"'::jsonb, false), coalesce(phase3_p14.num(_x->'bookRatePct'), 0),
+    coalesce(phase3_p14.num(_x->'usefulLifeYears'), 0), coalesce(phase3_p14.num(_x->'residualPct'), 0), v, _x->'soldOn', phase3_p14.num(_x->'saleValue'));
+END $$;
+-- rank of the copy at 1-based position _o among the non-excluded object rows of id _id and owner _ent (NULL = personal)
+CREATE FUNCTION phase3_p14.copy_rank(_rows jsonb, _o bigint, _id text, _ent text) RETURNS bigint
+LANGUAGE sql IMMUTABLE SET search_path = public, pg_temp AS $$
+  SELECT count(*) FROM jsonb_array_elements(_rows) WITH ORDINALITY t(x, o)
+   WHERE t.o < _o AND jsonb_typeof(t.x) = 'object' AND jsonb_typeof(t.x->'id') = 'string' AND t.x->>'id' = _id
+     AND NOT phase3_p14.truthy(t.x->'excludedAt') AND phase3_p14.owner_of(t.x) IS NOT DISTINCT FROM _ent
 $$;
+CREATE FUNCTION phase3_p14.sold_row_refusal(_owner uuid, _old jsonb, _new jsonb) RETURNS text
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE o jsonb := CASE WHEN jsonb_typeof(_old) = 'array' THEN _old ELSE '[]'::jsonb END;
+  n jsonb := CASE WHEN jsonb_typeof(_new) = 'array' THEN _new ELSE '[]'::jsonb END;
+  s record; r public.asset_disposal_requests; p jsonb; ent text; want jsonb; got jsonb; was jsonb; was_o bigint;
+BEGIN
+  FOR s IN SELECT t.o, t.x FROM jsonb_array_elements(n) WITH ORDINALITY t(x, o)
+            WHERE jsonb_typeof(t.x) = 'object' AND jsonb_typeof(t.x->'disposal') = 'object' AND jsonb_typeof(t.x->'disposal'->'requestId') = 'string' ORDER BY t.o LOOP
+    SELECT q.* INTO r FROM public.asset_disposal_requests q
+     WHERE q.owner_id = _owner AND q.status = 'approved' AND q.id::text = s.x->'disposal'->>'requestId'
+       -- reveals nothing the caller cannot read already (the table's SELECT policy: the owner or an approver)
+       AND (auth.uid() IS NULL OR q.owner_id = auth.uid() OR phase3_p14.may_approve(q.owner_id, q.entity_id));
+    CONTINUE WHEN NOT FOUND;
+    p := r.inputs->'asset'; ent := nullif(r.asset_owner_entity, '');
+    want := jsonb_build_array(false, to_jsonb(r.asset_id), ent, p->'kind', p->'inUse', phase3_p14.num(p->'cost'),
+      coalesce(p->'bookMethod' = '"wdv"'::jsonb, false), coalesce(phase3_p14.num(p->'bookRatePct'), 0), coalesce(phase3_p14.num(p->'usefulLifeYears'), 0),
+      coalesce(phase3_p14.num(p->'residualPct'), 0), r.book_value, to_char(r.disposal_date, 'YYYY-MM-DD'), r.proceeds);
+    got := phase3_p14.sold_meaning(s.x, r.disposal_date);
+    SELECT t.o, t.x INTO was_o, was FROM jsonb_array_elements(o) WITH ORDINALITY t(x, o)
+     WHERE jsonb_typeof(t.x) = 'object' AND jsonb_typeof(t.x->'disposal') = 'object' AND t.x->'disposal'->>'requestId' = s.x->'disposal'->>'requestId'
+     ORDER BY t.o LIMIT 1;
+    IF was IS NULL THEN
+      RETURN 'P14_DISPOSAL_APPROVAL_REQUIRED: an asset is disposed only through an approved disposal request (evidence, reason, date, proceeds); archiving never disposes';
+    END IF;
+    IF got IS DISTINCT FROM want AND got IS DISTINCT FROM phase3_p14.sold_meaning(was, r.disposal_date) THEN
+      IF (got->>0)::boolean AND NOT phase3_p14.truthy(was->'excludedAt') THEN
+        RETURN 'P14_DISPOSAL_APPROVAL_REQUIRED: a sold copy cannot be excluded (it would undo the approved disposal); keep it and mark the other copy as the duplicate';
+      END IF;
+      RETURN 'P14_DISPOSAL_APPROVAL_REQUIRED: a disposed asset keeps the figures it was approved with (id, owner, kind, cost, put-to-use date, book method, rate, life, residual and the book value at disposal, which also covers the opening WDV and adjustments); only its name, location, notes and similar details can change';
+    END IF;
+    IF phase3_p14.copy_rank(n, s.o, r.asset_id, ent) IS DISTINCT FROM phase3_p14.copy_rank(o, was_o, r.asset_id, ent) THEN
+      RETURN 'P14_DISPOSAL_APPROVAL_REQUIRED: a disposed asset keeps its place among the copies of its id (another copy cannot be moved in front of it or removed from before it); other assets can be added or moved freely';
+    END IF;
+  END LOOP;
+  RETURN NULL;
+END $$;
 CREATE FUNCTION phase3_p14.guard_asset_disposal_fields() RETURNS trigger
 LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
 DECLARE o jsonb := CASE WHEN TG_OP = 'UPDATE' AND jsonb_typeof(OLD.data->'assets') = 'array' THEN OLD.data->'assets' ELSE '[]'::jsonb END;
-  n jsonb := CASE WHEN jsonb_typeof(NEW.data->'assets') = 'array' THEN NEW.data->'assets' ELSE '[]'::jsonb END; k text; a jsonb; b jsonb;
+  n jsonb := CASE WHEN jsonb_typeof(NEW.data->'assets') = 'array' THEN NEW.data->'assets' ELSE '[]'::jsonb END; k text; w text; a jsonb; b jsonb;
 BEGIN
   IF phase3_p14.exempt() THEN RETURN NEW; END IF;
-  FOR k IN SELECT x->>'id' FROM jsonb_array_elements(o) x UNION SELECT x->>'id' FROM jsonb_array_elements(n) x LOOP
-    SELECT x INTO a FROM jsonb_array_elements(o) x WHERE x->>'id' = k LIMIT 1;
-    SELECT x INTO b FROM jsonb_array_elements(n) x WHERE x->>'id' = k LIMIT 1;
+  -- P14-e: a sold row bound to its approved request keeps its meaning and rank (phase3_p14.sold_row_refusal); checked first
+  -- so its specific message (e.g. a sold copy cannot be excluded) is the one shown.
+  k := phase3_p14.sold_row_refusal(NEW.owner_id, o, n);
+  IF k IS NOT NULL THEN RAISE EXCEPTION '%', k USING ERRCODE = '42501'; END IF;
+  -- P14-e (L2): per id and owner, the first copy that counts (not excluded, phase3_p14.owner_of) — the row the app reads —
+  -- not the first row of the id: an excluded duplicate or another owner's copy may sit in front of a sold row.
+  FOR k, w IN SELECT x->>'id', phase3_p14.owner_of(x) FROM jsonb_array_elements(o) x WHERE NOT phase3_p14.truthy(x->'excludedAt')
+         UNION SELECT x->>'id', phase3_p14.owner_of(x) FROM jsonb_array_elements(n) x WHERE NOT phase3_p14.truthy(x->'excludedAt') LOOP
+    a := NULL; b := NULL;
+    SELECT t.x INTO a FROM jsonb_array_elements(o) WITH ORDINALITY t(x, i) WHERE t.x->>'id' = k AND phase3_p14.owner_of(t.x) IS NOT DISTINCT FROM w
+       AND NOT phase3_p14.truthy(t.x->'excludedAt') ORDER BY t.i LIMIT 1;
+    SELECT t.x INTO b FROM jsonb_array_elements(n) WITH ORDINALITY t(x, i) WHERE t.x->>'id' = k AND phase3_p14.owner_of(t.x) IS NOT DISTINCT FROM w
+       AND NOT phase3_p14.truthy(t.x->'excludedAt') ORDER BY t.i LIMIT 1;
     IF (a->'soldOn', a->'saleValue', a->'disposal') IS DISTINCT FROM (b->'soldOn', b->'saleValue', b->'disposal')
        AND NOT (b IS NULL AND a IS NOT NULL AND a->'soldOn' IS NULL AND a->'disposal' IS NULL) THEN
       RAISE EXCEPTION 'P14_DISPOSAL_APPROVAL_REQUIRED: an asset is disposed only through an approved disposal request (evidence, reason, date, proceeds); archiving never disposes' USING ERRCODE = '42501';
@@ -709,9 +806,6 @@ BEGIN
               WHERE jsonb_typeof(x) = 'object' AND coalesce(nullif(x->'soldOn', 'null'::jsonb), nullif(x->'saleValue', 'null'::jsonb), nullif(x->'disposal', 'null'::jsonb)) IS NOT NULL) lost
              WHERE lost.f->0 <> 'null'::jsonb OR lost.f->2 <> 'null'::jsonb) THEN
     RAISE EXCEPTION 'P14_DISPOSAL_APPROVAL_REQUIRED: an asset is disposed only through an approved disposal request (evidence, reason, date, proceeds); archiving never disposes' USING ERRCODE = '42501';
-  END IF;
-  IF phase3_p14.sold_rows_moved(NEW.owner_id, o, n) THEN
-    RAISE EXCEPTION 'P14_DISPOSAL_APPROVAL_REQUIRED: a disposed asset keeps its place in the register and the figures it was approved with (cost, put-to-use date, kind, owner, book method, rate, life, residual); only its name, location and notes can change' USING ERRCODE = '42501';
   END IF;
   RETURN NEW;
 END $$;
@@ -875,11 +969,15 @@ REVOKE ALL ON FUNCTION public.preview_asset_disposal(text, date, numeric), publi
 GRANT EXECUTE ON FUNCTION public.preview_asset_disposal(text, date, numeric), public.preview_asset_disposal(text, date, numeric, text) TO authenticated;
 REVOKE ALL ON FUNCTION phase3_p14.num(jsonb), phase3_p14.book_value(jsonb, date) FROM PUBLIC, anon, authenticated;
 GRANT USAGE ON SCHEMA phase3_p14 TO authenticated; -- the SELECT policy and the guards call the helpers below
-REVOKE ALL ON FUNCTION phase3_p14.asset_copy(uuid, text, date, text, boolean), phase3_p14.truthy(jsonb), phase3_p14.owner_of(jsonb), phase3_p14.known_kind(jsonb), phase3_p14.in_figure(jsonb, text), phase3_p14.guard_asset_disposal_fields(), phase3_p14.guard_disposal_entry() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION phase3_p14.asset_copy(uuid, text, date, text, boolean), phase3_p14.known_kind(jsonb), phase3_p14.in_figure(jsonb, text), phase3_p14.guard_asset_disposal_fields(), phase3_p14.guard_disposal_entry() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION phase3_p14.may_approve(uuid, text), phase3_p14.step_up_ok(), phase3_p14.exempt(), phase3_p14.p11_restoring() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION phase3_p14.may_approve(uuid, text), phase3_p14.exempt(), phase3_p14.p11_restoring() TO authenticated;
-REVOKE ALL ON FUNCTION phase3_p14.sold_rows_moved(uuid, jsonb, jsonb) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION phase3_p14.sold_rows_moved(uuid, jsonb, jsonb) TO authenticated; -- called by the invoker guard on finance_preferences
+REVOKE ALL ON FUNCTION phase3_p14.sold_row_refusal(uuid, jsonb, jsonb) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION phase3_p14.sold_row_refusal(uuid, jsonb, jsonb) TO authenticated; -- called by the invoker guard on finance_preferences
+REVOKE ALL ON FUNCTION phase3_p14.sold_meaning(jsonb, date), phase3_p14.copy_rank(jsonb, bigint, text, text) FROM PUBLIC, anon, authenticated;
+-- P14-e: pure helpers the invoker guard on finance_preferences now calls (first counting copy per id and owner)
+REVOKE ALL ON FUNCTION phase3_p14.truthy(jsonb), phase3_p14.owner_of(jsonb), phase3_p14.js_blank(text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION phase3_p14.truthy(jsonb), phase3_p14.owner_of(jsonb), phase3_p14.js_blank(text) TO authenticated;
 REVOKE ALL ON phase3_p14.saved_functions FROM PUBLIC, anon, authenticated;
 
 DO $post$

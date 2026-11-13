@@ -448,7 +448,8 @@ describe("P14-d: copy-owner keyed open requests, app parity edges, sold rows bou
     await refused("rate", [{ ...sold, bookRatePct: 10 }, B]);
     await refused("life", [{ ...sold, usefulLifeYears: 3 }, B]);
     await refused("kind", [{ ...sold, kind: "computer" }, B]);
-    await refused("insert before", [machine(acc, { id: "AST-0", name: "Drill" }), sold, B]);
+    // P14-e (L2): the rank among the copies of the id counts, not the absolute position (unrelated rows: see P14-e L2)
+    await refused("same-id copy in front", [machine(acc, { name: "Lathe (C)" }), sold, B]);
     expect(await err(edit(o, "jsonb_set(data, '{assets,0,residualPct}', '5')"))).toMatch(/P14_DISPOSAL_APPROVAL_REQUIRED/);
     expect(await err(edit(o, "jsonb_set(data, '{assets,0,bookMethod}', '\"wdv\"')"))).toMatch(/P14_DISPOSAL_APPROVAL_REQUIRED/);
     expect(await register(o)).toBe(snap);
@@ -488,6 +489,162 @@ describe("P14-d: copy-owner keyed open requests, app parity edges, sold rows bou
     // a new request (with its position) is then approved normally
     const id = await request(o, doc);
     expect(await approve(o, id)).toMatchObject({ status: "approved", ordinal: 1, bookValue: 107032.26 });
+  });
+});
+
+// ---------------------------------------------------------------------------------------------------------------------------
+// P14-e (independent review of 4d3ba2cf, M-a / M-b / lows): a sold row is bound to its approval by meaning, not bytes; a sold
+// copy cannot be excluded; the preview counts approved requests; rank among same-id copies instead of absolute position;
+// any copy cleanAssets drops is refused; a whitespace-only owner is personal. Scenarios from the reviewer's attack script.
+describe("P14-e: sold rows bound by meaning, sold copies never excluded, copy rank, unreadable fallback copies, blank owners", () => {
+  let db: PGlite;
+  const owners = Array.from({ length: 24 }, (_, i) => `00000000-0000-4000-8000-0000000004${String(i).padStart(2, "0")}`);
+  let next = 0;
+  beforeAll(async () => {
+    db = await fullSchemaDb([...STACK, P14]);
+    await addUsers(db, Object.fromEntries(owners.map((o, i) => [o, `e${i}@x.in`])));
+  }, 600_000);
+  afterAll(async () => { await db.close(); });
+
+  const base = async () => {
+    const owner = owners[next++]!, acc = crypto.randomUUID(), doc = crypto.randomUUID();
+    await actAs(db, null);
+    await db.query("INSERT INTO public.finance_preferences(owner_id, data) VALUES ($1, '{}') ON CONFLICT (owner_id) DO NOTHING", [owner]);
+    await db.query("INSERT INTO public.accounts(id, owner_id, name, kind, opening_balance) VALUES ($1,$2,'Fixed assets','other_asset',0)", [acc, owner]);
+    await db.query("INSERT INTO public.documents(id, owner_id, title, file_path, file_name, size_bytes, notes) VALUES ($1,$2,'Sale invoice',$3,'inv.pdf',1000,'')", [doc, owner, `${owner}/docs/${doc}-inv.pdf`]);
+    return { o: owner, acc, doc };
+  };
+  /** as the service (exempt: a restore / an import) — the register exactly as written, JSON text so odd values survive */
+  const setRegisterText = async (owner: string, json: string) => { await actAs(db, null); await db.query("UPDATE public.finance_preferences SET data = jsonb_set(data, '{assets}', $2::jsonb) WHERE owner_id = $1", [owner, json]); };
+  const setRegister = (owner: string, rows: Row[]) => setRegisterText(owner, JSON.stringify(rows));
+  /** as the signed-in owner (the guards apply) */
+  const save = (owner: string, rows: Row[]) => q1(db, owner, "UPDATE public.finance_preferences SET data = jsonb_set(data, '{assets}', $2::jsonb) WHERE owner_id = $1", [owner, JSON.stringify(rows)]);
+  const register = async (owner: string) => (await q1<{ t: string }>(db, null, "SELECT data::text t FROM public.finance_preferences WHERE owner_id = $1", [owner]))[0]!.t;
+  const rows = async (owner: string) => (await q1<{ a: Row[] }>(db, null, "SELECT data->'assets' a FROM public.finance_preferences WHERE owner_id = $1", [owner]))[0]!.a;
+  const SALE = "SELECT public.request_asset_disposal(p_asset => $1, p_method => 'sale', p_date => $2::date, p_proceeds => 100000, p_proceeds_entry => NULL, p_evidence => ARRAY[$3]::uuid[], p_reason => 'Sold to a dealer', p_entry => $4, p_book_value => NULL, p_owner_entity => $5) id";
+  const request = async (owner: string, doc: string, ent: string | null = null) => (await q1<{ id: string }>(db, owner, SALE, ["X", "2026-10-15", doc, crypto.randomUUID(), ent]))[0]!.id;
+  const preview = async (owner: string, ent: string | null = null) => (await q1<{ p: Row }>(db, owner, "SELECT public.preview_asset_disposal('X', '2026-10-15', 100000, $1) p", [ent]))[0]!.p;
+  const approve = async (owner: string, id: string) => { await stepUp(db, owner); return (await q1<{ r: Row }>(db, owner, "SELECT public.decide_asset_disposal($1, true, 'Approved after review', NULL) r", [id]))[0]!.r; };
+  const sell = async (owner: string, doc: string, ent: string | null = null) => { const id = await request(owner, doc, ent); expect(await approve(owner, id)).toMatchObject({ status: "approved" }); return id; };
+  const m = (acc: string, x: Row = {}): Row => ({ id: "X", name: "Lathe", kind: "machinery", cost: 120000, inUse: "2026-04-01", sharePct: 100, bookMethod: "slm", bookRatePct: 20, accountId: acc, ...x });
+  /** the row as the app displays and writes it back (cleanAssets + preserve-records tidy, WS-E) */
+  const tidy = (x: Row): Row => {
+    const { ownerEntityId, ...r } = x;
+    return { ...r, ...(typeof ownerEntityId === "string" && ownerEntityId.trim() ? { ownerEntityId } : {}), bookMethod: x["bookMethod"] === "wdv" ? "wdv" : "slm",
+      bookRatePct: Math.min(100, Math.max(0, Number(x["bookRatePct"]) || 0)) };
+  };
+
+  it("M-a: a sold row stored untidied (owner ''/null/false/blank, land without method/rate, SLM life without rate) approves, then a name-only app edit saves", async () => {
+    const cases: [string, (acc: string) => string][] = [
+      ...['""', "null", "false", '"   "'].map((ov): [string, (acc: string) => string] => [`owner ${ov}`, (acc) => `[${JSON.stringify(m(acc)).slice(0, -1)},"ownerEntityId":${ov}}]`]),
+      ["land without bookMethod / bookRatePct", (acc) => JSON.stringify([{ id: "X", name: "Plot", kind: "property", cost: 500000, inUse: "2020-04-01", sharePct: 100, accountId: acc }])],
+      ["SLM with usefulLifeYears and no bookRatePct", (acc) => { const r = m(acc, { usefulLifeYears: 5 }); delete r["bookRatePct"]; return JSON.stringify([r]); }],
+      ["bookMethod invalid casing kept by a land row", (acc) => JSON.stringify([{ id: "X", name: "Plot", kind: "property", cost: 500000, inUse: "2020-04-01", bookMethod: "SLM", accountId: acc }])],
+    ];
+    for (const [label, make] of cases) {
+      const { o, acc, doc } = await base();
+      await setRegisterText(o, make(acc));
+      await sell(o, doc);
+      const stored = (await rows(o))[0]!;
+      expect(await err(save(o, [{ ...tidy(stored), name: "Renamed", location: "Yard" }])), label).toBe("ok");
+      expect((await rows(o))[0], label).toMatchObject({ name: "Renamed", location: "Yard", soldOn: "2026-10-15", disposal: stored["disposal"] });
+    }
+  });
+
+  it("M-a: a change that alters what was disposed is refused — cost, openingWdv, adjustments, kind, owner, method, residual, inUse, id, sale facts", async () => {
+    const { o, acc, doc } = await base();
+    // in use from FY 2024-25 so an imported opening WDV for FY 2026-27 is part of the working
+    await setRegister(o, [m(acc, { inUse: "2024-04-01" })]);
+    await sell(o, doc);
+    const sold = (await rows(o))[0]!;
+    const snap = await register(o);
+    const refused = async (label: string, x: Row) => {
+      expect(await err(save(o, [x])), label).toMatch(/P14_DISPOSAL_APPROVAL_REQUIRED/);
+      expect(await register(o), label).toBe(snap);
+    };
+    await refused("cost", { ...sold, cost: 150000 });
+    await refused("openingWdv", { ...sold, openingWdv: { fy: "2026-27", book: 1000 } });
+    await refused("adjustments", { ...sold, adjustments: [{ date: "2026-05-10", amount: -20000, kind: "impairment", note: "x" }] });
+    await refused("kind (same figure)", { ...sold, kind: "computer" });
+    await refused("owner", { ...sold, ownerEntityId: "ent-x" });
+    await refused("method", { ...sold, bookMethod: "wdv" });
+    await refused("residual (same figure)", { ...sold, residualPct: 5 });
+    await refused("in use", { ...sold, inUse: "2024-05-01" });
+    await refused("in use not a date", { ...sold, inUse: "2024-13-40" });
+    await refused("policy history", { ...sold, policyHistory: [{ field: "bookRatePct", effectiveFrom: "2025-04", toRaw: 10 }] });
+    await refused("sale value", { ...sold, saleValue: 1 });
+    await refused("id", { ...sold, id: "Y" });
+    // operational fields still save
+    expect(await err(save(o, [{ ...sold, name: "Lathe, sold", notes: "buyer collected", accountId: null, sharePct: 50 }]))).toBe("ok");
+  });
+
+  it("M-b: the sold copy cannot be excluded (it would undo the disposal); the preview counts an approved request, as the request does", async () => {
+    const { o, acc, doc } = await base();
+    await setRegister(o, [m(acc), m(acc)]);
+    const id = await sell(o, doc);
+    const a = await rows(o);
+    const snap = await register(o);
+    expect(await err(save(o, [{ ...a[0], excludedAt: "2026-11-01T00:00:00Z", duplicateOf: "X", excludeReason: "dup copy" }, a[1]!])))
+      .toMatch(/P14_DISPOSAL_APPROVAL_REQUIRED: a sold copy cannot be excluded/);
+    expect(await register(o)).toBe(snap);
+    // excluding the OTHER (unsold) copy is fine
+    expect(await err(save(o, [a[0]!, { ...a[1], excludedAt: "2026-11-01T00:00:00Z" }]))).toBe("ok");
+    // a register that reached this state outside the guard (restore / import): the twin previews as held, but the request
+    // would hit the open-request index (P14_PENDING); the preview now says so instead of a clean plan
+    await setRegister(o, [{ ...a[0], excludedAt: "2026-11-01T00:00:00Z" }, a[1]!]);
+    expect(await preview(o)).toMatchObject({ ordinal: 2, problems: ["This asset already has an approved disposal request"] });
+    expect(await err(request(o, doc))).toMatch(/P14_PENDING/);
+    expect((await q1(db, null, "SELECT status FROM public.asset_disposal_requests WHERE id = $1", [id]))[0]).toEqual({ status: "approved" });
+  });
+
+  it("L2: rank among the copies of the id counts — appending and inserting unrelated assets before the sold row works; a same-id copy in front is refused", async () => {
+    const { o, acc, doc } = await base();
+    await setRegister(o, [m(acc)]);
+    await sell(o, doc);
+    const sold = (await rows(o))[0]!;
+    expect(await err(save(o, [sold, m(acc, { id: "N1", name: "Drill" })]))).toBe("ok");
+    expect(await err(save(o, [m(acc, { id: "N0", name: "Press" }), sold, m(acc, { id: "N1", name: "Drill" })]))).toBe("ok");
+    expect((await rows(o)).map((x) => x["id"])).toEqual(["N0", "X", "N1"]);
+    const snap = await register(o);
+    // a same-id copy appended after it is fine (the sold copy stays first); one in front of it changes which copy counts
+    expect(await err(save(o, [m(acc, { id: "N0", name: "Press" }), m(acc, { name: "Lathe (2)" }), sold, m(acc, { id: "N1", name: "Drill" })]))).toMatch(/P14_DISPOSAL_APPROVAL_REQUIRED/);
+    expect(await register(o)).toBe(snap);
+    // an excluded same-id copy, or another owner's copy, in front does not count
+    expect(await err(save(o, [m(acc, { name: "Old dup", excludedAt: "2026-01-01" }), m(acc, { ownerEntityId: "ent-b" }), m(acc, { id: "N0", name: "Press" }), sold]))).toBe("ok");
+    expect(await err(save(o, [...(await rows(o)), m(acc, { name: "Lathe (2)" })]))).toBe("ok");
+  });
+
+  it("fallback copy: any copy cleanAssets would drop is refused (no name, string cost, inUse not YYYY-MM-DD), never priced or disposed", async () => {
+    const { o, acc, doc } = await base();
+    const land = { id: "X", name: "Plot", kind: "property", cost: 500000, inUse: "2020-04-01", accountId: acc };
+    const { name: _n, ...nameless } = land;
+    for (const [label, row] of [["no name", nameless], ["numeric name", { ...land, name: 7 }], ["string cost", { ...land, cost: "500000" }], ["inUse d/m/y", { ...land, inUse: "01/04/2020" }]] as const) {
+      await setRegister(o, [row as Row]);
+      const snap = await register(o);
+      expect(await preview(o), label).toMatchObject({ bookValue: null, problems: [expect.stringMatching(/P14_UNVERIFIABLE: .*not a readable asset/)] });
+      expect(await err(request(o, doc)), label).toMatch(/P14_UNVERIFIABLE: .*not a readable asset/);
+      expect(await register(o), label).toBe(snap);
+    }
+    expect((await q1(db, null, "SELECT count(*)::int n FROM public.asset_disposal_requests WHERE owner_id = $1", [o]))[0]).toEqual({ n: 0 });
+  });
+
+  it("owner_of: a whitespace-only ownerEntityId (JS trim() empty) is personal, also when named as p_owner_entity", async () => {
+    const { o, acc, doc } = await base();
+    for (const ws of ["  ", "\t\n", " 　﻿"]) {
+      await setRegister(o, [m(acc, { ownerEntityId: ws, cost: 240000 }), m(acc, { ownerEntityId: "" })]);
+      expect(await preview(o), JSON.stringify(ws)).toMatchObject({ ordinal: 1, ownerEntityId: null, bookValue: 214064.52, problems: [] });
+      expect(await preview(o, ""), JSON.stringify(ws)).toMatchObject({ ordinal: 1, ownerEntityId: null });
+      expect(await preview(o, ws), JSON.stringify(ws)).toMatchObject({ ordinal: 1, ownerEntityId: null });
+    }
+    // a non-blank owner keeps its own copies (stored as written)
+    await setRegister(o, [m(acc, { ownerEntityId: " ent-a " })]);
+    expect(await preview(o)).toMatchObject({ ordinal: 1, ownerEntityId: " ent-a " });
+    await setRegister(o, [m(acc, { ownerEntityId: "  ", cost: 240000 }), m(acc)]);
+    const id = await sell(o, doc, "");
+    expect((await q1<Row>(db, null, "SELECT asset_ordinal o, asset_owner_entity e FROM public.asset_disposal_requests WHERE id = $1", [id]))[0]).toEqual({ o: 1, e: "" });
+    // and the app's tidy write (owner dropped) of the sold row saves
+    const a = await rows(o);
+    expect(await err(save(o, [{ ...tidy(a[0]!), name: "Renamed" }, a[1]!]))).toBe("ok");
   });
 });
 
