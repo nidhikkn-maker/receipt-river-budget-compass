@@ -1443,7 +1443,7 @@ html[data-theme="signature-flow"] .cmp-night-link :is(a, button) { color: var(--
 .sf-main { min-width: 0; padding: 20px 16px calc(104px + env(safe-area-inset-bottom)); }
 .sf-focused .sf-main { padding-bottom: 24px; }
 .sf-tabbar { position: fixed; inset-inline: 0; bottom: 0; z-index: 30; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center; padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); background: color-mix(in oklab, var(--card) 96%, transparent); border-top: 1px solid var(--border); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
-.sf-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 52px; border-radius: 14px; font-size: 11px; font-weight: 500; color: var(--muted-foreground); }
+.sf-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 52px; border-radius: 14px; font-size: 12px; font-weight: 500; color: var(--muted-foreground); }
 .sf-tab .sf-nav-icon svg { width: 22px; height: 22px; stroke-width: 1.6; }
 .sf-tab[aria-current="page"] { color: var(--primary); font-weight: 700; }
 .sf-tab-add { align-self: center; justify-self: center; width: 52px; min-height: 48px !important; height: 48px; padding: 0; border-radius: 16px; background: var(--primary); color: var(--primary-foreground); box-shadow: var(--sf-shadow, none); }
@@ -1457,7 +1457,7 @@ html[data-theme="signature-flow"] .cmp-night-link :is(a, button) { color: var(--
   .sf-rail { position: fixed; inset-block: 0; left: 0; z-index: 30; display: flex; flex-direction: column; align-items: center; width: 92px; padding: calc(24px + env(safe-area-inset-top)) 0 24px; background: var(--card); border-right: 1px solid var(--border); overflow-y: auto; }
   .sf-rail-mark { display: grid; place-items: center; margin-bottom: 52px; }
   .sf-rail-nav { display: flex; flex-direction: column; align-items: center; gap: 18px; }
-  .sf-rail-item { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 76px; min-height: 64px !important; padding: 4px 0; border-radius: 16px; font-size: 11.5px; font-weight: 500; color: var(--muted-foreground); background: transparent; }
+  .sf-rail-item { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 76px; min-height: 64px !important; padding: 4px 0; border-radius: 16px; font-size: 12px; font-weight: 500; color: var(--muted-foreground); background: transparent; }
   .sf-rail-item .sf-nav-icon { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 15px; transition: background-color 200ms var(--sf-ease, ease); }
   .sf-rail-item .sf-nav-icon svg { width: 22px; height: 22px; stroke-width: 1.5; }
   .sf-rail-item:hover .sf-nav-icon { background: var(--secondary); }
@@ -1538,7 +1538,7 @@ html[data-theme="signature-flow"] .cmp-night-link :is(a, button) { color: var(--
 .sf-band p span { color: var(--muted-foreground); }
 .sf-footnote { margin-top: 28px; font-size: 12.5px; color: var(--muted-foreground); }
 .sf-embedded { min-width: 0; }
-.sf-proposed { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border: 1px solid color-mix(in oklab, var(--sf-copper, var(--gold-strong)) 55%, transparent); border-radius: 999px; color: var(--sf-copper-text, var(--gold-strong)); font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; vertical-align: middle; }
+.sf-proposed { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border: 1px solid color-mix(in oklab, var(--sf-copper, var(--gold-strong)) 55%, transparent); border-radius: 999px; color: var(--sf-copper-text, var(--gold-strong)); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; vertical-align: middle; }
 .sf-proposed-note { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px 14px; margin-bottom: 24px; padding: 16px 18px; border: 1px dashed color-mix(in oklab, var(--sf-copper, var(--gold-strong)) 55%, transparent); border-radius: 16px; font-size: 13.5px; }
 .sf-proposed-note p { flex: 1 1 260px; color: var(--muted-foreground); }
 .sf-proposed-note b { color: var(--foreground); }
@@ -1558,14 +1558,14 @@ html[data-theme="signature-flow"] .cmp-night-link :is(a, button) { color: var(--
 .sf-worth-note { display: flex; align-items: baseline; gap: 6px; margin-top: 10px; font-size: 12.5px; color: var(--sf-on-deep-muted, var(--primary-foreground)); }
 .sf-worth-note svg { width: 11px; height: 11px; flex-shrink: 0; transform: translateY(1px); }
 .sf-worth-note b { color: var(--sf-on-deep, var(--primary-foreground)); font-weight: 700; }
-.sf-worth-quality { font-size: 11.5px; }
+.sf-worth-quality { font-size: 12px; }
 .sf-worth-metrics dd.sf-worth-sub .sf-worth-overdue { color: var(--sf-on-deep, var(--primary-foreground)); font-weight: 700; }
 .sf-worth-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 22px; padding-top: 18px; border-top: 1px solid color-mix(in oklab, var(--sf-on-deep, white) 18%, transparent); }
 .sf-worth-metrics > div { min-width: 0; padding: 0 10px; border-left: 1px solid color-mix(in oklab, var(--sf-on-deep, white) 18%, transparent); }
 .sf-worth-metrics > div:first-child { padding-left: 0; border-left: 0; }
 .sf-worth-metrics dt { font-size: 11px; color: var(--sf-on-deep-muted, var(--primary-foreground)); }
 .sf-worth-metrics dd { margin-top: 6px; font-size: 15px; font-weight: 700; letter-spacing: -0.01em; overflow: hidden; text-overflow: ellipsis; }
-.sf-worth-metrics dd.sf-worth-sub { margin-top: 4px; font-size: 10.5px; font-weight: 400; color: var(--sf-on-deep-muted, var(--primary-foreground)); white-space: normal; }
+.sf-worth-metrics dd.sf-worth-sub { margin-top: 4px; font-size: 12px; font-weight: 400; color: var(--sf-on-deep-muted, var(--primary-foreground)); white-space: normal; }
 .sf-worth-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
 .sf-worth-actions .sf-btn { min-height: 44px; padding: 0 16px; font-size: 12.5px; border-radius: 12px; }
 .sf-coming .sf-section-head { padding-top: 4px; }
@@ -1580,7 +1580,7 @@ html[data-theme="signature-flow"] .cmp-night-link :is(a, button) { color: var(--
   .sf-hide-phone { display: inline-flex !important; }
 }
 @media (min-width: 768px) {
-  .sf-title { font-size: 40px; }
+  .sf-title { font-size: 32px; }
   .sf-hero-title { font-size: 44px; }
   .sf-crumbs ol { display: inline-flex; }
   .sf-module-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -1591,11 +1591,11 @@ html[data-theme="signature-flow"] .cmp-night-link :is(a, button) { color: var(--
   .sf-worth-metrics > div { padding: 0 20px; }
   .sf-worth-metrics dt { font-size: 12px; }
   .sf-worth-metrics dd { font-size: 20px; }
-  .sf-worth-metrics dd.sf-worth-sub { font-size: 11.5px; }
+  .sf-worth-metrics dd.sf-worth-sub { font-size: 12px; }
   .sf-next { padding: 18px 24px; }
 }
 @media (min-width: 1100px) {
-  .sf-title { font-size: 46px; }
+  .sf-title { font-size: 32px; }
   .sf-hero-title { font-size: 52px; }
   .sf-home-grid { grid-template-columns: minmax(0, 1.65fr) minmax(300px, 1fr); gap: 40px; align-items: start; }
   .sf-home-lower { grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr); column-gap: 40px; }
@@ -1674,11 +1674,11 @@ html[data-theme="signature-flow"] .cmp-night-link :is(a, button) { color: var(--
   .sf-icon-btn { width: 38px; height: 44px; border-radius: 10px; }
   .sf-icon-btn svg { width: 19px; height: 19px; }
   .sf-avatar { width: 44px; height: 44px; margin-left: 0; background: transparent; font-size: 0; position: relative; }
-  .sf-avatar::before { content: attr(data-initials); display: grid; place-items: center; width: 32px; height: 32px; border-radius: 999px; background: var(--primary); color: var(--primary-foreground); font-size: 11px; font-weight: 600; letter-spacing: .04em; }
+  .sf-avatar::before { content: attr(data-initials); display: grid; place-items: center; width: 32px; height: 32px; border-radius: 999px; background: var(--primary); color: var(--primary-foreground); font-size: 12px; font-weight: 600; letter-spacing: .04em; }
   .sf-main { padding: 16px max(16px, env(safe-area-inset-right)) calc(var(--sf-tabbar-h) + var(--sf-safe-bottom) + 28px) max(16px, env(safe-area-inset-left)); }
   .sf-focused .sf-main { padding-bottom: calc(24px + var(--sf-safe-bottom)); }
   .sf-tabbar { background: var(--card); backdrop-filter: none; -webkit-backdrop-filter: none; height: calc(var(--sf-tabbar-h) + var(--sf-safe-bottom)); padding: 4px max(6px, env(safe-area-inset-right)) var(--sf-safe-bottom) max(6px, env(safe-area-inset-left)); align-items: center; }
-  .sf-tab { height: 52px; min-height: 52px !important; gap: 2px; font-size: 10.5px; border-radius: 12px; }
+  .sf-tab { height: 52px; min-height: 52px !important; gap: 2px; font-size: 12px; border-radius: 12px; }
   .sf-tab .sf-nav-icon { display: grid; place-items: center; height: 24px; }
   .sf-tab .sf-nav-icon svg { width: 21px; height: 21px; }
   .sf-tab-add { width: 46px; height: 46px; min-height: 46px !important; border-radius: 15px; gap: 0; box-shadow: 0 8px 18px -12px color-mix(in oklab, var(--primary) 70%, transparent); }
@@ -1698,17 +1698,17 @@ html[data-theme="signature-flow"] .cmp-night-link :is(a, button) { color: var(--
   .sf-lede { margin-top: 4px; font-size: 14px; line-height: 1.45; }
   .sf-home-grid { gap: 22px; }
   .sf-worth { padding: 18px 18px 16px; border-radius: 20px; }
-  .sf-worth .sf-overline { margin-bottom: 0; font-size: 9.5px; }
+  .sf-worth .sf-overline { margin-bottom: 0; font-size: 10px; }
   .sf-worth-figure { margin-top: 10px; font-size: 34px; }
-  .sf-worth-note { margin-top: 6px; font-size: 11px; }
-  .sf-worth-quality { font-size: 10.5px; }
+  .sf-worth-note { margin-top: 6px; font-size: 12px; }
+  .sf-worth-quality { font-size: 12px; }
   .sf-worth-metrics { margin-top: 14px; padding-top: 12px; }
   .sf-worth-metrics > div { padding: 0 8px; }
   .sf-worth-metrics dt { font-size: 10px; }
   .sf-worth-metrics dd { margin-top: 4px; font-size: 14px; }
-  .sf-worth-metrics dd.sf-worth-sub { margin-top: 2px; font-size: 9.5px; line-height: 1.35; }
+  .sf-worth-metrics dd.sf-worth-sub { margin-top: 2px; font-size: 12px; line-height: 1.35; }
   .sf-worth-actions { gap: 8px; margin-top: 14px; }
-  .sf-worth-actions .sf-btn { min-height: 40px; height: 40px; padding: 0 12px; font-size: 11.5px; border-radius: 11px; }
+  .sf-worth-actions .sf-btn { min-height: 40px; height: 40px; padding: 0 12px; font-size: 12px; border-radius: 11px; }
   .sf-section-head { padding-bottom: 8px; }
   .sf-section-head h2 { font-size: 17px; }
   .sf-date-row, .sf-list-row, .sf-task-row { min-height: 60px; padding: 10px 0; gap: 12px; }
@@ -1747,7 +1747,7 @@ html[data-theme="signature-flow"] .cmp-night-link :is(a, button) { color: var(--
 .sf-canvas-close { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 999px; background: var(--secondary); color: var(--foreground); }
 .sf-canvas-close svg { width: 18px; height: 18px; }
 .sf-steps { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 12px; list-style: none; padding: 0; }
-.sf-steps li { display: flex; align-items: center; justify-content: center; gap: 4px; min-height: 32px; border-radius: 10px; font-size: 11.5px; font-weight: 600; background: var(--secondary); color: var(--muted-foreground); }
+.sf-steps li { display: flex; align-items: center; justify-content: center; gap: 4px; min-height: 32px; border-radius: 10px; font-size: 12px; font-weight: 600; background: var(--secondary); color: var(--muted-foreground); }
 .sf-steps li svg { width: 12px; height: 12px; }
 .sf-steps li[data-state="done"], .sf-steps li[data-state="current"] { background: var(--accent); color: var(--primary); }
 .sf-steps li[data-state="current"] { font-weight: 700; box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--primary) 18%, transparent); }
@@ -1767,7 +1767,7 @@ html[data-theme="signature-flow"] .cmp-night-link :is(a, button) { color: var(--
 .sf-drop-actions .sf-btn { min-height: 44px; padding: 0 16px; font-size: 13px; }
 .sf-picked { display: grid; gap: 6px; margin-top: 12px; list-style: none; padding: 0; }
 .sf-picked li { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 4px 0 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--card); font-size: 13px; }
-.sf-picked small { color: var(--muted-foreground); font-size: 11.5px; }
+.sf-picked small { color: var(--muted-foreground); font-size: 12px; }
 .sf-picked button { display: grid; place-items: center; width: 40px; height: 40px; min-height: 40px !important; color: var(--muted-foreground); }
 .sf-picked button svg { width: 15px; height: 15px; }
 .sf-canvas-alt { display: flex; flex-wrap: wrap; gap: 4px 18px; margin-top: 14px; }
@@ -1794,7 +1794,7 @@ html[data-theme="signature-flow"] .cmp-night-link :is(a, button) { color: var(--
 .sf-confirm-tick svg { width: 18px; height: 18px; }
 .sf-confirm-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 16px; margin-top: 16px; }
 .sf-confirm-grid > div { min-width: 0; padding: 10px 0; border-top: 1px solid var(--border); }
-.sf-confirm-grid dt { font-size: 11.5px; color: var(--muted-foreground); }
+.sf-confirm-grid dt { font-size: 12px; color: var(--muted-foreground); }
 .sf-confirm-grid dd { margin-top: 2px; font-size: 13.5px; font-weight: 700; overflow-wrap: anywhere; }
 .sf-canvas-done { display: grid; gap: 12px; }
 .sf-done-icon { width: 36px; height: 36px; color: var(--success); }
@@ -1822,7 +1822,7 @@ html[data-theme="signature-flow"] .cmp-night-link :is(a, button) { color: var(--
 
 /* ---- B1c: Smart Add review/confirm refinements (KK, 10 Nov 2026) ---- */
 .sf-needs { color: var(--warning); font-weight: 700; }
-.sf-evidence { display: block; margin-top: 2px; font-size: 11.5px; font-weight: 500; color: var(--muted-foreground); }
+.sf-evidence { display: block; margin-top: 2px; font-size: 12px; font-weight: 500; color: var(--muted-foreground); }
 .sf-account-block { display: grid; gap: 10px; margin-bottom: 14px; padding: 12px 14px; border: 1px solid color-mix(in oklab, var(--warning) 55%, transparent); border-radius: 14px; background: color-mix(in oklab, var(--warning) 9%, var(--background)); font-size: 13px; }
 .sf-account-block .sf-btn { justify-self: start; min-height: 44px; }
 .sf-canvas .date-shown { display: block; margin-top: 2px; color: var(--foreground); }
@@ -1833,12 +1833,12 @@ html[data-theme="signature-flow"] .cmp-night-link :is(a, button) { color: var(--
   .sf-canvas-head .sf-overline { margin-bottom: 2px; font-size: 10px; }
   .sf-canvas-title { font-size: 21px; line-height: 1.15; }
   .sf-steps { margin-top: 8px; gap: 5px; }
-  .sf-steps li { min-height: 28px; font-size: 11px; border-radius: 9px; }
+  .sf-steps li { min-height: 28px; font-size: 12px; border-radius: 9px; }
   .sf-canvas-body { padding: 12px 16px 16px; }
   .sf-canvas-lede { margin-bottom: 10px; font-size: 13px; line-height: 1.45; }
   .sf-canvas-hint { margin-top: 8px; font-size: 12px; }
   .sf-chips[role="radiogroup"] { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
-  .sf-chips[role="radiogroup"] .sf-chip { flex-direction: column; justify-content: center; gap: 3px; min-height: 52px !important; padding: 4px 2px; font-size: 11.5px; line-height: 1.15; text-align: center; border-radius: 12px; }
+  .sf-chips[role="radiogroup"] .sf-chip { flex-direction: column; justify-content: center; gap: 3px; min-height: 52px !important; padding: 4px 2px; font-size: 12px; line-height: 1.15; text-align: center; border-radius: 12px; }
   .sf-drop { margin-top: 10px; padding: 14px 12px; gap: 2px; border-radius: 16px; }
   .sf-drop-icon { width: 22px; height: 22px; }
   .sf-drop-actions { margin-top: 8px; }
@@ -1847,7 +1847,7 @@ html[data-theme="signature-flow"] .cmp-night-link :is(a, button) { color: var(--
   .sf-canvas-foot .sf-btn-outline { flex: 0 0 auto; }
   .sf-canvas-foot .sf-btn { min-height: 46px; padding: 0 14px; font-size: 13.5px; }
   .sf-canvas-foot .sf-btn-deep { flex: 1 1 auto; }
-  .sf-canvas-foot .sf-foot-note { flex: 1 1 100%; order: -1; font-size: 11.5px; line-height: 1.35; }
+  .sf-canvas-foot .sf-foot-note { flex: 1 1 100%; order: -1; font-size: 12px; line-height: 1.35; }
   .sf-confirm-card { padding: 12px; }
   .sf-confirm-grid { margin-top: 12px; }
   .sf-confirm-grid > div { padding: 8px 0; }
@@ -1921,7 +1921,7 @@ html[data-theme="signature-flow"] .sf-tmark { font-size: 25px; font-weight: 800;
   html[data-theme="signature-flow"] .sf-rail { width: 100px; background: var(--background); }
   html[data-theme="signature-flow"] .sf-rail-mark { margin-bottom: 44px; }
   html[data-theme="signature-flow"] .sf-rail-nav { gap: 13px; }
-  html[data-theme="signature-flow"] .sf-rail-item { gap: 5px; font-size: 10px; font-weight: 600; }
+  html[data-theme="signature-flow"] .sf-rail-item { gap: 5px; font-size: 12px; font-weight: 600; }
   html[data-theme="signature-flow"] .sf-rail-item .sf-nav-icon { width: 38px; height: 42px; border-radius: 13px; }
   html[data-theme="signature-flow"] .sf-rail-item .sf-nav-icon svg { width: 20px; height: 20px; }
   html[data-theme="signature-flow"] .sf-rail-item[aria-current="page"] { font-weight: 800; }
@@ -1929,11 +1929,11 @@ html[data-theme="signature-flow"] .sf-tmark { font-size: 25px; font-weight: 800;
   html[data-theme="signature-flow"] .sf-rail-settings svg { width: 16px; height: 16px; }
   html[data-theme="signature-flow"] .sf-header { padding-inline: max(43px, env(safe-area-inset-left)) max(42px, env(safe-area-inset-right)); }
   html[data-theme="signature-flow"] .sf-wordmark { font-size: 20px; letter-spacing: -0.02em; }
-  html[data-theme="signature-flow"] .sf-workspace { position: relative; isolation: isolate; min-height: 44px; padding: 0 14px; border-color: transparent; background: transparent; font-size: 11px; font-weight: 600; }
+  html[data-theme="signature-flow"] .sf-workspace { position: relative; isolation: isolate; min-height: 44px; padding: 0 14px; border-color: transparent; background: transparent; font-size: 12px; font-weight: 600; }
   html[data-theme="signature-flow"] .sf-workspace::before { content: ""; position: absolute; z-index: -1; inset: 3px 0; border: 1px solid var(--input); border-radius: 999px; background: var(--card); }
   html[data-theme="signature-flow"] .sf-workspace svg { width: 12px; height: 12px; }
   html[data-theme="signature-flow"] .sf-avatar { position: relative; background: transparent; color: transparent; font-size: 0; }
-  html[data-theme="signature-flow"] .sf-avatar::before { content: attr(data-initials); display: grid; place-items: center; width: 34px; height: 34px; border-radius: 999px; background: var(--primary); color: var(--primary-foreground); font-size: 10.5px; font-weight: 600; letter-spacing: .04em; }
+  html[data-theme="signature-flow"] .sf-avatar::before { content: attr(data-initials); display: grid; place-items: center; width: 34px; height: 34px; border-radius: 999px; background: var(--primary); color: var(--primary-foreground); font-size: 12px; font-weight: 600; letter-spacing: .04em; }
 }
 @media (min-width: 1180px) { html[data-theme="signature-flow"] .sf-main { padding: 36px 50px 64px 49px; } }
 
@@ -1941,16 +1941,16 @@ html[data-theme="signature-flow"] .sf-tmark { font-size: 25px; font-weight: 800;
 html[data-theme="signature-flow"] .sf-title { font-weight: 800 !important; letter-spacing: -0.04em; }
 html[data-theme="signature-flow"] .sf-hero-title { font-weight: 800 !important; }
 html[data-theme="signature-flow"] .sf-lede { font-size: 13px; line-height: 21px; max-width: 610px; }
-html[data-theme="signature-flow"] .sf-back { font-size: 11.5px; font-weight: 800; }
+html[data-theme="signature-flow"] .sf-back { font-size: 12px; font-weight: 800; }
 html[data-theme="signature-flow"] .sf-back svg { width: 12px; height: 12px; }
-html[data-theme="signature-flow"] .sf-crumbs ol { font-size: 11px; }
+html[data-theme="signature-flow"] .sf-crumbs ol { font-size: 12px; }
 html[data-theme="signature-flow"] .sf-crumb-sep { width: 12px; height: 12px; }
-html[data-theme="signature-flow"] .sf-find { --sf-pill-h: 32px; --sf-pill-r: 8px; padding: 0 10px; font-size: 11.5px; font-weight: 800; }
-html[data-theme="signature-flow"] .sf-link { font-size: 11px; font-weight: 800; }
+html[data-theme="signature-flow"] .sf-find { --sf-pill-h: 32px; --sf-pill-r: 8px; padding: 0 10px; font-size: 12px; font-weight: 800; }
+html[data-theme="signature-flow"] .sf-link { font-size: 12px; font-weight: 800; }
 html[data-theme="signature-flow"] .sf-link svg { width: 12px; height: 12px; }
-html[data-theme="signature-flow"] .sf-section-head h2 { font-size: 16px; font-weight: 800; letter-spacing: -0.04em; }
+html[data-theme="signature-flow"] .sf-section-head h2 { font-size: 18px; font-weight: 800; letter-spacing: -0.04em; }
 html[data-theme="signature-flow"] :is(.sf-list-row, .sf-date-row, .sf-task-row) b { font-size: 12px; font-weight: 800; }
-html[data-theme="signature-flow"] :is(.sf-list-row, .sf-date-row, .sf-task-row, .sf-palette-row) small { font-size: 11px; font-weight: 500; }
+html[data-theme="signature-flow"] :is(.sf-list-row, .sf-date-row, .sf-task-row, .sf-palette-row) small { font-size: 12px; font-weight: 500; }
 html[data-theme="signature-flow"] .sf-date-row { min-height: 71px; }
 html[data-theme="signature-flow"] .sf-date small { font-size: 10px !important; letter-spacing: 0; }
 html[data-theme="signature-flow"] .sf-date b { font-size: 21px !important; }
@@ -1959,16 +1959,16 @@ html[data-theme="signature-flow"] .sf-worth-note { display: block; }
 html[data-theme="signature-flow"] .sf-worth-note svg { display: inline-block; margin-right: 6px; vertical-align: baseline; }
 html[data-theme="signature-flow"] .sf-row-amount { font-size: 12px; font-weight: 700; }
 html[data-theme="signature-flow"] .sf-module-row b { font-size: 13.5px; font-weight: 700; }
-html[data-theme="signature-flow"] .sf-module-row small { font-size: 11px; }
-html[data-theme="signature-flow"] .sf-note { padding: 10px 16px; border-radius: 12px; font-size: 11px; }
+html[data-theme="signature-flow"] .sf-module-row small { font-size: 12px; }
+html[data-theme="signature-flow"] .sf-note { padding: 10px 16px; border-radius: 12px; font-size: 12px; }
 html[data-theme="signature-flow"] .sf-band p { font-size: 12px; }
-html[data-theme="signature-flow"] .sf-footnote { font-size: 11px; }
+html[data-theme="signature-flow"] .sf-footnote { font-size: 12px; }
 html[data-theme="signature-flow"] .sf-split-row b { font-size: 12.5px; font-weight: 800; }
-html[data-theme="signature-flow"] .sf-split-row small { font-size: 11px; }
+html[data-theme="signature-flow"] .sf-split-row small { font-size: 12px; }
 html[data-theme="signature-flow"] .sf-state-title { font-size: 13px; font-weight: 800; }
 html[data-theme="signature-flow"] .sf-state-hint { font-size: 12px; }
 @media (min-width: 768px) {
-  html[data-theme="signature-flow"] .sf-title { font-size: 38px; }
+  html[data-theme="signature-flow"] .sf-title { font-size: 32px; } /* UIX §3.3 page title 26-32 (was 38) */
   html[data-theme="signature-flow"] .sf-hero-title { font-size: 44px; letter-spacing: -0.04em; }
 }
 
@@ -1979,13 +1979,13 @@ html[data-theme="signature-flow"] .sf-state-hint { font-size: 12px; }
   html[data-theme="signature-flow"] .sf-worth { padding: 36px 36px 30px; border-radius: 22px; }
   html[data-theme="signature-flow"] .sf-worth .sf-overline { font-size: 10px; font-weight: 600; letter-spacing: .16em; }
   html[data-theme="signature-flow"] .sf-worth-figure { margin-top: 14px; font-size: 56px; letter-spacing: -0.05em; }
-  html[data-theme="signature-flow"] .sf-worth-note { font-size: 11.5px; }
+  html[data-theme="signature-flow"] .sf-worth-note { font-size: 12px; }
   html[data-theme="signature-flow"] .sf-worth-metrics { margin-top: 20px; padding-top: 24px; }
   html[data-theme="signature-flow"] .sf-worth-metrics dt { font-size: 10px; font-weight: 500; }
   html[data-theme="signature-flow"] .sf-worth-metrics dd { margin-top: 8px; font-size: 19px; letter-spacing: -0.04em; }
-  html[data-theme="signature-flow"] .sf-worth-metrics dd.sf-worth-sub { margin-top: 6px; font-size: 10px; font-weight: 500; letter-spacing: 0; }
+  html[data-theme="signature-flow"] .sf-worth-metrics dd.sf-worth-sub { margin-top: 6px; font-size: 12px; font-weight: 500; letter-spacing: 0; }
   html[data-theme="signature-flow"] .sf-worth-actions { margin-top: 22px; }
-  html[data-theme="signature-flow"] .sf-worth-actions .sf-btn { --sf-pill-h: 38px; padding: 0 15px; font-size: 11px; }
+  html[data-theme="signature-flow"] .sf-worth-actions .sf-btn { --sf-pill-h: 38px; padding: 0 15px; font-size: 12px; }
   html[data-theme="signature-flow"] .sf-next { margin-top: 24px; padding: 14px 24px; border-radius: 16px; }
   html[data-theme="signature-flow"] .sf-next-icon { width: 38px; height: 38px; }
   html[data-theme="signature-flow"] .sf-home-lower { margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--border); }
@@ -1993,8 +1993,8 @@ html[data-theme="signature-flow"] .sf-state-hint { font-size: 12px; }
 /* Hero and panel figures use the typeface's default (proportional) figures as in the reference; lists keep tabular. */
 html[data-theme="signature-flow"] :is(.sf-worth-figure, .sf-worth-metrics dd) { font-variant-numeric: normal; }
 html[data-theme="signature-flow"] .sf-next-title { font-size: 12px; font-weight: 800; }
-html[data-theme="signature-flow"] .sf-next-detail { font-size: 11px; font-weight: 500; }
-html[data-theme="signature-flow"] .sf-next .sf-btn { --sf-pill-h: 36px; --sf-pill-r: 9px; padding: 0 14px; font-size: 11px; }
+html[data-theme="signature-flow"] .sf-next-detail { font-size: 12px; font-weight: 500; }
+html[data-theme="signature-flow"] .sf-next .sf-btn { --sf-pill-h: 36px; --sf-pill-r: 9px; padding: 0 14px; font-size: 12px; }
 @media (min-width: 1100px) {
   html[data-theme="signature-flow"] .sf-home-grid { grid-template-columns: minmax(0, 673fr) minmax(300px, 360fr); column-gap: 38px; }
   html[data-theme="signature-flow"] .sf-home-lower { grid-template-columns: minmax(0, 673fr) minmax(0, 360fr); column-gap: 38px; }
@@ -2010,28 +2010,28 @@ html[data-theme="signature-flow"] .sf-next .sf-btn { --sf-pill-h: 36px; --sf-pil
   html[data-theme="signature-flow"] .sf-main { padding-left: max(20px, env(safe-area-inset-left)); padding-right: max(20px, env(safe-area-inset-right)); }
   html[data-theme="signature-flow"] .sf-overline { letter-spacing: .18em; }
   html[data-theme="signature-flow"] .sf-home-head { grid-template-areas: "over act" "title title" "lede ."; }
-  html[data-theme="signature-flow"] .sf-home-head .sf-btn { position: relative; isolation: isolate; min-height: 44px; height: 44px; padding: 0 10px; gap: 5px; font-size: 10.5px; background: transparent; }
+  html[data-theme="signature-flow"] .sf-home-head .sf-btn { position: relative; isolation: isolate; min-height: 44px; height: 44px; padding: 0 10px; gap: 5px; font-size: 12px; background: transparent; }
   html[data-theme="signature-flow"] .sf-home-head .sf-btn::before { content: ""; position: absolute; z-index: -1; inset: 4px 0; border-radius: 10px; background: var(--sf-pill-bg, transparent); border: 1px solid var(--sf-pill-line, transparent); }
   html[data-theme="signature-flow"] .sf-home-head .sf-btn svg { width: 11px; height: 11px; }
   html[data-theme="signature-flow"] .sf-home-head .sf-overline { margin-top: 0; }
   html[data-theme="signature-flow"] .sf-hero-title { font-size: 26px; letter-spacing: -0.05em; }
   html[data-theme="signature-flow"] .sf-lede { margin-top: 6px; font-size: 13px; line-height: 1.5; }
   html[data-theme="signature-flow"] .sf-worth { padding: 26px 21px 24px; border-radius: 18px; }
-  html[data-theme="signature-flow"] .sf-worth .sf-overline { font-size: 9.5px; font-weight: 800; letter-spacing: .18em; }
+  html[data-theme="signature-flow"] .sf-worth .sf-overline { font-size: 10px; font-weight: 800; letter-spacing: .18em; }
   html[data-theme="signature-flow"] .sf-worth-figure { margin-top: 14px; font-size: 36px; letter-spacing: -0.05em; }
   html[data-theme="signature-flow"] .sf-worth-metrics { margin-top: 22px; padding-top: 20px; }
-  html[data-theme="signature-flow"] .sf-worth-metrics dt { font-size: 9px; font-weight: 500; }
+  html[data-theme="signature-flow"] .sf-worth-metrics dt { font-size: 10px; font-weight: 500; }
   html[data-theme="signature-flow"] .sf-worth-metrics dd { font-size: 13px; letter-spacing: -0.02em; }
-  html[data-theme="signature-flow"] .sf-worth-metrics dd.sf-worth-sub { margin-top: 4px; font-size: 9px; font-weight: 500; letter-spacing: 0; }
-  html[data-theme="signature-flow"] .sf-worth-note { font-size: 10.5px; line-height: 1.5; }
+  html[data-theme="signature-flow"] .sf-worth-metrics dd.sf-worth-sub { margin-top: 4px; font-size: 12px; font-weight: 500; letter-spacing: 0; }
+  html[data-theme="signature-flow"] .sf-worth-note { font-size: 12px; line-height: 1.5; }
   html[data-theme="signature-flow"] .sf-worth-actions { flex-wrap: nowrap; gap: 10px; margin-top: 18px; }
-  html[data-theme="signature-flow"] .sf-worth-actions .sf-btn { --sf-pill-h: 36px; min-width: 0; padding: 0 10px; font-size: 10px; }
-  html[data-theme="signature-flow"] .sf-section-head h2 { font-size: 16.5px; }
+  html[data-theme="signature-flow"] .sf-worth-actions .sf-btn { --sf-pill-h: 36px; min-width: 0; padding: 0 10px; font-size: 12px; }
+  html[data-theme="signature-flow"] .sf-section-head h2 { font-size: 17px; }
   html[data-theme="signature-flow"] .sf-date-row { min-height: 71px; }
   /* Coming up titles wrap to two lines instead of truncating beside the amount column. */
   html[data-theme="signature-flow"] .sf-coming .sf-date-row b.block { white-space: normal; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
   html[data-theme="signature-flow"] .sf-next { padding: 14px 16px; }
-  html[data-theme="signature-flow"] .sf-tab { font-size: 10px; }
+  html[data-theme="signature-flow"] .sf-tab { font-size: 12px; }
   html[data-theme="signature-flow"] .sf-tab .sf-nav-icon svg { width: 20px; height: 20px; }
   html[data-theme="signature-flow"] .sf-tab-add { width: 44px; height: 44px; min-height: 44px !important; border-radius: 14px; box-shadow: none; }
   html[data-theme="signature-flow"] .sf-tab-add .sf-nav-icon svg { width: 18px; height: 18px; }
@@ -2041,24 +2041,24 @@ html[data-theme="signature-flow"] .sf-next .sf-btn { --sf-pill-h: 36px; --sf-pil
 html[data-theme="signature-flow"] .sf-canvas-scrim { background: color-mix(in oklab, var(--sf-ink) 68%, transparent); backdrop-filter: none; -webkit-backdrop-filter: none; }
 html[data-theme="signature-flow"] .sf-canvas-title { letter-spacing: -0.05em; }
 html[data-theme="signature-flow"] .sf-canvas-close svg { width: 12px; height: 12px; }
-html[data-theme="signature-flow"] .sf-steps li { font-size: 10px; }
+html[data-theme="signature-flow"] .sf-steps li { font-size: 12px; }
 html[data-theme="signature-flow"] .sf-steps li[data-state="current"] { font-weight: 800; box-shadow: none; }
 html[data-theme="signature-flow"] .sf-canvas-lede { font-size: 13px; line-height: 1.6; }
-html[data-theme="signature-flow"] .sf-canvas-hint { font-size: 11px; }
-html[data-theme="signature-flow"] .sf-chips[role="radiogroup"] .sf-chip { --sf-pill-h: 38px; border-radius: 10px; font-size: 11px; font-weight: 500; }
+html[data-theme="signature-flow"] .sf-canvas-hint { font-size: 12px; }
+html[data-theme="signature-flow"] .sf-chips[role="radiogroup"] .sf-chip { --sf-pill-h: 38px; border-radius: 10px; font-size: 12px; font-weight: 500; }
 html[data-theme="signature-flow"] .sf-chips[role="radiogroup"] .sf-chip[aria-checked="true"] { font-weight: 600; }
 html[data-theme="signature-flow"] .sf-drop { padding: 22px 16px; border-width: 1px; border-radius: 16px; }
 html[data-theme="signature-flow"] .sf-drop-title { font-size: 12px; font-weight: 800; }
-html[data-theme="signature-flow"] .sf-drop-sub { font-size: 10px; }
-html[data-theme="signature-flow"] .sf-drop-actions .sf-btn { font-size: 11.5px; }
-html[data-theme="signature-flow"] .sf-canvas-alt .sf-link { font-size: 11px; }
-html[data-theme="signature-flow"] .sf-canvas-foot .sf-btn { --sf-pill-h: 42px; --sf-pill-r: 11px; padding: 0 18px; font-size: 11.5px; }
-html[data-theme="signature-flow"] .sf-foot-note { font-size: 11px; }
+html[data-theme="signature-flow"] .sf-drop-sub { font-size: 12px; }
+html[data-theme="signature-flow"] .sf-drop-actions .sf-btn { font-size: 12px; }
+html[data-theme="signature-flow"] .sf-canvas-alt .sf-link { font-size: 12px; }
+html[data-theme="signature-flow"] .sf-canvas-foot .sf-btn { --sf-pill-h: 42px; --sf-pill-r: 11px; padding: 0 18px; font-size: 12px; }
+html[data-theme="signature-flow"] .sf-foot-note { font-size: 12px; }
 html[data-theme="signature-flow"] .sf-confirm-card b { font-size: 12.5px; font-weight: 800; }
-html[data-theme="signature-flow"] .sf-confirm-card small { font-size: 10px; }
-html[data-theme="signature-flow"] .sf-confirm-grid dt { font-size: 10px; font-weight: 500; }
-html[data-theme="signature-flow"] .sf-confirm-grid dd { font-size: 11px; font-weight: 800; }
-html[data-theme="signature-flow"] .sf-evidence { font-size: 10px; }
+html[data-theme="signature-flow"] .sf-confirm-card small { font-size: 12px; }
+html[data-theme="signature-flow"] .sf-confirm-grid dt { font-size: 12px; font-weight: 500; }
+html[data-theme="signature-flow"] .sf-confirm-grid dd { font-size: 12px; font-weight: 800; }
+html[data-theme="signature-flow"] .sf-evidence { font-size: 12px; }
 html[data-theme="signature-flow"] .sf-account-block { font-size: 12px; }
 @media (min-width: 768px) {
   html[data-theme="signature-flow"] .sf-canvas:not(.sf-canvas-wide) { width: min(583px, calc(100vw - 3rem)); }
@@ -2122,7 +2122,7 @@ html[data-theme="signature-flow"] .sf-steps li:is([data-state="done"], [data-sta
 html[data-theme="signature-flow"] :is(.sf-worth-figure, .sf-worth-metrics dd, .sf-row-amount) { font-variant-numeric: tabular-nums; }
 
 /* ---- Decision 3: header Search and sync status with the reference header's icon metrics (16 px glyphs in 44 px boxes) ---- */
-html[data-theme="signature-flow"] .sf-sync-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 44px; height: 44px; padding: 0 10px; border-radius: 12px; color: var(--muted-foreground); font-size: 11px; font-weight: 600; white-space: nowrap; }
+html[data-theme="signature-flow"] .sf-sync-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 44px; height: 44px; padding: 0 10px; border-radius: 12px; color: var(--muted-foreground); font-size: 12px; font-weight: 600; white-space: nowrap; }
 html[data-theme="signature-flow"] .sf-sync-btn:hover { color: var(--foreground); background: var(--secondary); }
 html[data-theme="signature-flow"] .sf-sync-btn svg { width: 16px; height: 16px; stroke-width: 1.6; flex-shrink: 0; }
 html[data-theme="signature-flow"] .sf-sync-btn[data-attention] { color: var(--foreground); }
@@ -2135,12 +2135,12 @@ html[data-theme="signature-flow"] .sf-sync-btn[data-sync-state="error"] { color:
 /* ---- Decision 4: Coming up amounts in a labelled, right-aligned tabular column; titles wrap to two lines ---- */
 html[data-theme="signature-flow"] .sf-clamp-2 { white-space: normal; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow-wrap: anywhere; line-height: 1.3; }
 html[data-theme="signature-flow"] .sf-coming-amount { display: grid; justify-items: end; flex-shrink: 0; min-width: 84px; text-align: right; }
-html[data-theme="signature-flow"] .sf-coming-amount small { margin-top: 2px !important; font-size: 10px !important; font-weight: 500; color: var(--muted-foreground); }
+html[data-theme="signature-flow"] .sf-coming-amount small { margin-top: 2px !important; font-size: 12px !important; font-weight: 500; color: var(--muted-foreground); }
 
 /* ---- Decision 7: Records sub-navigation on Travel and the other Records modules ---- */
 html[data-theme="signature-flow"] .sf-subnav { display: flex; gap: 6px; margin: -8px 0 20px; overflow-x: auto; scrollbar-width: none; }
 html[data-theme="signature-flow"] .sf-subnav::-webkit-scrollbar { display: none; }
-html[data-theme="signature-flow"] .sf-subnav a { display: inline-flex; align-items: center; flex-shrink: 0; min-height: 44px; padding: 0 12px; border-radius: 10px; font-size: 11.5px; font-weight: 600; color: var(--muted-foreground); }
+html[data-theme="signature-flow"] .sf-subnav a { display: inline-flex; align-items: center; flex-shrink: 0; min-height: 44px; padding: 0 12px; border-radius: 10px; font-size: 12px; font-weight: 600; color: var(--muted-foreground); }
 html[data-theme="signature-flow"] .sf-subnav a:hover { color: var(--foreground); background: var(--secondary); }
 html[data-theme="signature-flow"] .sf-subnav a[aria-current="page"] { color: var(--primary); font-weight: 800; background: var(--sf-rail-active); }
 
@@ -2152,7 +2152,7 @@ html[data-theme="signature-flow"] .sf-view-bar .sf-view-toggle { flex: 1 1 auto;
 html[data-theme="signature-flow"] .sf-view-bar { position: sticky; top: -12px; z-index: 2; margin-inline: -4px; padding: 6px 4px; background: var(--background); }
 html[data-theme="signature-flow"] .sf-canvas-fields :where(*) { scroll-margin-top: 64px; }
 @media (min-width: 768px) { html[data-theme="signature-flow"] .sf-view-bar { top: -16px; background: var(--card); } }
-html[data-theme="signature-flow"] .sf-side-toggle { display: none; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border-radius: 10px; font-size: 11.5px; font-weight: 800; color: var(--primary); white-space: nowrap; }
+html[data-theme="signature-flow"] .sf-side-toggle { display: none; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border-radius: 10px; font-size: 12px; font-weight: 800; color: var(--primary); white-space: nowrap; }
 html[data-theme="signature-flow"] .sf-side-toggle svg { width: 14px; height: 14px; }
 html[data-theme="signature-flow"] .sf-side-toggle:hover { background: var(--secondary); }
 @media (min-width: 768px) {
@@ -2176,7 +2176,7 @@ html[data-theme="signature-flow"] .sf-canvas-lede { margin-bottom: 12px; }
 @media (max-width: 767px) {
   html[data-theme="signature-flow"] .sf-canvas-layer { inset: var(--sf-vv-top, 0px) 0 auto 0; height: var(--sf-vv-h, 100dvh); }
   html[data-theme="signature-flow"] .sf-canvas-foot { flex-wrap: wrap; row-gap: 4px; }
-  html[data-theme="signature-flow"] .sf-canvas-foot .sf-foot-note { font-size: 11px; line-height: 16px; }
+  html[data-theme="signature-flow"] .sf-canvas-foot .sf-foot-note { font-size: 12px; line-height: 16px; }
   html[data-theme="signature-flow"] .sf-canvas-layer[data-keyboard="open"] .sf-canvas-foot { padding-bottom: 8px; }
 }
 /* Toasts use the measured clearance above the canvas footer (toast-placement.ts), not a fixed distance: the narrow,
@@ -2266,11 +2266,38 @@ html[data-theme="signature-flow"] .sf-main { padding-left: max(var(--sf-inset), 
 }
 
 /* UIX master §3.3 text roles: shell support text at least 12 px (support 12-14) and overline-style labels at least
- * 10 px (overline 10-12). Raised from the calibrated 9-11.5 px values; nothing is made smaller. */
+ * 10 px (overline 10-12). Raised from the calibrated 9-11.5 px values; nothing is made smaller. (Since density pass 3
+ * the values above are raised in place too; these rules stay as the shared floor.) */
 html[data-theme="signature-flow"] :is(.sf-back, .sf-crumbs ol, .sf-find, .sf-link, .sf-note, .sf-footnote) { font-size: 12px; }
 html[data-theme="signature-flow"] :is(.sf-list-row, .sf-date-row, .sf-task-row, .sf-palette-row, .sf-module-row, .sf-split-row) small { font-size: 12px; }
 @media (max-width: 767px) {
   html[data-theme="signature-flow"] .sf-worth .sf-overline { font-size: 10px; }
   html[data-theme="signature-flow"] .sf-worth-metrics dt { font-size: 10px; }
-  html[data-theme="signature-flow"] .sf-worth-metrics dd.sf-worth-sub { font-size: 10px; }
+  /* Review L-C: the line under each metric is support text (12-14), not an overline. */
+  html[data-theme="signature-flow"] .sf-worth-metrics dd.sf-worth-sub { font-size: 12px; }
+}
+
+/* Density pass 3 (13 Nov 2026). Every font size in the Signature Flow stylesheet above is now at least 12 px, except
+ * overline-style labels (.sf-overline, net-worth metric names, calendar weekday/month marks) at 10-12 px; the
+ * calibrated 9-11.5 px values were raised in place, so no later rule is needed to win the cascade (e.g.
+ * .sf-canvas-alt .sf-link was 11 px despite the 12 px .sf-link floor). Page titles 32 px from 768 px (§3.3 26-32;
+ * was 38), section titles 18 px (17 on iPhone; §3.3 17-20; was 16).
+ *
+ * Plan calendar (PlanCalendar.tsx): day cells at least 44 x 44 and their item/status labels 12 px. Where seven 44 px
+ * columns do not fit (320 px iPhone, a narrow column), the calendar grid scrolls sideways inside its own box; the
+ * page itself never scrolls sideways. */
+html[data-theme="signature-flow"] .plan-cal-scroll { max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; }
+html[data-theme="signature-flow"] .plan-cal-grid { grid-template-columns: repeat(7, minmax(44px, 1fr)); }
+html[data-theme="signature-flow"] .plan-cal-cell { min-width: 44px; min-height: 44px; }
+html[data-theme="signature-flow"] .plan-cal-meta { font-size: 12px; line-height: 16px; white-space: normal; }
+/* The 12 px support text must stay whole: the line under a net-worth metric breaks long words (hyphenated where the
+ * browser can) instead of ending in an ellipsis, and the two net-worth actions go onto two lines on a narrow iPhone
+ * rather than letting a 12 px label run past its button. */
+html[data-theme="signature-flow"] .sf-worth-metrics dd.sf-worth-sub { text-overflow: clip; overflow-wrap: anywhere; hyphens: auto; }
+@media (max-width: 767px) {
+  html[data-theme="signature-flow"] .sf-worth-actions { flex-wrap: wrap; }
+  html[data-theme="signature-flow"] .sf-worth-actions .sf-btn { flex: 1 1 auto; min-width: max-content; }
+  /* Smart Add source chips: a two-line 12 px label ("Asset register" at 320 px) keeps its icon inside the pill. */
+  html[data-theme="signature-flow"] .sf-chips[role="radiogroup"] .sf-chip { --sf-pill-h: 100%; height: auto; }
+  html[data-theme="signature-flow"] .sf-chips[role="radiogroup"] .sf-chip svg { flex-shrink: 0; }
 }

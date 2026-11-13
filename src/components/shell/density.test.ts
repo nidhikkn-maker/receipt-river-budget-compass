@@ -9,6 +9,10 @@ const MARKER = "Density audit, shared shell SH-1";
 const block = css.slice(css.lastIndexOf("/*", css.indexOf(MARKER)));
 const SF = 'html[data-theme="signature-flow"]';
 const phone = block.slice(block.indexOf("@media (max-width: 767px)"));
+/** The whole Signature Flow part of the stylesheet: from its theme tokens to the end of the file. */
+const sfCss = css.slice(css.lastIndexOf("/*", css.indexOf("Signature Flow (Track B, batch B1)")));
+/** §3.3 overline-style roles (uppercase, letter-spaced labels), which may be 10-12 px; everything else is at least 12. */
+const OVERLINE = /sf-overline|sf-worth-metrics dt|sf-date small/;
 /** Declarations of the first rule whose selector is exactly `sel` in `text`. */
 const rule = (text: string, sel: string) => {
   const at = text.indexOf(`${SF} ${sel} {`);
@@ -62,9 +66,43 @@ describe("density rules (Signature Flow only)", () => {
     expect(rule(block, ".sf-header-tools > *")).toContain("flex-shrink: 0");
     expect(rule(block, ".sf-workspace-label")).not.toContain("font-size");
   });
-  it("never sets a font size below 12 px, except overline-style labels (§3.3 overline 10-12 px)", () => {
-    const OVERLINE = /sf-overline|sf-worth-metrics dt|sf-worth-sub/;
+  it("never sets a font size below 12 px, except overline-style labels (§3.3 overline 10-12 px), in the density block", () => {
     for (const m of block.replace(/\/\*[\s\S]*?\*\//g, "").matchAll(/([^{}]+)\{[^{}]*font-size: ([\d.]+)px/g)) expect(Number(m[2]), m[1]!.trim()).toBeGreaterThanOrEqual(OVERLINE.test(m[1]!) ? 10 : 12);
+  });
+  it("density 3: the whole Signature Flow stylesheet has no text below 10 px, and nothing but overline roles below 12 px", () => {
+    // Every rule in the Signature Flow part of the stylesheet (theme tokens to the end), not just the density block, so
+    // a calibrated value earlier in the file cannot win the cascade over the floor (e.g. .sf-canvas-alt .sf-link).
+    expect(sfCss.length).toBeGreaterThan(block.length * 3);
+    const sizes = [...sfCss.replace(/\/\*[\s\S]*?\*\//g, "").matchAll(/([^{}]+)\{[^{}]*?font-size: ([\d.]+)px/g)].map((m) => [m[1]!.trim().split("\n").at(-1)!.trim(), Number(m[2])] as const);
+    expect(sizes.length).toBeGreaterThan(100);
+    expect(sizes.filter(([, px]) => px < 10)).toEqual([]);
+    expect(sizes.filter(([sel, px]) => px < 12 && !OVERLINE.test(sel))).toEqual([]);
+  });
+  it("review L-C: the line under each net-worth metric (dd.sf-worth-sub) is support text at 12 px or more, on every width", () => {
+    expect(OVERLINE.test(".sf-worth-metrics dd.sf-worth-sub")).toBe(false);
+    const subs = [...sfCss.replace(/\/\*[\s\S]*?\*\//g, "").matchAll(/dd\.sf-worth-sub \{[^}]*font-size: ([\d.]+)px/g)].map((m) => Number(m[1]));
+    expect(subs.length).toBeGreaterThanOrEqual(4);
+    for (const px of subs) expect(px).toBeGreaterThanOrEqual(12);
+    expect(rule(sfCss, ".sf-canvas-alt .sf-link")).toContain("font-size: 12px");
+  });
+  it("density 3 / §3.3: page titles 26-32 px from 768 px and section titles 17-20 px", () => {
+    const tablet = sfCss.slice(sfCss.indexOf(`@media (min-width: 768px) {\n  ${SF} .sf-title`));
+    expect(rule(tablet, ".sf-title")).toContain("font-size: 32px");
+    for (const m of sfCss.matchAll(/\.sf-title \{[^}]*font-size: ([\d.]+)px/g)) expect(Number(m[1])).toBeLessThanOrEqual(32);
+    const heads = [...sfCss.matchAll(/\.sf-section-head h2 \{[^}]*font-size: ([\d.]+)px/g)].map((m) => Number(m[1]));
+    expect(heads.length).toBeGreaterThanOrEqual(3);
+    for (const px of heads) { expect(px).toBeGreaterThanOrEqual(17); expect(px).toBeLessThanOrEqual(20); }
+  });
+  it("density 3: Plan calendar day cells are at least 44 x 44 with 12 px labels; the grid scrolls inside its own box", () => {
+    expect(rule(block, ".plan-cal-grid")).toContain("grid-template-columns: repeat(7, minmax(44px, 1fr))");
+    expect(rule(block, ".plan-cal-cell")).toMatch(/min-width: 44px; min-height: 44px/);
+    expect(rule(block, ".plan-cal-meta")).toContain("font-size: 12px");
+    expect(rule(block, ".plan-cal-scroll")).toMatch(/max-width: 100%; overflow-x: auto/);
+    const src = readFileSync("src/components/PlanCalendar.tsx", "utf8");
+    expect(src).toContain('<div className="plan-cal-scroll"><div className="plan-cal-grid grid grid-cols-7');
+    expect(src).toContain('cn("plan-cal-cell h-20');
+    expect(src.match(/className="plan-cal-meta/g)?.length).toBe(2);
+    expect(src.match(/text-\[10px\]/g)?.length).toBe(2); // the only 10 px labels, both raised by .plan-cal-meta
   });
   it("§3.3 text roles: shell support text is at least 12 px", () => {
     expect(block).toContain(':is(.sf-back, .sf-crumbs ol, .sf-find, .sf-link, .sf-note, .sf-footnote) { font-size: 12px; }');
@@ -80,13 +118,22 @@ describe("Records row placement (SH-1)", () => {
   });
 });
 
-describe("/assets app pages vs the build's /assets/ files", () => {
-  // Only /assets (the Asset register) is a page in this base; the rule guards every navigation under /assets/,
-  // including any future Asset detail route.
-  it("the offline worker's cache-first file rule never answers a page navigation under /assets/", () => {
-    const config = readFileSync("vite.config.ts", "utf8");
+describe("/assets app pages vs the build's hashed files", () => {
+  // /assets is the Asset register's page (and /assets/<id> any future Asset detail route). The host's one-year
+  // "immutable" Cache-Control is written for /<build.assetsDir>/*, and the worker's cache-first rule matched /assets/,
+  // so the build files must live under a prefix that is not a route.
+  const config = readFileSync("vite.config.ts", "utf8");
+  it("the client build's hashed files go to /_build/, not /assets/", () => {
+    expect(config).toContain('const BUILD_ASSETS_DIR = "_build";');
+    expect(config).toContain("build: { assetsDir: BUILD_ASSETS_DIR }, environments: { client: { build: { assetsDir: BUILD_ASSETS_DIR } } }");
+  });
+  it("the offline worker's cache-first file rule covers /_build/ only and never answers a page navigation", () => {
     const rule = config.slice(config.indexOf("runtimeCaching"), config.indexOf('cacheName: "ledgerline-lazy"'));
-    expect(rule).toContain('url.pathname.startsWith("/assets/")');
+    expect(rule).toContain('url.pathname.startsWith("/_build/")');
+    expect(rule).not.toContain("/assets");
     expect(rule).toContain('request.mode !== "navigate"');
+  });
+  it("keeps the precache 'client/' prefix strip (without it every entry 404s and the worker never installs)", () => {
+    expect(config).toContain('modifyURLPrefix: { "client/": "" }');
   });
 });

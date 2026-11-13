@@ -279,6 +279,12 @@ describe("Signature Flow shell density (SH-1, SH-2, SH-6)", () => {
     expect(view.container.querySelector(".sf-page[data-sf-page]")).toBeNull();
     expect(view.container.querySelector(".sf-route-plain")).toHaveTextContent("hub body");
   });
+  it("header Find, Calendar and Notifications keep the 44 px icon-button class (SH-4, styles.css .sf-header .sf-icon-btn)", () => {
+    render(<SignatureShell><p>body</p></SignatureShell>);
+    const banner = screen.getByRole("banner");
+    for (const name of ["Calendar", "Notifications"]) expect(within(banner).getByRole("link", { name }), name).toHaveClass("sf-icon-btn");
+    expect(within(banner).getByRole("button", { name: "Find anything (Ctrl+K)" })).toHaveClass("sf-icon-btn");
+  });
   it("moving between a hub page and a legacy page keeps the same route container and DeviceLock (no remount)", () => {
     let mounts = 0;
     function Page({ label }: { label: string }) {
@@ -328,6 +334,17 @@ describe("Signature Flow shell density (SH-1, SH-2, SH-6)", () => {
       act(() => ro.cb());
       expect(row).not.toHaveAttribute("data-fade-start");
       expect(row).not.toHaveAttribute("data-fade-end");
+      // Review L-H: the row narrows again (rotation back to portrait): the current tab is placed clear of the fade
+      // again, not left under it at scrollLeft 0.
+      dims.client = 320;
+      act(() => ro.cb());
+      expect(row.scrollLeft).toBe(200);
+      expect(row).toHaveAttribute("data-fade-start");
+      // A narrower row that leaves the end fade on (more scroll range than needed): Reimbursements (400-500) stays clear.
+      dims.client = 300; dims.scroll = 700; row.scrollLeft = 0;
+      act(() => ro.cb());
+      expect(row.scrollLeft).toBe(240); // 500 + 40 fade - 300
+      expect(row).toHaveAttribute("data-fade-end");
       view.unmount();
       expect(ro.disconnected).toBe(true);
     } finally {

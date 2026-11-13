@@ -58,7 +58,8 @@ export function subnavScrollFor(left: number, width: number, scrollLeft: number,
  * Records sub-navigation (KK decision 7): shown on the Records module index pages, e.g. Travel, with the current one
  * marked. Detail pages rely on the labelled Back (SH-1). The row scrolls sideways on iPhone: the current tab is
  * scrolled into view clear of the fade, and a fade marks the edge that has more tabs beyond it (SH-2). The marks are
- * refreshed on scroll and whenever the row or its tabs change size (ResizeObserver: rotation, text zoom, font load).
+ * refreshed on scroll; on any size change of the row or its tabs (ResizeObserver: rotation, text zoom, font load) the
+ * current tab is placed clear of the fade again and the marks are refreshed.
  */
 export function RecordsSubnav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -73,10 +74,12 @@ export function RecordsSubnav() {
     const end = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
     setEdges((e) => (e.start === start && e.end === end ? e : { start, end }));
   }, []);
-  useEffect(() => {
+  // Bring the current tab fully into view, clear of the fade, without scrolling the page itself. Runs on arrival and
+  // again whenever the row or a tab changes size (rotation, window resize, text zoom, font load), so the current tab
+  // never ends up under the fade after a resize (review L-H).
+  const place = useCallback(() => {
     const el = ref.current;
     if (!el) return;
-    // Bring the current tab fully into view, clear of the fade, without scrolling the page itself.
     const current = el.querySelector<HTMLElement>('[aria-current="page"]');
     if (current) {
       // .sf-subnav is position: relative, so offsetLeft is measured from the row
@@ -84,15 +87,20 @@ export function RecordsSubnav() {
       if (next !== null) el.scrollLeft = next;
     }
     measure();
+  }, [measure]);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    place();
     if (typeof ResizeObserver === "undefined") {
-      window.addEventListener("resize", measure);
-      return () => window.removeEventListener("resize", measure);
+      window.addEventListener("resize", place);
+      return () => window.removeEventListener("resize", place);
     }
-    const ro = new ResizeObserver(() => measure());
+    const ro = new ResizeObserver(() => place());
     ro.observe(el);
     for (const tab of el.children) ro.observe(tab);
     return () => ro.disconnect();
-  }, [active, shown, measure]);
+  }, [active, shown, place]);
   if (!active || !shown) return null;
   return (
     <nav ref={ref} aria-label="Records sections" className="sf-subnav" onScroll={measure} data-fade-start={edges.start || undefined} data-fade-end={edges.end || undefined}>
