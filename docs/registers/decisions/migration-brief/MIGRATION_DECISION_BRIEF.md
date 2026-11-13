@@ -469,3 +469,10 @@ The P14 checksums above are superseded. Re-compute them from develop/sf-base 640
 4. **Re-installing P14 later:** it requires rolling back P18 first, including P18's audit-drop step, which needs KK approval.
 
 The recommendation is unchanged: decline the hosted install for now. G1–G8 and G12–G15 remain open.
+
+## Addendum, 13 Nov 2026 06:30 UTC: closed-period guard for duplicate asset rows (new staged item, not P14/P17/P20)
+
+- **The issue (fin5 review, L2):** the applied guard `0069_freeze_financial_registers` compares only the first row of each id. The app now checks every copy, which is the closed-period rule in the app layer. The live database does not, so if the app's pre-check is bypassed, the database would accept excluding a backdated duplicate copy. It would also wrongly refuse giving an open-year copy its own id when a closed-year copy shares the id.
+- **The staged fix:** `docs/evidence/verification/ws-e/next25-fin5/staged-guard_books_registers-every-copy.sql` on `ws/e-records-next25-fin5` (d371590e). It pairs identical rows first, then the rest by order, and checks id-less rows.
+- **Review result:** identical to 0069 for unique ids, and stricter for duplicates. Tested in PGlite only.
+- **Status:** staged only. It needs its own KK decision, with the same rehearsal, drift-check and backup requirements as the other hosted changes (G1–G8). Nothing is applied.
