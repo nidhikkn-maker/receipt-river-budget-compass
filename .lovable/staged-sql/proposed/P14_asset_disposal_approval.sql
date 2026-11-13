@@ -118,6 +118,25 @@
 --   Lows: the fallback copy is refused (P14_UNVERIFIABLE) whenever cleanAssets would drop it (no string name, no numeric
 --      cost, inUse not YYYY-MM-DD), not only for an unknown kind; a whitespace-only ownerEntityId (JS trim() empty) is
 --      personal (phase3_p14.js_blank), also as a named p_owner_entity.
+-- P14-f (13 Nov 2026, Track A; lead review of 6d56411a H1 + M1 + M2 + L1 + L2, WS-E fin9 addenda 1-3 and 2):
+--   H1/M1 a sold row bound to its approved request is FROZEN BY VALUE against the row the request recorded (r.inputs->'asset'),
+--      not compared by a "meaning" that read a non-number as absent (the app coerces strings / booleans, reads an openingWdv
+--      fy by its first four characters and concatenates a string adjustment amount, so its reported disposal moved while the
+--      guard passed). Frozen: id, ownerEntityId, kind, inUse, cost, bookMethod, bookRatePct, usefulLifeYears, residualPct,
+--      sharePct (L2: the share scales tax depreciation and fixed-asset figures), openingWdv (whole value), adjustments (whole
+--      list: no change before the sale and no post-sale additions), policyHistory, buildingPolicy, not excluded, soldOn,
+--      saleValue (phase3_p14.sold_row_change). Another JSON type, a malformed shape, a key added or removed is a change.
+--      Request time fails closed too: a present non-number life / residual, an openingWdv with a non-number book or a
+--      non-YYYY-YY fy, or adjustments that are not objects with a string date and numeric amount are P14_UNVERIFIABLE.
+--   M2 a frozen field also passes when it equals exactly what the app's cleanAssets writes from the approved value
+--      (phase3_p14.tidy_field, built on js_number = JS Number() and js_json = JSON.stringify(JSON.parse()); plus WS-E's
+--      normaliseShare, tidy_share_recorded) or the value the row already held, so the app's re-save of an untidied row and
+--      every later re-save pass. Parity tests run the real cleanAssets over a matrix of untidied values.
+--   L1 excluding the sold copy says which copy can be marked: one after it; one before it cannot (rank), keep both.
+--   Owner: a non-blank string, JS-trimmed (owner_of; "co " = " co" = "co"), compared trimmed everywhere (rows, the
+--      request's asset_owner_entity, now recorded trimmed, p_owner_entity; '' = personal).
+--   Sale stop: P14_BEFORE_SALE for a disposal dated before the recorded sale; P14_ALREADY_DISPOSED "… — check the duplicate"
+--      only when the owner has another copy: the codes and text of the app's disposalCopy (WS-E c6b8d4c9).
 -- Known limit (KK review): the posted paise figure is the database's full-precision working rounded once; the app engine
 -- (carried-forward paise) may differ from it by up to the tolerance above and is only checked against it. 0069's closed-period register guard still
 -- applies to the asset change: an asset bought before a closed period cannot be changed (also not disposed) until
@@ -214,18 +233,114 @@ LANGUAGE sql IMMUTABLE SET search_path = public, pg_temp AS $$
 $$;
 -- P14-e: true when JS String.prototype.trim() leaves nothing (ECMAScript WhiteSpace + LineTerminator: TAB, LF, VT, FF, CR,
 -- SPACE, NBSP, U+1680, U+2000-U+200A, U+2028, U+2029, U+202F, U+205F, U+3000, U+FEFF). NULL stays NULL.
-CREATE FUNCTION phase3_p14.js_blank(_s text) RETURNS boolean
+CREATE FUNCTION phase3_p14.js_trim(_s text) RETURNS text
 LANGUAGE sql IMMUTABLE SET search_path = public, pg_temp AS $$
   SELECT btrim(_s, chr(9) || chr(10) || chr(11) || chr(12) || chr(13) || chr(32) || chr(160) || chr(5760) || chr(8192) || chr(8193) || chr(8194)
     || chr(8195) || chr(8196) || chr(8197) || chr(8198) || chr(8199) || chr(8200) || chr(8201) || chr(8202) || chr(8232) || chr(8233) || chr(8239)
-    || chr(8287) || chr(12288) || chr(65279)) = ''
+    || chr(8287) || chr(12288) || chr(65279))
+$$;
+CREATE FUNCTION phase3_p14.js_blank(_s text) RETURNS boolean
+LANGUAGE sql IMMUTABLE SET search_path = public, pg_temp AS $$ SELECT phase3_p14.js_trim(_s) = '' $$;
+-- P14-f (M2): JavaScript number semantics, so the guard recognises exactly what the app writes back. js_double: a decimal
+-- literal (already validated) as a JS double: out of the double range it rounds to ±Infinity or 0 as JS does (a float8
+-- cast raises instead).
+CREATE FUNCTION phase3_p14.js_double(_t text) RETURNS float8
+LANGUAGE plpgsql IMMUTABLE SET search_path = public, pg_temp AS $$
+DECLARE n numeric; neg constant boolean := left(_t, 1) = '-';
+BEGIN
+  BEGIN RETURN _t::float8; EXCEPTION WHEN OTHERS THEN NULL; END;
+  IF regexp_replace(_t, '[eE].*$', '') !~ '[1-9]' THEN RETURN 0; END IF;
+  BEGIN n := abs(_t::numeric); EXCEPTION WHEN OTHERS THEN n := NULL; END;
+  IF (n IS NULL AND _t ~ '[eE]-') OR n < 1 THEN RETURN 0; END IF;
+  RETURN CASE WHEN neg THEN '-Infinity' ELSE 'Infinity' END::float8;
+END $$;
+-- JS Number(v) for a stored JSON value (_v NULL = the key is absent, undefined → NaN): numbers as doubles, true 1, false 0,
+-- null 0, a string by StringToNumber (JS whitespace trimmed; '' → 0; decimal with optional sign and exponent; Infinity;
+-- 0x / 0o / 0b without a sign; anything else NaN), an array through its string ([] → 0, [x] → Number(String(x)), more → NaN),
+-- an object NaN.
+CREATE FUNCTION phase3_p14.js_number(_v jsonb) RETURNS float8
+LANGUAGE plpgsql IMMUTABLE SET search_path = public, pg_temp AS $$
+DECLARE s text; d numeric := 0; b int; c text;
+BEGIN
+  IF _v IS NULL THEN RETURN 'NaN'; END IF;
+  CASE jsonb_typeof(_v)
+    WHEN 'number' THEN RETURN phase3_p14.js_double(_v #>> '{}');
+    WHEN 'boolean' THEN RETURN CASE WHEN _v = 'true'::jsonb THEN 1 ELSE 0 END;
+    WHEN 'null' THEN RETURN 0;
+    WHEN 'array' THEN
+      IF jsonb_array_length(_v) = 0 THEN RETURN 0; END IF;
+      IF jsonb_array_length(_v) > 1 THEN RETURN 'NaN'; END IF;   -- "a,b"
+      RETURN CASE jsonb_typeof(_v->0) WHEN 'null' THEN 0 WHEN 'boolean' THEN 'NaN' WHEN 'object' THEN 'NaN' ELSE phase3_p14.js_number(_v->0) END;
+    WHEN 'string' THEN
+      s := phase3_p14.js_trim(_v #>> '{}');
+      IF s = '' THEN RETURN 0; END IF;
+      IF s ~ '^[+-]?Infinity$' THEN RETURN CASE WHEN left(s, 1) = '-' THEN '-Infinity' ELSE 'Infinity' END::float8; END IF;
+      IF s ~ '^[+-]?([0-9]+\.?[0-9]*|\.[0-9]+)([eE][+-]?[0-9]+)?$' THEN RETURN phase3_p14.js_double(s); END IF;
+      b := CASE WHEN s ~ '^0[xX][0-9a-fA-F]+$' THEN 16 WHEN s ~ '^0[oO][0-7]+$' THEN 8 WHEN s ~ '^0[bB][01]+$' THEN 2 END;
+      IF b IS NULL THEN RETURN 'NaN'; END IF;
+      FOREACH c IN ARRAY regexp_split_to_array(lower(substr(s, 3)), '') LOOP d := d * b + strpos('0123456789abcdef', c) - 1; END LOOP;
+      RETURN phase3_p14.js_double(d::text);
+    ELSE RETURN 'NaN';
+  END CASE;
+END $$;
+-- The value JSON.stringify(JSON.parse(text)) writes back: numbers as the JS double's shortest form (±Infinity → null),
+-- arrays and objects element by element (jsonb keeps the last of a duplicated key, as JSON.parse does).
+CREATE FUNCTION phase3_p14.js_json(_v jsonb) RETURNS jsonb
+LANGUAGE plpgsql IMMUTABLE SET search_path = public, pg_temp SET extra_float_digits = 1 AS $$
+DECLARE d float8;
+BEGIN
+  CASE jsonb_typeof(_v)
+    WHEN 'number' THEN d := phase3_p14.js_double(_v #>> '{}');
+      RETURN CASE WHEN d IN ('Infinity'::float8, '-Infinity'::float8) THEN 'null'::jsonb ELSE to_jsonb(d) END;
+    WHEN 'array' THEN RETURN (SELECT coalesce(jsonb_agg(phase3_p14.js_json(t.e) ORDER BY t.o), '[]'::jsonb) FROM jsonb_array_elements(_v) WITH ORDINALITY t(e, o));
+    WHEN 'object' THEN RETURN (SELECT coalesce(jsonb_object_agg(t.k, phase3_p14.js_json(t.v)), '{}'::jsonb) FROM jsonb_each(_v) t(k, v));
+    ELSE RETURN _v;
+  END CASE;
+END $$;
+-- What src/lib/assets.ts cleanAssets writes for a field given its stored value (_v NULL = absent; result NULL = absent):
+--   sharePct    Math.min(100, Math.max(0, Number(x) || 100))
+--   bookRatePct Math.min(100, Math.max(0, Number(x) || 0))
+--   bookMethod  x === "wdv" ? "wdv" : "slm"
+--   ownerEntityId a non-blank string kept JS-trimmed, anything else dropped (WS-E cleanAssets, lead addendum 2; owner_of)
+-- every other field is written back as stored.
+CREATE FUNCTION phase3_p14.tidy_field(_f text, _v jsonb) RETURNS jsonb
+LANGUAGE plpgsql IMMUTABLE SET search_path = public, pg_temp SET extra_float_digits = 1 AS $$
+DECLARE n float8;
+BEGIN
+  IF _f = 'bookMethod' THEN RETURN CASE WHEN _v = '"wdv"'::jsonb THEN '"wdv"'::jsonb ELSE '"slm"'::jsonb END; END IF;
+  IF _f = 'ownerEntityId' THEN RETURN CASE WHEN jsonb_typeof(_v) = 'string' AND NOT phase3_p14.js_blank(_v #>> '{}') THEN to_jsonb(phase3_p14.js_trim(_v #>> '{}')) END; END IF;
+  IF _f NOT IN ('sharePct', 'bookRatePct') THEN RETURN _v; END IF;
+  n := phase3_p14.js_number(_v);
+  IF n = 'NaN'::float8 OR n = 0 THEN n := CASE WHEN _f = 'sharePct' THEN 100 ELSE 0 END; END IF;
+  RETURN to_jsonb(least(100::float8, greatest(0::float8, n)));
+END $$;
+-- A frozen field is unchanged when the new value is, as the app reads it, the reference value itself or what cleanAssets
+-- writes from it (so the app's own re-save of an untidied row passes, and its second re-save too). Any other value,
+-- another JSON type, or a key added / removed is a change.
+-- The share as the WS-E app's cleanAssets writes it (assets.ts normaliseShare, app commit c6b8d4c9): a JSON number, or a
+-- non-blank string read by Number(), that is finite and in (0, 100] is kept as that number; anything else becomes 100 (the
+-- app keeps the unreadable original beside it in sharePctRecorded, a display marker that is not frozen).
+CREATE FUNCTION phase3_p14.tidy_share_recorded(_v jsonb) RETURNS jsonb
+LANGUAGE plpgsql IMMUTABLE SET search_path = public, pg_temp SET extra_float_digits = 1 AS $$
+DECLARE n float8 := CASE WHEN jsonb_typeof(_v) = 'number' THEN phase3_p14.js_number(_v)
+                         WHEN jsonb_typeof(_v) = 'string' AND NOT phase3_p14.js_blank(_v #>> '{}') THEN phase3_p14.js_number(_v) ELSE 'NaN' END;
+BEGIN
+  RETURN to_jsonb(CASE WHEN n <> 'NaN'::float8 AND n > 0 AND n <= 100 THEN n ELSE 100::float8 END);
+END $$;
+CREATE FUNCTION phase3_p14.frozen_same(_f text, _new jsonb, _ref jsonb) RETURNS boolean
+LANGUAGE sql IMMUTABLE SET search_path = public, pg_temp AS $$
+  SELECT phase3_p14.js_json(_new) IS NOT DISTINCT FROM phase3_p14.js_json(_ref)
+      OR phase3_p14.js_json(_new) IS NOT DISTINCT FROM phase3_p14.js_json(phase3_p14.tidy_field(_f, _ref))
+      OR (_f = 'sharePct' AND phase3_p14.js_json(_new) IS NOT DISTINCT FROM phase3_p14.tidy_share_recorded(_ref))
 $$;
 -- P14-d (L1b): the owner of a copy, as the app normalises ownerEntityId (WS-E fin9): a non-empty JSON string, else personal
 -- (NULL). false, 0, 1, true, '' and null are all personal. P14-e: a whitespace-only string (JS trim() empty) is personal
--- too, as the app's ownerEntityId.trim() check; a non-blank string is returned as stored.
+-- too, as the app's ownerEntityId.trim() check. P14-f (lead addendum 2: the app's cleanAssets trims the owner): a non-blank
+-- string is returned JS-trimmed ("co " and " co" are owner "co"); owners are compared trimmed everywhere (row, request's
+-- asset_owner_entity, p_owner_entity).
 CREATE FUNCTION phase3_p14.owner_of(_a jsonb) RETURNS text
 LANGUAGE sql IMMUTABLE SET search_path = public, pg_temp AS $$
-  SELECT CASE WHEN jsonb_typeof(_a->'ownerEntityId') = 'string' AND NOT phase3_p14.js_blank(_a->>'ownerEntityId') THEN _a->>'ownerEntityId' END
+  SELECT CASE WHEN jsonb_typeof(_a->'ownerEntityId') = 'string' AND NOT phase3_p14.js_blank(_a->>'ownerEntityId') THEN phase3_p14.js_trim(_a->>'ownerEntityId') END
 $$;
 -- P14-d (L1a): src/lib/assets.ts ASSET_KINDS own keys (the app's cleanAssets checks Object.hasOwn(ASSET_KINDS, kind), WS-E
 -- fin9); anything else ("toString", "constructor", "", a number) is unreadable.
@@ -256,7 +371,7 @@ BEGIN
    WHERE p.owner_id = _owner AND jsonb_typeof(t.x) = 'object' AND jsonb_typeof(t.x->'id') = 'string' AND t.x->>'id' = _asset
      AND NOT phase3_p14.truthy(t.x->'excludedAt');
   IF jsonb_array_length(copies) = 0 THEN RETURN NULL; END IF;
-  IF _named THEN ent := CASE WHEN NOT phase3_p14.js_blank(_entity) THEN _entity END;   -- P14-e: blank = personal, as owner_of
+  IF _named THEN ent := CASE WHEN NOT phase3_p14.js_blank(_entity) THEN phase3_p14.js_trim(_entity) END;   -- P14-e: blank = personal; P14-f: trimmed, as owner_of
   ELSE
     IF (SELECT count(DISTINCT coalesce(c->>'w', '')) FROM jsonb_array_elements(copies) c) > 1 THEN
       RETURN jsonb_build_object('code', '22023', 'refused', 'P14_OWNER: this asset is recorded under more than one owner; name the owner whose copy is disposed (p_owner_entity, '''' for personal). Nothing was requested');
@@ -280,7 +395,13 @@ BEGIN
             ORDER BY (c->'a'->>'soldOn') COLLATE "C", (c->>'o')::bigint LOOP
     first_o := (SELECT (c->>'o')::bigint FROM jsonb_array_elements(dep) c WHERE phase3_p14.in_figure(c->'a', left(s.sold, 7)) ORDER BY (c->>'o')::bigint LIMIT 1);
     IF first_o = s.o THEN
-      RETURN jsonb_build_object('code', '42501', 'refused', format('P14_ALREADY_DISPOSED: already disposed on %s (the copy depreciation was worked from was sold); check the duplicate. Nothing was requested', s.sold));
+      -- P14-f (WS-E fin9 parity, app asset-disposal.ts disposalCopy): a disposal dated before the recorded sale has its own
+      -- code; "check the duplicate" only when the owner has another copy of the id. Same codes and wording as the app.
+      IF to_char(_on, 'YYYY-MM-DD') COLLATE "C" < s.sold COLLATE "C" THEN
+        RETURN jsonb_build_object('code', '22023', 'refused', format('P14_BEFORE_SALE: this asset is recorded as sold on %s; a disposal dated %s is before that — correct the recorded sale instead. Nothing was changed.', s.sold, to_char(_on, 'YYYY-MM-DD')));
+      END IF;
+      RETURN jsonb_build_object('code', '42501', 'refused', format('P14_ALREADY_DISPOSED: already disposed on %s%s. Nothing was changed.', s.sold,
+        CASE WHEN jsonb_array_length(mine) > 1 THEN ' — check the duplicate' ELSE '' END));
     END IF;
   END LOOP;
   -- 4. the copy depreciation is worked from in the month
@@ -324,6 +445,21 @@ DECLARE cost numeric := phase3_p14.num(_a->'cost'); in_use date; method text := 
   last date := date_trunc('month', _date)::date; dim int; dfrom int; dto int; raw numeric; d numeric; n int := 0; adj record; ob jsonb := _a->'openingWdv';
 BEGIN
   IF cost IS NULL OR coalesce(_a->>'inUse', '') !~ '^\d{4}-\d{2}-\d{2}$' THEN RETURN jsonb_build_object('unverifiable', 'the asset has no cost or put-to-use date'); END IF;
+  -- P14-f (H1): the app uses a present usefulLifeYears / residualPct / openingWdv / adjustment as JavaScript reads it (a
+  -- string or boolean is coerced, an openingWdv fy is read by its first four characters, a string amount concatenates),
+  -- where this working would skip it. Any such shape is refused as unverifiable (fail closed), never priced differently.
+  IF jsonb_typeof(_a->'usefulLifeYears') NOT IN ('number', 'null') OR jsonb_typeof(_a->'residualPct') NOT IN ('number', 'null') THEN
+    RETURN jsonb_build_object('unverifiable', 'the useful life or residual value is not a number');
+  END IF;
+  IF jsonb_typeof(ob) = 'object' AND ob ? 'book' AND (jsonb_typeof(ob->'book') <> 'number'
+       OR (phase3_p14.num(ob->'book') >= 0 AND (jsonb_typeof(ob->'fy') IS DISTINCT FROM 'string' OR (ob->>'fy') !~ '^\d{4}-\d{2}$'))) THEN
+    RETURN jsonb_build_object('unverifiable', 'the imported opening written-down value is not a number with a year YYYY-YY');
+  END IF;
+  IF jsonb_typeof(_a->'adjustments') NOT IN ('array', 'null')
+     OR EXISTS (SELECT 1 FROM jsonb_array_elements(CASE WHEN jsonb_typeof(_a->'adjustments') = 'array' THEN _a->'adjustments' ELSE '[]' END) j
+                 WHERE jsonb_typeof(j) <> 'object' OR jsonb_typeof(j->'date') IS DISTINCT FROM 'string' OR jsonb_typeof(j->'amount') IS DISTINCT FROM 'number') THEN
+    RETURN jsonb_build_object('unverifiable', 'an impairment or revaluation adjustment has no date or numeric amount');
+  END IF;
   in_use := (_a->>'inUse')::date;
   IF EXISTS (SELECT 1 FROM jsonb_array_elements(CASE WHEN jsonb_typeof(_a->'policyHistory') = 'array' THEN _a->'policyHistory' ELSE '[]' END) c
               WHERE c->>'field' IN ('bookMethod', 'bookRatePct', 'usefulLifeYears', 'residualPct') AND coalesce(c->>'effectiveFrom', '') ~ '^\d{4}-\d{2}$' AND c ? 'toRaw') THEN
@@ -627,9 +763,9 @@ BEGIN
   -- P14-e (M-b): 'approved' counts as well as 'pending', exactly as the open-request index request_asset_disposal hits
   -- (P14_PENDING), so the preview never shows a clean plan the request then refuses.
   IF EXISTS (SELECT 1 FROM public.asset_disposal_requests q WHERE q.owner_id = uid AND q.asset_id = p_asset AND q.status = 'pending'
-              AND q.asset_owner_entity = coalesce(c->>'ownerEntityId', '')) THEN problems := problems || 'This asset already has an open disposal request'::text;
+              AND phase3_p14.js_trim(q.asset_owner_entity) = coalesce(c->>'ownerEntityId', '')) THEN problems := problems || 'This asset already has an open disposal request'::text;
   ELSIF EXISTS (SELECT 1 FROM public.asset_disposal_requests q WHERE q.owner_id = uid AND q.asset_id = p_asset AND q.status = 'approved'
-              AND q.asset_owner_entity = coalesce(c->>'ownerEntityId', '')) THEN problems := problems || 'This asset already has an approved disposal request'::text; END IF;
+              AND phase3_p14.js_trim(q.asset_owner_entity) = coalesce(c->>'ownerEntityId', '')) THEN problems := problems || 'This asset already has an approved disposal request'::text; END IF;
   b := phase3_p14.book_value(a, p_date);
   IF b ? 'unverifiable' THEN problems := problems || format('The database cannot check this asset''s book value (%s)', b->>'unverifiable'); END IF;
   acc := nullif(a->>'accountId', '')::uuid;
@@ -689,35 +825,20 @@ LANGUAGE sql STABLE SET search_path = public, pg_temp AS $$
       OR phase3_p14.p11_restoring()   -- checked backup restore (P11 ticket, not a session setting)
       OR (auth.uid() IS NULL AND current_user NOT IN ('authenticated', 'anon'))
 $$;
--- P14-d (L2) / P14-e (M-a, M-b, L2): a sold row bound to its approved request (its disposal.requestId names an approved
--- request of this owner) is compared by MEANING, never by bytes: the app rewrites a row as it displays it (cleanAssets /
--- preserve-records: an ownerEntityId of '', null, false or whitespace dropped, a missing or invalid bookMethod -> 'slm', a
--- missing bookRatePct -> 0), and a name-only edit of a row stored untidied must still save. phase3_p14.sold_meaning is
--- what the approval priced and disposed:
---   excluded (JS truthy excludedAt), id, owner (owner_of), kind, inUse, cost, method ('wdv' or else 'slm'), rate, life,
---   residual (numbers; missing = 0), the book value at the disposal date (phase3_p14.book_value rounded to paise; NULL when
---   unverifiable: it reads cost, inUse, kind, method, rate, life, residual, openingWdv, adjustments, policyHistory and
---   buildingPolicy, so a change to any of those that moves the figure is caught), soldOn and saleValue.
--- The expected meaning comes from the request: not excluded, r.asset_id, nullif(r.asset_owner_entity, ''), the priced row's
--- kind / inUse / cost / method / rate / life / residual (r.inputs->'asset', read the same normalised way), r.book_value,
--- r.disposal_date, r.proceeds. Position: the row keeps its rank among the non-excluded copies of the same id and owner
--- (the order that decides which copy counts), compared with the previous register; unrelated rows may be added, removed
--- or moved around it. A row that already differed before the write (not produced by this workflow) is refused only if the
--- write changes its meaning or rank again. Returns NULL (allowed) or the refusal message. SECURITY DEFINER: reads the
--- request (an approver may not hold the owner's read).
-CREATE FUNCTION phase3_p14.sold_meaning(_x jsonb, _on date) RETURNS jsonb
-LANGUAGE plpgsql STABLE SET search_path = public, pg_temp AS $$
-DECLARE b jsonb; v numeric;
-BEGIN
-  BEGIN
-    b := phase3_p14.book_value(_x, _on);
-    v := CASE WHEN b ? 'value' THEN round((b->>'value')::numeric, 2) END;
-  EXCEPTION WHEN OTHERS THEN v := NULL;   -- e.g. inUse 2026-13-40 (format right, no such date): unverifiable
-  END;
-  RETURN jsonb_build_array(phase3_p14.truthy(_x->'excludedAt'), _x->'id', phase3_p14.owner_of(_x), _x->'kind', _x->'inUse',
-    phase3_p14.num(_x->'cost'), coalesce(_x->'bookMethod' = '"wdv"'::jsonb, false), coalesce(phase3_p14.num(_x->'bookRatePct'), 0),
-    coalesce(phase3_p14.num(_x->'usefulLifeYears'), 0), coalesce(phase3_p14.num(_x->'residualPct'), 0), v, _x->'soldOn', phase3_p14.num(_x->'saleValue'));
-END $$;
+-- P14-d (L2) / P14-e (M-b, L2) / P14-f (H1, M1, M2, L1, L2): a sold row bound to its approved request (its
+-- disposal.requestId names an approved request of this owner) keeps the facts the approval priced and disposed, FROZEN BY
+-- VALUE against the row the request recorded (r.inputs->'asset', the approved raw row):
+--   id (= r.asset_id), ownerEntityId, kind, inUse, cost, bookMethod, bookRatePct, usefulLifeYears, residualPct, sharePct,
+--   openingWdv (the whole value), adjustments (the whole list: none added, removed or changed, before or after the sale),
+--   policyHistory, buildingPolicy; not excluded; soldOn = the request's date; saleValue = the proceeds (a JSON number).
+-- Each field passes when its new value is, as the app reads JSON, the approved value itself or exactly what the app's
+-- cleanAssets writes from it (phase3_p14.frozen_same / tidy_field: an untidied row's own re-save and every later re-save
+-- pass), or the value the row already held before this write (a row written outside the guard, by a restore, keeps its
+-- values). Anything else, including another JSON type, a malformed shape, or a key added or removed, is a change and is
+-- refused. Operational fields (name, location, notes, tag, custodian, docIds, accountId, ...) stay editable. P14-e
+-- compared a "meaning" that read a non-number as absent, which the app does not do (H1). Position: the row keeps its rank
+-- among the non-excluded copies of the same id and owner (copy_rank), compared with the previous register. Returns NULL
+-- (allowed) or the refusal message. SECURITY DEFINER: reads the request (an approver may not hold the owner's read).
 -- rank of the copy at 1-based position _o among the non-excluded object rows of id _id and owner _ent (NULL = personal)
 CREATE FUNCTION phase3_p14.copy_rank(_rows jsonb, _o bigint, _id text, _ent text) RETURNS bigint
 LANGUAGE sql IMMUTABLE SET search_path = public, pg_temp AS $$
@@ -725,11 +846,25 @@ LANGUAGE sql IMMUTABLE SET search_path = public, pg_temp AS $$
    WHERE t.o < _o AND jsonb_typeof(t.x) = 'object' AND jsonb_typeof(t.x->'id') = 'string' AND t.x->>'id' = _id
      AND NOT phase3_p14.truthy(t.x->'excludedAt') AND phase3_p14.owner_of(t.x) IS NOT DISTINCT FROM _ent
 $$;
+CREATE FUNCTION phase3_p14.sold_row_change(_new jsonb, _approved jsonb, _was jsonb, _id text, _date date, _proceeds numeric) RETURNS text
+LANGUAGE plpgsql STABLE SET search_path = public, pg_temp AS $$
+DECLARE f text;
+BEGIN
+  IF NOT (phase3_p14.frozen_same('id', _new->'id', to_jsonb(_id)) OR phase3_p14.frozen_same('id', _new->'id', _was->'id')) THEN RETURN 'id'; END IF;
+  FOREACH f IN ARRAY ARRAY['ownerEntityId', 'kind', 'inUse', 'cost', 'bookMethod', 'bookRatePct', 'usefulLifeYears', 'residualPct', 'sharePct',
+                           'openingWdv', 'adjustments', 'policyHistory', 'buildingPolicy'] LOOP
+    IF NOT (phase3_p14.frozen_same(f, _new->f, _approved->f) OR phase3_p14.frozen_same(f, _new->f, _was->f)) THEN RETURN f; END IF;
+  END LOOP;
+  IF NOT coalesce(_new->'soldOn' = to_jsonb(to_char(_date, 'YYYY-MM-DD')) OR _new->'soldOn' = _was->'soldOn', false) THEN RETURN 'soldOn'; END IF;
+  IF NOT coalesce((jsonb_typeof(_new->'saleValue') = 'number' AND (_new->>'saleValue')::numeric = _proceeds)
+                  OR phase3_p14.js_json(_new->'saleValue') = phase3_p14.js_json(_was->'saleValue'), false) THEN RETURN 'saleValue'; END IF;
+  RETURN NULL;
+END $$;
 CREATE FUNCTION phase3_p14.sold_row_refusal(_owner uuid, _old jsonb, _new jsonb) RETURNS text
 LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE o jsonb := CASE WHEN jsonb_typeof(_old) = 'array' THEN _old ELSE '[]'::jsonb END;
   n jsonb := CASE WHEN jsonb_typeof(_new) = 'array' THEN _new ELSE '[]'::jsonb END;
-  s record; r public.asset_disposal_requests; p jsonb; ent text; want jsonb; got jsonb; was jsonb; was_o bigint;
+  s record; r public.asset_disposal_requests; ent text; was jsonb; was_o bigint; f text; before bigint;
 BEGIN
   FOR s IN SELECT t.o, t.x FROM jsonb_array_elements(n) WITH ORDINALITY t(x, o)
             WHERE jsonb_typeof(t.x) = 'object' AND jsonb_typeof(t.x->'disposal') = 'object' AND jsonb_typeof(t.x->'disposal'->'requestId') = 'string' ORDER BY t.o LOOP
@@ -738,22 +873,26 @@ BEGIN
        -- reveals nothing the caller cannot read already (the table's SELECT policy: the owner or an approver)
        AND (auth.uid() IS NULL OR q.owner_id = auth.uid() OR phase3_p14.may_approve(q.owner_id, q.entity_id));
     CONTINUE WHEN NOT FOUND;
-    p := r.inputs->'asset'; ent := nullif(r.asset_owner_entity, '');
-    want := jsonb_build_array(false, to_jsonb(r.asset_id), ent, p->'kind', p->'inUse', phase3_p14.num(p->'cost'),
-      coalesce(p->'bookMethod' = '"wdv"'::jsonb, false), coalesce(phase3_p14.num(p->'bookRatePct'), 0), coalesce(phase3_p14.num(p->'usefulLifeYears'), 0),
-      coalesce(phase3_p14.num(p->'residualPct'), 0), r.book_value, to_char(r.disposal_date, 'YYYY-MM-DD'), r.proceeds);
-    got := phase3_p14.sold_meaning(s.x, r.disposal_date);
+    ent := nullif(phase3_p14.js_trim(r.asset_owner_entity), '');   -- P14-f: trimmed (a request recorded before P14-f may hold the untrimmed owner)
+    was := NULL; was_o := NULL;
     SELECT t.o, t.x INTO was_o, was FROM jsonb_array_elements(o) WITH ORDINALITY t(x, o)
      WHERE jsonb_typeof(t.x) = 'object' AND jsonb_typeof(t.x->'disposal') = 'object' AND t.x->'disposal'->>'requestId' = s.x->'disposal'->>'requestId'
      ORDER BY t.o LIMIT 1;
     IF was IS NULL THEN
       RETURN 'P14_DISPOSAL_APPROVAL_REQUIRED: an asset is disposed only through an approved disposal request (evidence, reason, date, proceeds); archiving never disposes';
     END IF;
-    IF got IS DISTINCT FROM want AND got IS DISTINCT FROM phase3_p14.sold_meaning(was, r.disposal_date) THEN
-      IF (got->>0)::boolean AND NOT phase3_p14.truthy(was->'excludedAt') THEN
-        RETURN 'P14_DISPOSAL_APPROVAL_REQUIRED: a sold copy cannot be excluded (it would undo the approved disposal); keep it and mark the other copy as the duplicate';
+    -- P14-e (M-b) / P14-f (L1): the sold copy is never excluded. What the user can do instead depends on where the other
+    -- copy sits: one after it can be marked as the duplicate; one before it cannot (the sold copy keeps its rank).
+    IF phase3_p14.truthy(s.x->'excludedAt') AND NOT phase3_p14.truthy(was->'excludedAt') THEN
+      before := phase3_p14.copy_rank(n, s.o, r.asset_id, ent);
+      IF before > 0 THEN
+        RETURN 'P14_DISPOSAL_APPROVAL_REQUIRED: a sold copy cannot be excluded (it would undo the approved disposal). The other copy sits before it in the register, so it cannot be marked as the duplicate or removed either (the sold copy must keep its place among the copies of its id); keep both copies and ask Finance to correct the register';
       END IF;
-      RETURN 'P14_DISPOSAL_APPROVAL_REQUIRED: a disposed asset keeps the figures it was approved with (id, owner, kind, cost, put-to-use date, book method, rate, life, residual and the book value at disposal, which also covers the opening WDV and adjustments); only its name, location, notes and similar details can change';
+      RETURN 'P14_DISPOSAL_APPROVAL_REQUIRED: a sold copy cannot be excluded (it would undo the approved disposal); keep it and mark a copy that comes after it as the duplicate';
+    END IF;
+    f := phase3_p14.sold_row_change(s.x, r.inputs->'asset', was, r.asset_id, r.disposal_date, r.proceeds);
+    IF f IS NOT NULL THEN
+      RETURN format('P14_DISPOSAL_APPROVAL_REQUIRED: a disposed asset keeps the figures it was approved with (%s changed). Its id, owner, kind, cost, put-to-use date, book method, rate, life, residual, ownership share, opening WDV, adjustments and sale facts are fixed; only its name, location, notes and similar details can change', f);
     END IF;
     IF phase3_p14.copy_rank(n, s.o, r.asset_id, ent) IS DISTINCT FROM phase3_p14.copy_rank(o, was_o, r.asset_id, ent) THEN
       RETURN 'P14_DISPOSAL_APPROVAL_REQUIRED: a disposed asset keeps its place among the copies of its id (another copy cannot be moved in front of it or removed from before it); other assets can be added or moved freely';
@@ -974,10 +1113,13 @@ REVOKE ALL ON FUNCTION phase3_p14.may_approve(uuid, text), phase3_p14.step_up_ok
 GRANT EXECUTE ON FUNCTION phase3_p14.may_approve(uuid, text), phase3_p14.exempt(), phase3_p14.p11_restoring() TO authenticated;
 REVOKE ALL ON FUNCTION phase3_p14.sold_row_refusal(uuid, jsonb, jsonb) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION phase3_p14.sold_row_refusal(uuid, jsonb, jsonb) TO authenticated; -- called by the invoker guard on finance_preferences
-REVOKE ALL ON FUNCTION phase3_p14.sold_meaning(jsonb, date), phase3_p14.copy_rank(jsonb, bigint, text, text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION phase3_p14.sold_row_change(jsonb, jsonb, jsonb, text, date, numeric), phase3_p14.copy_rank(jsonb, bigint, text, text) FROM PUBLIC, anon, authenticated;
+-- P14-f: pure JavaScript-semantics helpers used by the definer sold_row_refusal (no client grant needed)
+REVOKE ALL ON FUNCTION phase3_p14.js_double(text), phase3_p14.js_number(jsonb), phase3_p14.js_json(jsonb), phase3_p14.tidy_field(text, jsonb),
+  phase3_p14.tidy_share_recorded(jsonb), phase3_p14.frozen_same(text, jsonb, jsonb) FROM PUBLIC, anon, authenticated;
 -- P14-e: pure helpers the invoker guard on finance_preferences now calls (first counting copy per id and owner)
-REVOKE ALL ON FUNCTION phase3_p14.truthy(jsonb), phase3_p14.owner_of(jsonb), phase3_p14.js_blank(text) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION phase3_p14.truthy(jsonb), phase3_p14.owner_of(jsonb), phase3_p14.js_blank(text) TO authenticated;
+REVOKE ALL ON FUNCTION phase3_p14.truthy(jsonb), phase3_p14.owner_of(jsonb), phase3_p14.js_blank(text), phase3_p14.js_trim(text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION phase3_p14.truthy(jsonb), phase3_p14.owner_of(jsonb), phase3_p14.js_blank(text), phase3_p14.js_trim(text) TO authenticated;
 REVOKE ALL ON phase3_p14.saved_functions FROM PUBLIC, anon, authenticated;
 
 DO $post$
